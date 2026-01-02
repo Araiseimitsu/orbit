@@ -32,6 +32,7 @@ class Step(BaseModel):
     id: str = Field(..., description="ステップID（一意）")
     type: str = Field(..., description="アクションタイプ (log, file_write, ai, etc.)")
     params: dict[str, Any] = Field(default_factory=dict, description="パラメータ")
+    meta: dict[str, Any] | None = Field(default=None, description="UI用メタ情報（位置など）")
 
 
 class Workflow(BaseModel):

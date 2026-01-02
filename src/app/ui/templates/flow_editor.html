@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - ORBIT{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="/static/flow-editor.css?v={{ static_version }}">
+{% endblock %}
+
+{% block content %}
+<div class="flow-editor-page">
+    <div class="flow-editor-header">
+        <div class="header-left">
+            <div class="header-field">
+                <label for="workflow-name">ワークフロー名</label>
+                <input id="workflow-name" type="text" placeholder="例: hello_world">
+            </div>
+            <div class="header-field">
+                <label for="trigger-type">トリガー</label>
+                <select id="trigger-type">
+                    <option value="manual">manual</option>
+                    <option value="schedule">schedule</option>
+                </select>
+            </div>
+            <div class="header-field" id="cron-field">
+                <label for="trigger-cron">cron</label>
+                <input id="trigger-cron" type="text" placeholder="0 9 * * *">
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="header-status" id="editor-status"></span>
+            <button class="primary-button" id="save-workflow">保存</button>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="flow-editor-error">
+        <strong>読み込みエラー:</strong>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <div class="flow-editor-layout">
+        <aside class="flow-panel">
+            <div class="panel-title">アクション</div>
+            <div id="action-list" class="action-list"></div>
+        </aside>
+
+        <section class="flow-canvas-wrap">
+            <div class="canvas-toolbar">
+                <button class="ghost-button" id="add-node">+ 追加</button>
+                <span class="hint">クリックで追加 / ドラッグで移動 / クリックで編集（実行順は上から下）</span>
+            </div>
+            <div id="flow-canvas" class="flow-canvas"></div>
+        </section>
+
+        <aside class="flow-panel">
+            <div class="panel-title">詳細</div>
+            <div id="inspector" class="inspector"></div>
+        </aside>
+    </div>
+</div>
+
+<script id="flow-editor-config" type="application/json">{{ config_json | safe }}</script>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/static/flow-editor.js?v={{ static_version }}" defer></script>
+{% endblock %}

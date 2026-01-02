@@ -1,13 +1,17 @@
 # ORBIT MVP 開発進捗
 
 ## 現在の状態
-- **Day 4 完了** - 次は Day 5 から再開
+- **Day 7-8 完了** - UI 仕上げ完了
+
+## 更新履歴
+- 2026-01-02: フローエディタでドラッグ順序が分かるよう、ノードに実行順バッジと詳細パネルの順序表示を追加。
 
 ## 技術スタック
 - Python 3.13
 - FastAPI + Uvicorn
-- HTMX + TailwindCSS (CDN)
-- Gemini API（AI連携）
+- HTMX + Alpine.js + TailwindCSS (CDN)
+- Gemini API / OpenAI API（AI連携）
+- Google Sheets API
 
 ## 完了タスク
 
@@ -38,14 +42,39 @@
 - 次回実行予定の UI 表示
 - デバッグ用 API エンドポイント追加（/api/scheduler/jobs, /api/scheduler/reload）
 
-## 次回のタスク: Day 5
+### Day 5: Google Sheets 連携
+- google-api-python-client / google-auth 導入
+- `sheets_read` アクション実装（ヘッダー行処理対応）
+- `sheets_list` アクション実装（シート一覧取得）
+- サービスアカウント認証（secrets/google_service_account.json）
 
-### Google Sheets Read
-- [ ] Service Account で Sheets read
-- [ ] `google_sheet_read` action 実装
-- [ ] サンプルワークフローで値を取得 → log に出す
+### Day 6: AI アクション
+- `ai_generate` アクション実装（Gemini/OpenAI対応）
+- `ai_summarize` アクション実装（要約ショートカット）
+- openai パッケージ追加
+- テストワークフロー作成（ai_test, ai_summarize_test, ai_openai_test）
 
-## 現在のファイル構造
+### Day 7-8: UI 仕上げ
+- Alpine.js 導入（トースト通知の展開機能）
+- グローバルローディングオーバーレイ追加
+- ボタン内スピナー表示（htmx-indicator）
+- トースト通知の詳細展開（成功/失敗時）
+- 実行履歴詳細画面（runs.html）の拡張
+  - ステップ結果の表示
+  - エラー詳細の展開
+  - 完全な JSON デバッグ表示
+- ワークフロー詳細画面の実行履歴強化
+- エラーハンドリング強化（try-except で予期しないエラーもキャッチ）
+
+## 次回のタスク: Day 9-10
+
+### 運用対応
+- [ ] タイムアウト処理の実装
+- [ ] ログローテーション
+- [ ] 実行中ワークフローのキャンセル機能
+- [ ] リソース使用状況の監視
+
+## 現在のファイル構成
 
 ```
 orbit/
@@ -66,7 +95,9 @@ orbit/
 │       ├── actions/
 │       │   ├── __init__.py
 │       │   ├── log.py           # logアクション
-│       │   └── file_ops.py      # file_write / file_read
+│       │   ├── file_ops.py      # file_write / file_read
+│       │   ├── google_sheets.py # sheets_read / sheets_list
+│       │   └── ai.py            # ai_generate / ai_summarize
 │       └── ui/
 │           ├── __init__.py
 │           └── templates/
@@ -79,12 +110,14 @@ orbit/
 ├── workflows/
 │   ├── hello_world.yaml
 │   ├── sample_daily_summary.yaml
-│   └── test_every_minute.yaml   # テスト用（毎分実行）
+│   ├── test_every_minute.yaml   # テスト用（毎分実行）
+│   ├── ai_test.yaml             # AIテスト
+│   ├── ai_summarize_test.yaml   # 要約テスト
+│   └── ai_openai_test.yaml      # OpenAIテスト
 ├── runs/
-│   ├── 20260102.jsonl           # 実行ログ
 │   └── output/                  # ワークフロー出力ファイル
 ├── secrets/
-│   └── .gitkeep
+│   └── .gitkeep                 # APIキー配置用
 ├── .docs/
 │   ├── workflow_mvp_plan.md     # MVP計画書
 │   └── update.md                # この進捗ファイル
@@ -109,3 +142,15 @@ py -3.13 -m uvicorn src.app.main:app --reload
 
 ## 参照ファイル
 - MVP計画書: `.docs/workflow_mvp_plan.md`
+
+## 更新履歴
+
+### 2026/01/02
+- 新規ワークフロー作成のUI導線を追加（ダッシュボード/ナビ）
+- 新規作成ガイドページ（/workflows/new）を追加
+- `.docs/AGENTS.md` / `.docs/CLAUDE.md` / `.docs/copilot-instructions.md` を作成
+- ビジュアルエディタ（/workflows/new/visual, /workflows/{name}/edit）を追加
+- アクション追加・ドラッグ移動・詳細編集のUIを実装
+- ワークフロー保存API（/api/workflows/save）とアクション一覧APIを追加
+- UI用の静的ファイル（/static）を追加
+- ビジュアルエディタの詳細設定にアクション別の設定ガイドと出力参照例を追加

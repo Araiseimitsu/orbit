@@ -6,8 +6,38 @@
     <title>{% block title %}ORBIT{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
+
+        /* HTMX ローディングインジケーター */
+        .htmx-indicator {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-block;
+            opacity: 1;
+        }
+
+        /* スピナーアニメーション */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        /* ボタン無効状態の上書き */
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -23,10 +53,16 @@
                         <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
                             Dashboard
                         </a>
+                        <a href="/workflows/new/visual" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
+                            Visual
+                        </a>
                         <a href="/runs" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
                             Runs
                         </a>
                     </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-xs text-gray-400" id="status-indicator"></span>
                 </div>
             </div>
         </div>
@@ -37,13 +73,88 @@
     </main>
 
     <!-- Toast Notifications Container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 w-80 sm:w-96"></div>
+
+    <!-- Global Loading Overlay -->
+    <div id="global-loader" class="fixed inset-0 bg-black bg-opacity-10 z-40 hidden items-center justify-center">
+        <div class="bg-white rounded-lg p-6 shadow-lg flex items-center space-x-3">
+            <svg class="w-6 h-6 text-blue-600 spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-gray-700 font-medium">実行中...</span>
+        </div>
+    </div>
 
     <footer class="border-t border-gray-200 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <p class="text-center text-gray-500 text-sm">ORBIT MVP v0.1.0</p>
         </div>
     </footer>
+
+    <script>
+        // HTMX リクエスト時にグローバルローダーを表示
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            const target = evt.target;
+            if (target.matches('button[hx-post*="/run"]')) {
+                const loader = document.getElementById('global-loader');
+                loader.classList.remove('hidden');
+                loader.classList.add('flex');
+                target.disabled = true;
+            }
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            const loader = document.getElementById('global-loader');
+            loader.classList.add('hidden');
+            loader.classList.remove('flex');
+            const buttons = document.querySelectorAll('button[hx-post*="/run"]');
+            buttons.forEach(btn => btn.disabled = false);
+        });
+
+        // トーストの自動スクロール
+        const observer = new MutationObserver(function() {
+            const container = document.getElementById('toast-container');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+        const toastContainer = document.getElementById('toast-container');
+        if (toastContainer) {
+            observer.observe(toastContainer, { childList: true });
+        }
+
+        // ワークフロー削除（確認ダイアログ付き）
+        document.addEventListener('click', async (event) => {
+            const target = event.target instanceof Element ? event.target.closest('[data-delete-workflow]') : null;
+            if (!target) {
+                return;
+            }
+            event.preventDefault();
+            const name = target.getAttribute('data-delete-workflow');
+            if (!name) {
+                return;
+            }
+            const confirmed = window.confirm(`「${name}」を削除しますか？この操作は取り消せません。`);
+            if (!confirmed) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/workflows/${encodeURIComponent(name)}/delete`, { method: 'POST' });
+                if (!response.ok) {
+                    const body = await response.json();
+                    throw new Error(body.detail || '削除に失敗しました');
+                }
+                if (window.location.pathname.startsWith(`/workflows/${name}`)) {
+                    window.location.href = '/';
+                } else {
+                    window.location.reload();
+                }
+            } catch (error) {
+                window.alert(error.message || '削除に失敗しました');
+            }
+        });
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>

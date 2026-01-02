@@ -1,18 +1,22 @@
 """
 ORBIT MVP - FastAPI Application Entry Point
 """
+import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .core.loader import WorkflowLoader
 from .core.executor import Executor
 from .core.run_logger import RunLogger
 from .core.scheduler import WorkflowScheduler
+from .core.registry import get_registry
+from .core.models import Workflow
 
 # アクション登録（インポート時に自動登録）
 from . import actions  # noqa: F401
@@ -29,6 +33,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 WORKFLOWS_DIR = BASE_DIR / "workflows"
 RUNS_DIR = BASE_DIR / "runs"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "ui" / "templates"
+STATIC_DIR = Path(__file__).resolve().parent / "ui" / "static"
 
 # Jinja2 テンプレート設定
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -63,6 +68,44 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def build_editor_data(workflow: Workflow | None) -> dict:
+    """ビジュアルエディタ向けのデータを構築"""
+    if not workflow:
+        return {
+            "name": "",
+            "description": "",
+            "trigger": {"type": "manual"},
+            "steps": [],
+        }
+
+    steps = []
+    for index, step in enumerate(workflow.steps):
+        meta = step.meta or {}
+        steps.append(
+            {
+                "id": step.id,
+                "type": step.type,
+                "params": step.params,
+                "position": {
+                    "x": int(meta.get("x", 80)),
+                    "y": int(meta.get("y", 80 + index * 120)),
+                },
+            }
+        )
+
+    trigger_data: dict[str, str] = {"type": workflow.trigger.type}
+    if workflow.trigger.type == "schedule":
+        trigger_data["cron"] = workflow.trigger.cron
+
+    return {
+        "name": workflow.name,
+        "description": workflow.description or "",
+        "trigger": trigger_data,
+        "steps": steps,
+    }
 
 
 def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
@@ -141,6 +184,89 @@ async def runs_page(request: Request, workflow: str | None = None):
     )
 
 
+@app.get("/workflows/new", response_class=HTMLResponse)
+async def workflow_new(request: Request):
+    """ワークフロー新規作成ガイド"""
+    sample_yaml = """name: hello_world
+trigger:
+  type: manual
+steps:
+  - id: step_1
+    type: log
+    params:
+      message: "Hello {{ now }}"
+
+  - id: step_2
+    type: file_write
+    params:
+      path: "runs/output/{{ run_id }}.txt"
+      content: "Result from step_1: {{ step_1.result }}"
+"""
+    return templates.TemplateResponse(
+        "new_workflow.html",
+        {
+            "request": request,
+            "workflows_dir": str(WORKFLOWS_DIR),
+            "sample_yaml": sample_yaml
+        }
+    )
+
+
+@app.get("/workflows/new/visual", response_class=HTMLResponse)
+async def workflow_new_visual(request: Request):
+    """ビジュアルエディタ（新規作成）"""
+    actions = sorted(get_registry().list_actions())
+    editor_data = build_editor_data(None)
+    config_json = json.dumps(
+        {
+            "workflow": editor_data,
+            "actions": actions,
+            "mode": "new",
+            "saveUrl": "/api/workflows/save",
+        },
+        ensure_ascii=False
+    )
+    return templates.TemplateResponse(
+        "flow_editor.html",
+        {
+            "request": request,
+            "config_json": config_json,
+            "error": None,
+            "page_title": "ビジュアルエディタ（新規作成）",
+            "static_version": str(int(__import__("time").time())),
+        }
+    )
+
+
+@app.get("/workflows/{name}/edit", response_class=HTMLResponse)
+async def workflow_edit(request: Request, name: str):
+    """ビジュアルエディタ（編集）"""
+    workflow, error = loader.load_workflow(name)
+    actions = sorted(get_registry().list_actions())
+    editor_data = build_editor_data(workflow)
+    if not workflow:
+        editor_data["name"] = name
+    config_json = json.dumps(
+        {
+            "workflow": editor_data,
+            "actions": actions,
+            "mode": "edit",
+            "saveUrl": "/api/workflows/save",
+        },
+        ensure_ascii=False
+    )
+    return templates.TemplateResponse(
+        "flow_editor.html",
+        {
+            "request": request,
+            "config_json": config_json,
+            "error": error,
+            "page_title": f"ビジュアルエディタ - {name}",
+            "static_version": str(int(__import__("time").time())),
+        }
+    )
+
+
 @app.post("/api/workflows/{name}/run", response_class=HTMLResponse)
 async def run_workflow(request: Request, name: str):
     """
@@ -149,26 +275,180 @@ async def run_workflow(request: Request, name: str):
     成功時: トースト通知用のHTMLを返す
     失敗時: エラー表示用のHTMLを返す
     """
-    workflow, error = loader.load_workflow(name)
+    try:
+        workflow, error = loader.load_workflow(name)
 
-    if error or not workflow:
-        raise HTTPException(status_code=400, detail=error or "Workflow not found")
+        if error or not workflow:
+            # エラートーストを返す
+            from .core.models import RunLog
+            from datetime import datetime
+            error_run = RunLog(
+                workflow=name,
+                run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
+                status="failed",
+                started_at=datetime.now().isoformat(),
+                ended_at=datetime.now().isoformat(),
+                error=error or "Workflow not found",
+                step_results={}
+            )
+            return templates.TemplateResponse(
+                "partials/run_result.html",
+                {
+                    "request": request,
+                    "run": error_run,
+                    "workflow_name": name
+                }
+            )
 
-    # ワークフロー実行
-    run_log = await executor.run(workflow)
+        # ワークフロー実行
+        run_log = await executor.run(workflow)
 
-    # ログ保存
-    run_logger.save(run_log)
+        # ログ保存
+        run_logger.save(run_log)
 
-    # レスポンス（トースト通知）
-    return templates.TemplateResponse(
-        "partials/run_result.html",
-        {
-            "request": request,
-            "run": run_log,
-            "workflow_name": name
+        # レスポンス（トースト通知）
+        return templates.TemplateResponse(
+            "partials/run_result.html",
+            {
+                "request": request,
+                "run": run_log,
+                "workflow_name": name
+            }
+        )
+
+    except Exception as e:
+        # 予期しないエラーをキャッチ
+        logger.exception(f"Unexpected error running workflow {name}")
+        from .core.models import RunLog
+        from datetime import datetime
+        error_run = RunLog(
+            workflow=name,
+            run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
+            status="failed",
+            started_at=datetime.now().isoformat(),
+            ended_at=datetime.now().isoformat(),
+            error=f"{type(e).__name__}: {str(e)}",
+            step_results={}
+        )
+        return templates.TemplateResponse(
+            "partials/run_result.html",
+            {
+                "request": request,
+                "run": error_run,
+                "workflow_name": name
+            }
+        )
+
+
+@app.get("/api/actions")
+async def list_actions():
+    """登録済みアクション一覧（UI用）"""
+    return {"actions": sorted(get_registry().list_actions())}
+
+
+@app.post("/api/workflows/save")
+async def save_workflow(request: Request):
+    """ビジュアルエディタからワークフローを保存"""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="無効なリクエスト形式です")
+
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in name for token in ["/", "\\", ".."]):
+        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+
+    trigger = payload.get("trigger") or {"type": "manual"}
+    if not isinstance(trigger, dict) or not trigger.get("type"):
+        raise HTTPException(status_code=400, detail="トリガー設定が不正です")
+    if trigger.get("type") == "manual":
+        trigger = {"type": "manual"}
+    elif trigger.get("type") == "schedule":
+        cron = (trigger.get("cron") or "").strip()
+        if not cron:
+            raise HTTPException(status_code=400, detail="schedule の cron が必要です")
+        trigger = {"type": "schedule", "cron": cron}
+    else:
+        raise HTTPException(status_code=400, detail="未対応のトリガーです")
+    steps = payload.get("steps") or []
+    description = payload.get("description") or None
+
+    if not isinstance(steps, list) or len(steps) == 0:
+        raise HTTPException(status_code=400, detail="少なくとも1つのステップが必要です")
+
+    normalized_steps = []
+    step_ids = set()
+    for step in steps:
+        if not isinstance(step, dict):
+            raise HTTPException(status_code=400, detail="ステップ形式が正しくありません")
+        step_id = (step.get("id") or "").strip()
+        step_type = (step.get("type") or "").strip()
+        if not step_id or not step_type:
+            raise HTTPException(status_code=400, detail="ステップIDとタイプは必須です")
+        if step_id in step_ids:
+            raise HTTPException(status_code=400, detail="ステップIDが重複しています")
+        step_ids.add(step_id)
+
+        params = step.get("params") or {}
+        position = step.get("position") or {}
+        meta = {
+            "x": int(position.get("x", 0)),
+            "y": int(position.get("y", 0)),
         }
+        normalized_steps.append(
+            {
+                "id": step_id,
+                "type": step_type,
+                "params": params,
+                "meta": meta,
+            }
+        )
+
+    workflow_data = {
+        "name": name,
+        "description": description,
+        "trigger": trigger,
+        "steps": normalized_steps,
+    }
+
+    try:
+        workflow = Workflow.model_validate(workflow_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"バリデーションエラー: {e}") from e
+
+    WORKFLOWS_DIR.mkdir(parents=True, exist_ok=True)
+    yaml_path = WORKFLOWS_DIR / f"{workflow.name}.yaml"
+
+    import yaml
+    yaml_content = yaml.safe_dump(
+        workflow.model_dump(exclude_none=True),
+        sort_keys=False,
+        allow_unicode=True
     )
+    yaml_path.write_text(yaml_content, encoding="utf-8")
+
+    return {"ok": True, "name": workflow.name, "path": str(yaml_path)}
+
+
+@app.post("/api/workflows/{name}/delete")
+async def delete_workflow(name: str):
+    """ワークフローを削除"""
+    safe_name = (name or "").strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in safe_name for token in ["/", "\\", ".."]):
+        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+
+    yaml_path = WORKFLOWS_DIR / f"{safe_name}.yaml"
+    yml_path = WORKFLOWS_DIR / f"{safe_name}.yml"
+    target = yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    if not target or not target.exists():
+        raise HTTPException(status_code=404, detail="ワークフローが見つかりません")
+
+    target.unlink()
+    workflow_scheduler.reload_workflows()
+    return {"ok": True, "name": safe_name}
 
 
 @app.get("/api/scheduler/jobs")

@@ -1,0 +1,32 @@
+name: ai_summarize_test
+trigger:
+  type: manual
+steps:
+  - id: step_1
+    type: ai_summarize
+    params:
+      text: |
+        ORBITはn8nライクなワークフロー実行エンジンです。YAML定義でワークフローを作成し、
+        スケジュール実行または手動実行できます。データベースは不要で、ローカル環境で動作します。
+        Google Sheetsからのデータ読み取りや、AIによるテキスト生成など、様々なアクションを
+        組み合わせて自動化タスクを作成できます。FastAPIで構築されており、Web UIから
+        ワークフローの管理や実行が可能です。
+      max_length: 100
+      provider: gemini
+      language: japanese
+
+  - id: step_2
+    type: log
+    params:
+      message: "要約結果: {{ step_1.summary }}"
+      level: info
+
+  - id: step_3
+    type: file_write
+    params:
+      path: "runs/output/ai_summary_{{ run_id }}.txt"
+      content: |
+        要約結果:
+        {{ step_1.summary }}
+
+        元のテキスト長: {{ step_1.original_length }} 文字

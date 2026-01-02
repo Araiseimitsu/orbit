@@ -27,7 +27,10 @@
                         Started
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ended
+                        Duration
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
                     </th>
                 </tr>
             </thead>
@@ -59,7 +62,91 @@
                         {{ run.started_at }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ run.ended_at or "-" }}
+                        {% if run.ended_at %}
+                            <span class="text-xs">
+                                〜 {{ (run.ended_at | replace('T', ' ') | replace('Z', '') | replace('+00:00', ''))[:19] }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                            onclick="toggleRunDetails('{{ run.run_id }}')"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                            詳細
+                        </button>
+                    </td>
+                </tr>
+                <!-- 詳細行 -->
+                <tr id="details-{{ run.run_id }}" class="hidden">
+                    <td colspan="6" class="px-6 py-4 bg-gray-50">
+                        <div class="space-y-4">
+                            <!-- 基本情報 -->
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="font-medium text-gray-700">Run ID:</span>
+                                    <code class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">{{ run.run_id }}</code>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-gray-700">ステータス:</span>
+                                    <span class="ml-2
+                                        {% if run.status == 'success' %}text-green-600
+                                        {% elif run.status == 'failed' %}text-red-600
+                                        {% else %}text-yellow-600{% endif %}
+                                    ">{{ run.status }}</span>
+                                </div>
+                            </div>
+
+                            <!-- エラー詳細 -->
+                            {% if run.error %}
+                            <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <h4 class="text-sm font-medium text-red-800 mb-2">エラー詳細</h4>
+                                <pre class="text-xs text-red-700 whitespace-pre-wrap bg-red-100 p-2 rounded overflow-auto max-h-32">{{ run.error }}</pre>
+                            </div>
+                            {% endif %}
+
+                            <!-- ステップ結果 -->
+                            {% if run.steps %}
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">ステップ実行結果</h4>
+                                <div class="space-y-2">
+                                    {% for step_result in run.steps %}
+                                    <div class="p-3 bg-white border border-gray-200 rounded-lg">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-medium text-gray-900 text-sm">{{ step_result.id }}</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                                {% if step_result.status == 'success' %}
+                                                    bg-green-100 text-green-800
+                                                {% else %}
+                                                    bg-red-100 text-red-800
+                                                {% endif %}
+                                            ">
+                                                {% if step_result.status == 'success' %}成功{% else %}失敗{% endif %}
+                                            </span>
+                                        </div>
+                                        {% if step_result.error %}
+                                        <p class="text-xs text-red-600 mb-2">{{ step_result.error }}</p>
+                                        {% endif %}
+                                        {% if step_result.result %}
+                                        <details class="text-xs">
+                                            <summary class="cursor-pointer text-gray-600 hover:text-gray-800">出力を表示</summary>
+                                            <pre class="mt-2 p-2 bg-gray-900 text-gray-100 rounded overflow-auto max-h-48">{{ step_result.result | tojson(indent=2) }}</pre>
+                                        </details>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- 完全な JSON -->
+                            <details class="text-xs">
+                                <summary class="cursor-pointer text-gray-600 hover:text-gray-800">完全な JSON (デバッグ用)</summary>
+                                <pre class="mt-2 p-3 bg-gray-900 text-gray-100 rounded overflow-auto max-h-64">{{ run.model_dump() | tojson(indent=2) }}</pre>
+                            </details>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -76,4 +163,13 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleRunDetails(runId) {
+    const detailsRow = document.getElementById('details-' + runId);
+    detailsRow.classList.toggle('hidden');
+}
+</script>
 {% endblock %}

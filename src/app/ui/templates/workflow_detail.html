@@ -39,21 +39,42 @@
             </div>
             {% endif %}
         </div>
-        <button
-            class="px-6 py-2 rounded-md text-sm font-medium transition-colors
-                {% if not error %}
-                    bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                {% else %}
-                    bg-gray-300 text-gray-500 cursor-not-allowed
-                {% endif %}
-            "
-            hx-post="/api/workflows/{{ name }}/run"
-            hx-target="#toast-container"
-            hx-swap="beforeend"
-            {% if error %}disabled{% endif %}
-        >
-            Run
-        </button>
+        <div class="flex items-center gap-3">
+            <a
+                href="/workflows/{{ name }}/edit"
+                class="px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+            >
+                ビジュアル編集
+            </a>
+            <button
+                class="px-4 py-2 rounded-md text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+                data-delete-workflow="{{ name }}"
+            >
+                削除
+            </button>
+            <button
+                class="px-6 py-2 rounded-md text-sm font-medium transition-colors relative
+                    {% if not error %}
+                        bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                    {% else %}
+                        bg-gray-300 text-gray-500 cursor-not-allowed
+                    {% endif %}
+                "
+                hx-post="/api/workflows/{{ name }}/run"
+                hx-target="#toast-container"
+                hx-swap="beforeend"
+                {% if error %}disabled{% endif %}
+            >
+                <span class="htmx-indicator inline-flex items-center">
+                    <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Running...
+                </span>
+                <span class="htmx-content">Run</span>
+            </button>
+        </div>
     </div>
 
     {% if error %}
@@ -90,37 +111,63 @@
 </div>
 {% endif %}
 
-<div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-    <details {% if not error %}open{% endif %}>
-        <summary class="cursor-pointer text-lg font-semibold text-gray-900 mb-4">
-            YAML 定義
-        </summary>
-        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"><code>{{ yaml_content }}</code></pre>
-    </details>
-</div>
-
 <div class="bg-white rounded-lg border border-gray-200 p-6">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">実行履歴</h2>
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">実行履歴</h2>
+        <a href="/runs" class="text-sm text-blue-600 hover:text-blue-800">すべて表示 →</a>
+    </div>
 
     {% if runs %}
     <div class="space-y-3">
         {% for run in runs %}
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center space-x-3">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    {% if run.status == 'success' %}
-                        bg-green-100 text-green-800
-                    {% elif run.status == 'failed' %}
-                        bg-red-100 text-red-800
-                    {% else %}
-                        bg-yellow-100 text-yellow-800
-                    {% endif %}
-                ">
-                    {{ run.status }}
-                </span>
-                <span class="text-sm text-gray-900">{{ run.run_id }}</span>
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="flex items-center justify-between p-3 bg-gray-50">
+                <div class="flex items-center space-x-3">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if run.status == 'success' %}
+                            bg-green-100 text-green-800
+                        {% elif run.status == 'failed' %}
+                            bg-red-100 text-red-800
+                        {% else %}
+                            bg-yellow-100 text-yellow-800
+                        {% endif %}
+                    ">
+                        {{ run.status }}
+                    </span>
+                    <span class="text-sm text-gray-900 font-mono">{{ run.run_id }}</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-xs text-gray-500">{{ run.started_at }}</span>
+                    <button
+                        onclick="toggleDetails('{{ run.run_id }}')"
+                        class="text-blue-600 hover:text-blue-800 text-xs"
+                    >詳細</button>
+                </div>
             </div>
-            <span class="text-xs text-gray-500">{{ run.started_at }}</span>
+            <div id="details-{{ run.run_id }}" class="hidden p-3 bg-white border-t border-gray-200">
+                {% if run.error %}
+                <div class="p-2 bg-red-50 rounded mb-2">
+                    <p class="text-xs text-red-700 break-words">{{ run.error }}</p>
+                </div>
+                {% endif %}
+                {% if run.steps %}
+                <div class="space-y-2">
+                    {% for step_result in run.steps %}
+                    <div class="text-xs p-2 bg-gray-50 rounded">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium">{{ step_result.id }}</span>
+                            <span class="{% if step_result.status == 'success' %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if step_result.status == 'success' %}成功{% else %}失敗{% endif %}
+                            </span>
+                        </div>
+                        {% if step_result.error %}
+                        <p class="text-red-600 mt-1">{{ step_result.error }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -128,4 +175,11 @@
     <p class="text-gray-500 text-sm">まだ実行履歴がありません。</p>
     {% endif %}
 </div>
+
+<script>
+function toggleDetails(runId) {
+    const el = document.getElementById('details-' + runId);
+    el.classList.toggle('hidden');
+}
+</script>
 {% endblock %}

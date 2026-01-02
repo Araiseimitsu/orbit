@@ -4,8 +4,18 @@
 
 {% block content %}
 <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Workflows</h1>
-    <p class="mt-2 text-gray-600">ワークフロー一覧</p>
+    <div class="flex items-start justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Workflows</h1>
+            <p class="mt-2 text-gray-600">ワークフロー一覧</p>
+        </div>
+        <a
+            href="/workflows/new/visual"
+            class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+        >
+            + ビジュアル作成
+        </a>
+    </div>
 </div>
 
 {% if workflows %}
@@ -59,9 +69,30 @@
         </p>
         {% endif %}
 
-        <div class="mt-4 pt-4 border-t border-gray-100">
+        <div class="mt-4 pt-4 border-t border-gray-100 space-y-2">
+            <a
+                href="/workflows/{{ workflow.name }}/edit"
+                class="w-full inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors
+                    {% if workflow.is_valid %}
+                        bg-white text-gray-700 border border-gray-300 hover:bg-gray-50
+                    {% else %}
+                        bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed pointer-events-none
+                    {% endif %}
+                "
+                {% if not workflow.is_valid %}aria-disabled="true"{% endif %}
+            >
+                編集
+            </a>
             <button
-                class="w-full px-4 py-2 rounded-md text-sm font-medium transition-colors
+                class="w-full inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors
+                    bg-red-50 text-red-700 border border-red-200 hover:bg-red-100
+                "
+                data-delete-workflow="{{ workflow.name }}"
+            >
+                削除
+            </button>
+            <button
+                class="w-full px-4 py-2 rounded-md text-sm font-medium transition-colors relative
                     {% if workflow.is_valid %}
                         bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                     {% else %}
@@ -71,10 +102,16 @@
                 hx-post="/api/workflows/{{ workflow.name }}/run"
                 hx-target="#toast-container"
                 hx-swap="beforeend"
-                hx-indicator=".htmx-indicator"
                 {% if not workflow.is_valid %}disabled{% endif %}
             >
-                Run
+                <span class="htmx-indicator inline-flex items-center">
+                    <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Running...
+                </span>
+                <span class="htmx-content">Run</span>
             </button>
         </div>
     </div>
@@ -86,7 +123,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
     <h3 class="mt-2 text-sm font-medium text-gray-900">ワークフローがありません</h3>
-    <p class="mt-1 text-sm text-gray-500">workflows/ ディレクトリにYAMLファイルを追加してください。</p>
+    <p class="mt-1 text-sm text-gray-500">右上の「+ ビジュアル作成」からワークフローを作成してください。</p>
 </div>
 {% endif %}
 {% endblock %}

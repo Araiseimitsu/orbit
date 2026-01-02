@@ -181,6 +181,6 @@ POST /api/scheduler/reload              # ワークフロー再読み込み
 ## 次のフェーズ（Day 5 以降）
 
 - Day 5: Google Sheets Read アクション実装
-- Day 6: AI アクション実装（OpenAI/Gemini）
+- Day 6: AI アクション実装（Gemini）
 - Day 7-8: UI 仕上げ
 - Day 9-10: 運用対応（タイムアウト、ログローテーション）

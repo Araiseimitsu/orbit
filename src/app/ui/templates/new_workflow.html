@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}New Workflow - ORBIT{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h1 class="text-3xl font-bold text-gray-900">新規ワークフロー作成</h1>
+        <p class="mt-2 text-gray-600">
+            ワークフローはビジュアル作成画面で完結します。YAML を直接編集する必要はありません。
+        </p>
+        <div class="mt-6">
+            <a href="/workflows/new/visual" class="inline-flex items-center px-5 py-2 rounded-md text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">
+                ビジュアルで作成する
+            </a>
+        </div>
+    </div>
+
+    <div class="mt-6 flex items-center gap-3">
+        <a href="/" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
+            ダッシュボードへ戻る
+        </a>
+        <a href="/runs" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">
+            実行履歴を見る
+        </a>
+    </div>
+</div>
+{% endblock %}

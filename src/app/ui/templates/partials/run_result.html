@@ -1,35 +1,73 @@
 <!-- Run Result Toast Notification -->
 <div class="toast-item transform transition-all duration-300 ease-out"
-     x-data="{ show: true }"
-     x-init="setTimeout(() => { show = false; setTimeout(() => $el.remove(), 300) }, 5000)"
+     data-toast-id="{{ run.run_id }}"
+     x-data="{ show: true, expanded: false }"
      x-show="show"
      x-transition:enter="translate-x-0 opacity-100"
      x-transition:leave="translate-x-full opacity-0">
-    <div class="max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
-        <div class="p-4">
+    <div class="w-full min-w-[320px] sm:min-w-[420px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+        <div class="p-5">
             <div class="flex items-start">
                 {% if run.status == 'success' %}
                 <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="h-7 w-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">{{ workflow_name }}</p>
-                    <p class="mt-1 text-sm text-green-600">実行成功</p>
-                    <p class="mt-1 text-xs text-gray-500">{{ run.run_id }}</p>
+                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-green-600">実行成功</p>
+                    <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
+                    {% if run.steps %}
+                    <button
+                        x-on:click="expanded = !expanded"
+                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                        <span x-show="!expanded">詳細を表示</span>
+                        <span x-show="expanded">詳細を非表示</span>
+                    </button>
+                    <div x-show="expanded" class="mt-2 text-sm bg-gray-50 rounded p-3 max-h-32 overflow-auto">
+                        <p class="font-medium text-gray-700 mb-1">ステップ結果:</p>
+                        {% for step_result in run.steps %}
+                        <div class="mb-1">
+                            <span class="text-gray-600">{{ step_result.id }}:</span>
+                            <span class="{% if step_result.status == 'success' %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if step_result.status == 'success' %}OK{% else %}NG{% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="h-7 w-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">{{ workflow_name }}</p>
-                    <p class="mt-1 text-sm text-red-600">実行失敗</p>
+                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-red-600">実行失敗</p>
+                    <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
                     {% if run.error %}
-                    <p class="mt-1 text-xs text-red-500 truncate" title="{{ run.error }}">{{ run.error | truncate(50) }}</p>
+                    <button
+                        x-on:click="expanded = !expanded"
+                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                        <span x-show="!expanded">エラー詳細を表示</span>
+                        <span x-show="expanded">エラー詳細を非表示</span>
+                    </button>
+                    <div x-show="expanded" class="mt-2">
+                        <p class="text-sm text-red-700 bg-red-50 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
+                        {% if run.steps %}
+                        <p class="mt-2 text-sm font-medium text-gray-700">失敗したステップ:</p>
+                        {% for step_result in run.steps %}
+                            {% if step_result.status != 'success' %}
+                            <p class="text-sm text-red-600">{{ step_result.id }}</p>
+                            {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -47,13 +85,15 @@
     </div>
 </div>
 <script>
-    // 5秒後に自動削除
-    setTimeout(() => {
-        const toast = document.querySelector('.toast-item:last-child');
-        if (toast) {
+    // 成功時は5秒、失敗時は10秒で自動削除
+    (() => {
+        const toast = document.querySelector('[data-toast-id="{{ run.run_id }}"]');
+        if (!toast) return;
+        const duration = {{ '10000' if run.status == 'failed' else '5000' }};
+        setTimeout(() => {
             toast.style.transform = 'translateX(100%)';
             toast.style.opacity = '0';
             setTimeout(() => toast.remove(), 300);
-        }
-    }, 5000);
+        }, duration);
+    })();
 </script>
