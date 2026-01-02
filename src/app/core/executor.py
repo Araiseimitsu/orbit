@@ -1,0 +1,156 @@
+"""
+ORBIT MVP - Workflow Executor
+ワークフローを直列実行するエンジン
+"""
+import logging
+from datetime import datetime, timezone, timedelta
+from typing import Any
+from pathlib import Path
+
+from .models import Workflow, RunLog
+from .registry import get_registry
+from .templating import render_params
+
+logger = logging.getLogger(__name__)
+
+# 日本時間
+JST = timezone(timedelta(hours=9))
+
+
+def generate_run_id() -> str:
+    """実行ID生成: YYYYMMDD_HHMMSS_xxxx"""
+    import secrets
+    now = datetime.now(JST)
+    suffix = secrets.token_hex(2)
+    return f"{now.strftime('%Y%m%d_%H%M%S')}_{suffix}"
+
+
+class Executor:
+    """ワークフロー実行エンジン"""
+
+    def __init__(self, base_dir: Path):
+        self.base_dir = base_dir
+        self.registry = get_registry()
+
+    async def run(self, workflow: Workflow) -> RunLog:
+        """
+        ワークフローを実行
+
+        Args:
+            workflow: 実行するワークフロー
+
+        Returns:
+            RunLog: 実行結果
+        """
+        run_id = generate_run_id()
+        started_at = datetime.now(JST)
+
+        # コンテキスト初期化
+        context: dict[str, Any] = {
+            "run_id": run_id,
+            "workflow": workflow.name,
+            "now": started_at.isoformat(),
+            "base_dir": self.base_dir,
+        }
+
+        # 実行ログ初期化
+        run_log = RunLog(
+            run_id=run_id,
+            workflow=workflow.name,
+            status="running",
+            started_at=started_at.isoformat(),
+            steps=[],
+        )
+
+        logger.info(f"Starting workflow: {workflow.name} (run_id: {run_id})")
+
+        try:
+            # ステップを順番に実行
+            for step in workflow.steps:
+                step_result = await self._execute_step(step.id, step.type, step.params, context)
+                run_log.steps.append(step_result)
+
+                if step_result["status"] == "failed":
+                    run_log.status = "failed"
+                    run_log.error = step_result.get("error")
+                    break
+                else:
+                    # 成功した結果を context に格納（次ステップで参照可能）
+                    context[step.id] = step_result.get("result", {})
+
+            else:
+                # 全ステップ成功
+                run_log.status = "success"
+
+        except Exception as e:
+            logger.exception(f"Workflow execution error: {e}")
+            run_log.status = "failed"
+            run_log.error = str(e)
+
+        # 終了時刻
+        ended_at = datetime.now(JST)
+        run_log.ended_at = ended_at.isoformat()
+
+        logger.info(
+            f"Workflow completed: {workflow.name} "
+            f"(status: {run_log.status}, duration: {(ended_at - started_at).total_seconds():.2f}s)"
+        )
+
+        return run_log
+
+    async def _execute_step(
+        self,
+        step_id: str,
+        step_type: str,
+        params: dict[str, Any],
+        context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        単一ステップを実行
+
+        Returns:
+            {
+                "id": step_id,
+                "type": step_type,
+                "status": "success" | "failed",
+                "result": {...},   # 成功時
+                "error": "..."     # 失敗時
+            }
+        """
+        logger.debug(f"Executing step: {step_id} (type: {step_type})")
+
+        # アクション取得
+        action = self.registry.get(step_type)
+        if not action:
+            error_msg = f"Unknown action type: {step_type}"
+            logger.error(error_msg)
+            return {
+                "id": step_id,
+                "type": step_type,
+                "status": "failed",
+                "error": error_msg,
+            }
+
+        try:
+            # パラメータをテンプレートレンダリング
+            rendered_params = render_params(params, context)
+
+            # アクション実行
+            result = await action(rendered_params, context)
+
+            logger.debug(f"Step completed: {step_id}")
+            return {
+                "id": step_id,
+                "type": step_type,
+                "status": "success",
+                "result": result,
+            }
+
+        except Exception as e:
+            logger.exception(f"Step failed: {step_id} - {e}")
+            return {
+                "id": step_id,
+                "type": step_type,
+                "status": "failed",
+                "error": str(e),
+            }

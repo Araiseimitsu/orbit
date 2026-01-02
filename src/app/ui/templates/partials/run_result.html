@@ -1,0 +1,59 @@
+<!-- Run Result Toast Notification -->
+<div class="toast-item transform transition-all duration-300 ease-out"
+     x-data="{ show: true }"
+     x-init="setTimeout(() => { show = false; setTimeout(() => $el.remove(), 300) }, 5000)"
+     x-show="show"
+     x-transition:enter="translate-x-0 opacity-100"
+     x-transition:leave="translate-x-full opacity-0">
+    <div class="max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+        <div class="p-4">
+            <div class="flex items-start">
+                {% if run.status == 'success' %}
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3 w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900">{{ workflow_name }}</p>
+                    <p class="mt-1 text-sm text-green-600">実行成功</p>
+                    <p class="mt-1 text-xs text-gray-500">{{ run.run_id }}</p>
+                </div>
+                {% else %}
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3 w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900">{{ workflow_name }}</p>
+                    <p class="mt-1 text-sm text-red-600">実行失敗</p>
+                    {% if run.error %}
+                    <p class="mt-1 text-xs text-red-500 truncate" title="{{ run.error }}">{{ run.error | truncate(50) }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button onclick="this.closest('.toast-item').remove()"
+                            class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // 5秒後に自動削除
+    setTimeout(() => {
+        const toast = document.querySelector('.toast-item:last-child');
+        if (toast) {
+            toast.style.transform = 'translateX(100%)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+</script>

@@ -1,0 +1,8 @@
+name: hello_world
+trigger:
+  type: manual
+steps:
+  - id: greet
+    type: log
+    params:
+      message: "Hello, ORBIT!"

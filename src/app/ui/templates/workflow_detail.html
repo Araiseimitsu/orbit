@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ name }} - ORBIT{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/" class="text-blue-600 hover:text-blue-800 text-sm">&larr; Dashboard に戻る</a>
+</div>
+
+<div class="bg-white rounded-lg border {% if error %}border-red-300{% else %}border-gray-200{% endif %} p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ name }}</h1>
+            {% if workflow %}
+            <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                <span class="inline-flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ workflow.trigger.type }}
+                    {% if workflow.trigger.type == 'schedule' %}
+                    <code class="ml-1 text-xs bg-gray-100 px-1 rounded">{{ workflow.trigger.cron }}</code>
+                    {% endif %}
+                </span>
+                {% if next_run %}
+                <span class="inline-flex items-center text-green-600">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    次回: {{ next_run[:19] | replace('T', ' ') }}
+                </span>
+                {% endif %}
+                <span class="inline-flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    {{ workflow.steps | length }} steps
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        <button
+            class="px-6 py-2 rounded-md text-sm font-medium transition-colors
+                {% if not error %}
+                    bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                {% else %}
+                    bg-gray-300 text-gray-500 cursor-not-allowed
+                {% endif %}
+            "
+            hx-post="/api/workflows/{{ name }}/run"
+            hx-target="#toast-container"
+            hx-swap="beforeend"
+            {% if error %}disabled{% endif %}
+        >
+            Run
+        </button>
+    </div>
+
+    {% if error %}
+    <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">バリデーションエラー</h3>
+                <pre class="mt-2 text-sm text-red-700 whitespace-pre-wrap">{{ error }}</pre>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if workflow %}
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Steps</h2>
+    <div class="space-y-3">
+        {% for step in workflow.steps %}
+        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+            <span class="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-600 rounded-full text-xs font-medium mr-3">
+                {{ loop.index }}
+            </span>
+            <div class="flex-1">
+                <span class="font-medium text-gray-900">{{ step.id }}</span>
+                <span class="ml-2 text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">{{ step.type }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+    <details {% if not error %}open{% endif %}>
+        <summary class="cursor-pointer text-lg font-semibold text-gray-900 mb-4">
+            YAML 定義
+        </summary>
+        <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"><code>{{ yaml_content }}</code></pre>
+    </details>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">実行履歴</h2>
+
+    {% if runs %}
+    <div class="space-y-3">
+        {% for run in runs %}
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if run.status == 'success' %}
+                        bg-green-100 text-green-800
+                    {% elif run.status == 'failed' %}
+                        bg-red-100 text-red-800
+                    {% else %}
+                        bg-yellow-100 text-yellow-800
+                    {% endif %}
+                ">
+                    {{ run.status }}
+                </span>
+                <span class="text-sm text-gray-900">{{ run.run_id }}</span>
+            </div>
+            <span class="text-xs text-gray-500">{{ run.started_at }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-500 text-sm">まだ実行履歴がありません。</p>
+    {% endif %}
+</div>
+{% endblock %}
