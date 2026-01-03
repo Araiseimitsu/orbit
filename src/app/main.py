@@ -3,6 +3,7 @@ ORBIT MVP - FastAPI Application Entry Point
 """
 import json
 import logging
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +42,15 @@ STATIC_DIR = Path(__file__).resolve().parent / "ui" / "static"
 
 # Jinja2 テンプレート設定
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+STATIC_VERSION = str(int(time.time()))
+
+
+def static_mtime(path: str) -> str:
+    """静的ファイルの更新時刻をキャッシュバスターに利用"""
+    try:
+        return str(int((STATIC_DIR / path).stat().st_mtime))
+    except FileNotFoundError:
+        return STATIC_VERSION
 
 
 def tojson_utf8(value, indent: int = 2) -> Markup:
@@ -49,6 +59,8 @@ def tojson_utf8(value, indent: int = 2) -> Markup:
 
 
 templates.env.filters["tojson_utf8"] = tojson_utf8
+templates.env.globals["static_version"] = STATIC_VERSION
+templates.env.globals["static_mtime"] = static_mtime
 
 # コンポーネント初期化
 loader = WorkflowLoader(WORKFLOWS_DIR)

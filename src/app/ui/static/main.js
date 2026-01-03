@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHtmxEvents();
     initToastAutoScroll();
     initGlobalEventListeners();
+    initHelpModal();
 });
 
 /**
@@ -106,6 +107,44 @@ function initGlobalEventListeners() {
             window.location.reload();
         } catch (error) {
             window.alert(error.message || '更新に失敗しました');
+        }
+    });
+}
+
+/**
+ * Help Modal
+ */
+function initHelpModal() {
+    const modal = document.getElementById('help-modal');
+    if (!modal) return;
+
+    const openButtons = document.querySelectorAll('[data-help-open]');
+    const closeButtons = modal.querySelectorAll('[data-help-close]');
+    const overlay = modal.querySelector('[data-help-overlay]');
+
+    const openModal = () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+        openButtons.forEach(btn => btn.setAttribute('aria-expanded', 'true'));
+    };
+
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+        openButtons.forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+    };
+
+    openButtons.forEach(btn => btn.addEventListener('click', openModal));
+    closeButtons.forEach(btn => btn.addEventListener('click', closeModal));
+    if (overlay) {
+        overlay.addEventListener('click', closeModal);
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModal();
         }
     });
 }
