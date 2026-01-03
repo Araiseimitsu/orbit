@@ -3,230 +3,215 @@
 {% block title %}{{ name }} - ORBIT{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="/" class="text-blue-600 hover:text-blue-800 text-sm">&larr; Dashboard に戻る</a>
+<div class="mb-8">
+    <a href="/"
+        class="text-blue-500 hover:text-blue-400 text-xs font-bold tracking-widest uppercase flex items-center transition-colors">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Dashboard
+    </a>
 </div>
 
-<div class="bg-white rounded-lg border {% if error %}border-red-300{% else %}border-gray-200{% endif %} p-6 mb-6">
-    <div class="flex items-center justify-between mb-4">
+<div class="apple-card p-8 mb-8">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ name }}</h1>
+            <div class="flex items-center space-x-3 mb-2">
+                <h1 class="text-4xl font-extrabold tracking-tight text-white">{{ name }}</h1>
+                <div
+                    class="apple-badge {% if workflow and workflow.enabled %}badge-success{% else %}badge-neutral{% endif %}">
+                    {% if workflow and workflow.enabled %}ACTIVE{% else %}PAUSED{% endif %}
+                </div>
+            </div>
+
             {% if workflow %}
-            <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                <span class="inline-flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div class="flex flex-wrap items-center gap-6 mt-4">
+                <div class="flex items-center text-xs text-gray-400 font-medium">
+                    <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {% if workflow.trigger.type == 'schedule' %}
-                    スケジュール実行（JST）
+                    Schedule: <code
+                        class="ml-1.5 text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">{{ workflow.trigger.cron }}</code>
                     {% else %}
-                    手動実行
+                    Manual Execution
                     {% endif %}
-                    {% if workflow.trigger.type == 'schedule' %}
-                    <code class="ml-1 text-xs bg-gray-100 px-1 rounded">cron: {{ workflow.trigger.cron }}</code>
-                    {% endif %}
-                </span>
-                <span class="inline-flex items-center">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                        {% if workflow.enabled %}
-                            bg-green-100 text-green-800
-                        {% else %}
-                            bg-gray-100 text-gray-700
-                        {% endif %}
-                    ">
-                        {% if workflow.enabled %}アクティブ{% else %}停止中{% endif %}
-                    </span>
-                </span>
+                </div>
+
                 {% if next_run %}
-                <span class="inline-flex items-center text-green-600">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <div class="flex items-center text-xs text-green-400 font-bold">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    次回（JST）: {{ next_run[:19] | replace('T', ' ') }}
-                </span>
+                    Next Run: {{ next_run[:16] | replace('T', ' ') }}
+                </div>
                 {% endif %}
-                <span class="inline-flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+
+                <div class="flex items-center text-xs text-gray-400 font-medium">
+                    <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                    {{ workflow.steps | length }} steps
-                </span>
+                    {{ workflow.steps | length }} Process Steps
+                </div>
             </div>
             {% endif %}
         </div>
-        <div class="flex items-center gap-3">
-            <a
-                href="/workflows/{{ name }}/edit"
-                class="px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-            >
-                ビジュアル編集
+
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="/workflows/{{ name }}/edit" class="apple-button apple-button-secondary px-6 py-2.5 text-sm">
+                Visual Editor
             </a>
             {% if workflow %}
-            <button
-                class="px-4 py-2 rounded-md text-sm font-medium transition-colors
-                    {% if workflow.enabled %}
-                        bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100
-                    {% else %}
-                        bg-green-50 text-green-700 border border-green-200 hover:bg-green-100
-                    {% endif %}
-                "
-                data-toggle-workflow="{{ name }}"
-                data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}"
-            >
-                {% if workflow.enabled %}停止{% else %}有効化{% endif %}
+            <button class="apple-button apple-button-secondary px-6 py-2.5 text-sm" data-toggle-workflow="{{ name }}"
+                data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}">
+                {% if workflow.enabled %}Pause{% else %}Enable{% endif %}
             </button>
             {% endif %}
-            <button
-                class="px-4 py-2 rounded-md text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
-                data-delete-workflow="{{ name }}"
-            >
-                削除
+            <button class="apple-button apple-button-danger px-6 py-2.5 text-sm" data-delete-workflow="{{ name }}">
+                Delete
             </button>
             <button
-                class="px-6 py-2 rounded-md text-sm font-medium transition-colors relative
-                    {% if not error %}
-                        bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    {% else %}
-                        bg-gray-300 text-gray-500 cursor-not-allowed
-                    {% endif %}
-                "
-                hx-post="/api/workflows/{{ name }}/run"
-                hx-target="#toast-container"
-                hx-swap="beforeend"
-                {% if error %}disabled{% endif %}
-            >
-                <span class="htmx-indicator inline-flex items-center">
+                class="apple-button apple-button-primary px-8 py-2.5 text-sm run-button {% if error %}opacity-50 cursor-not-allowed{% endif %}"
+                hx-post="/api/workflows/{{ name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if error
+                %}disabled{% endif %}>
+                <div class="htmx-indicator flex items-center">
                     <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
                     </svg>
-                    Running...
-                </span>
-                <span class="htmx-content">Run</span>
+                    Executing...
+                </div>
+                <div class="htmx-content">Run Workflow</div>
             </button>
         </div>
     </div>
 
     {% if error %}
-    <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <div class="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
         <div class="flex items-start">
-            <svg class="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg class="w-6 h-6 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-red-800">バリデーションエラー</h3>
-                <pre class="mt-2 text-sm text-red-700 whitespace-pre-wrap">{{ error }}</pre>
+            <div class="ml-4">
+                <h3 class="text-sm font-bold text-red-400 uppercase tracking-widest">Configuration Error</h3>
+                <pre class="mt-3 text-sm text-red-300 whitespace-pre-wrap font-mono">{{ error }}</pre>
             </div>
         </div>
     </div>
     {% endif %}
 </div>
 
-{% if workflow %}
-<div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Steps</h2>
-        <div class="space-y-3">
-        {% for step in workflow.steps %}
-        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-            <span class="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-600 rounded-full text-xs font-medium mr-3">
-                {{ loop.index }}
-            </span>
-            <div class="flex-1">
-                <span class="font-medium text-gray-900">{{ step.id }}</span>
-                <span class="ml-2 text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">{{ step.type }}</span>
+<div class="grid lg:grid-cols-3 gap-8">
+    <!-- Steps Section -->
+    <div class="lg:col-span-1">
+        <div class="apple-card p-6 h-full">
+            <h2 class="text-lg font-extrabold text-white mb-6 flex items-center">
+                <span class="w-1.5 h-6 bg-blue-500 rounded-full mr-3"></span>
+                Workflow Steps
+            </h2>
+            <div class="space-y-3">
+                {% if workflow %}
+                {% for step in workflow.steps %}
+                <div
+                    class="flex items-center p-4 bg-white/5 rounded-xl border border-white/5 group hover:border-white/10 transition-colors">
+                    <span
+                        class="flex items-center justify-center w-7 h-7 bg-blue-500 text-white rounded-full text-[10px] font-black mr-4 shadow-lg shadow-blue-500/20">
+                        {{ loop.index }}
+                    </span>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="text-sm font-bold text-gray-100 truncate">{{ step.id }}</div>
+                        <div class="text-[10px] text-gray-500 font-mono mt-0.5">{{ step.type | upper }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
             </div>
         </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-{% if workflow and workflow.trigger.type == 'schedule' %}
-<div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 mb-2">スケジュールの説明</h2>
-    <p class="text-sm text-gray-600 mb-3">
-        cron 形式で実行時刻を指定します。タイムゾーンは JST 固定です。
-    </p>
-    <div class="text-xs text-gray-500 space-y-1">
-        <div>形式: 分(0-59) 時(0-23) 日(1-31) 月(1-12) 曜日(0-6/SUN-SAT)</div>
-        <div>記号: <code class="bg-gray-100 px-1 rounded">*</code> = すべて / <code class="bg-gray-100 px-1 rounded">*/n</code> = nごと</div>
-        <div>例: <code class="bg-gray-100 px-1 rounded">0 9 * * *</code> = 毎日 09:00</div>
-        <div>例: <code class="bg-gray-100 px-1 rounded">*/5 * * * *</code> = 5 分ごと</div>
-        <div>例: <code class="bg-gray-100 px-1 rounded">0 18 * * 1-5</code> = 平日 18:00</div>
-        <div>注意: 停止中はスケジュール登録されません（手動実行は可能）</div>
-    </div>
-</div>
-{% endif %}
-
-<div class="bg-white rounded-lg border border-gray-200 p-6">
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">実行履歴</h2>
-        <a href="/runs" class="text-sm text-blue-600 hover:text-blue-800">すべて表示 →</a>
     </div>
 
-    {% if runs %}
-    <div class="space-y-3">
-        {% for run in runs %}
-        <div class="border border-gray-200 rounded-lg overflow-hidden">
-            <div class="flex items-center justify-between p-3 bg-gray-50">
-                <div class="flex items-center space-x-3">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        {% if run.status == 'success' %}
-                            bg-green-100 text-green-800
-                        {% elif run.status == 'failed' %}
-                            bg-red-100 text-red-800
-                        {% else %}
-                            bg-yellow-100 text-yellow-800
-                        {% endif %}
-                    ">
-                        {{ run.status }}
-                    </span>
-                    <span class="text-sm text-gray-900 font-mono">{{ run.run_id }}</span>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <span class="text-xs text-gray-500">{{ run.started_at }}</span>
-                    <button
-                        onclick="toggleDetails('{{ run.run_id }}')"
-                        class="text-blue-600 hover:text-blue-800 text-xs"
-                    >詳細</button>
-                </div>
+    <!-- History Section -->
+    <div class="lg:col-span-2">
+        <div class="apple-card p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-extrabold text-white flex items-center">
+                    <span class="w-1.5 h-6 bg-accent-green rounded-full mr-3"></span>
+                    Recent Activity
+                </h2>
+                <a href="/runs"
+                    class="text-[10px] font-bold text-blue-400 hover:text-blue-300 tracking-widest uppercase transition-colors">See
+                    Full Audit Log &rarr;</a>
             </div>
-            <div id="details-{{ run.run_id }}" class="hidden p-3 bg-white border-t border-gray-200">
-                {% if run.error %}
-                <div class="p-2 bg-red-50 rounded mb-2">
-                    <p class="text-xs text-red-700 break-words">{{ run.error }}</p>
-                </div>
-                {% endif %}
-                {% if run.steps %}
-                <div class="space-y-2">
-                    {% for step_result in run.steps %}
-                    <div class="text-xs p-2 bg-gray-50 rounded">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium">{{ step_result.id }}</span>
-                            <span class="{% if step_result.status == 'success' %}text-green-600{% else %}text-red-600{% endif %}">
-                                {% if step_result.status == 'success' %}成功{% else %}失敗{% endif %}
+
+            {% if runs %}
+            <div class="space-y-3">
+                {% for run in runs %}
+                <div class="border border-white/5 rounded-2xl overflow-hidden bg-white/5">
+                    <div class="flex items-center justify-between p-4 bg-white/5">
+                        <div class="flex items-center space-x-4">
+                            <span
+                                class="apple-badge {% if run.status == 'success' %}badge-success{% elif run.status == 'failed' %}badge-error{% else %}badge-pending{% endif %}">
+                                {{ run.status }}
                             </span>
+                            <span class="text-xs font-mono text-gray-400 opacity-60">{{ run.run_id }}</span>
                         </div>
-                        {% if step_result.error %}
-                        <p class="text-red-600 mt-1">{{ step_result.error }}</p>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-[10px] font-medium text-gray-500 uppercase tracking-tighter">{{
+                                run.started_at }}</span>
+                            <button onclick="toggleDetails('{{ run.run_id }}')"
+                                class="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest transition-colors">Details</button>
+                        </div>
+                    </div>
+                    <div id="details-{{ run.run_id }}" class="hidden p-5 bg-black/20 border-t border-white/5">
+                        {% if run.error %}
+                        <div class="p-3 bg-red-500/10 rounded-xl mb-4 border border-red-500/20">
+                            <p class="text-[11px] text-red-300 font-mono break-words">{{ run.error }}</p>
+                        </div>
+                        {% endif %}
+                        {% if run.steps %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {% for step_result in run.steps %}
+                            <div class="text-[11px] p-3 bg-white/5 rounded-xl border border-white/5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-gray-300">{{ step_result.id }}</span>
+                                    <span
+                                        class="{% if step_result.status == 'success' %}text-green-500{% else %}text-red-500{% endif %} font-black uppercase text-[9px]">
+                                        {{ step_result.status | upper }}
+                                    </span>
+                                </div>
+                                {% if step_result.error %}
+                                <p class="text-red-400 mt-2 text-[10px] italic">{{ step_result.error }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
-                    {% endfor %}
                 </div>
-                {% endif %}
+                {% endfor %}
             </div>
+            {% else %}
+            <div class="py-12 text-center">
+                <p class="text-gray-600 text-sm italic font-medium">No activity records recorded yet.</p>
+            </div>
+            {% endif %}
         </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <p class="text-gray-500 text-sm">まだ実行履歴がありません。</p>
-    {% endif %}
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-function toggleDetails(runId) {
-    const el = document.getElementById('details-' + runId);
-    el.classList.toggle('hidden');
-}
+    function toggleDetails(runId) {
+        const el = document.getElementById('details-' + runId);
+        if (!el) return;
+        el.classList.toggle('hidden');
+    }
 </script>
 {% endblock %}

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,87 +8,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-
-        /* HTMX ローディングインジケーター */
-        .htmx-indicator {
-            display: none;
-            opacity: 0;
-            transition: opacity 200ms ease-in;
-        }
-        .htmx-request .htmx-indicator {
-            display: inline-block;
-            opacity: 1;
-        }
-        .htmx-request.htmx-indicator {
-            display: inline-block;
-            opacity: 1;
-        }
-
-        /* スピナーアニメーション */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        /* ボタン無効状態の上書き */
-        button:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .run-button {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .run-button .htmx-indicator {
-            position: absolute;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .run-button .htmx-content {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='app-icon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='index.css') }}?v=1.0.1">
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white border-b border-gray-200">
+
+<body class="min-h-screen flex flex-col">
+    <nav class="nav-glass">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="flex items-center space-x-2">
-                        <span class="text-2xl font-bold text-gray-900">ORBIT</span>
+                    <a href="/" class="flex items-center space-x-3 group">
+                        <div
+                            class="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-blue-500/50 transition-colors">
+                            <img src="{{ url_for('static', path='favicon.svg') }}" class="w-6 h-6" alt="ORBIT Logo">
+                        </div>
+                        <span
+                            class="text-2xl font-bold tracking-tight text-white group-hover:text-blue-400 transition-colors">ORBIT</span>
                     </a>
                     <div class="ml-10 flex items-center space-x-4">
-                        <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
+                        <a href="/"
+                            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
                             Dashboard
                         </a>
-                        <a href="/runs" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
+                        <a href="/runs"
+                            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
                             Runs
                         </a>
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <span class="text-xs text-gray-400" id="status-indicator"></span>
+                    <span class="text-[10px] text-gray-500 font-mono" id="status-indicator">SYSTEM ONLINE</span>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         {% block content %}{% endblock %}
     </main>
 
@@ -95,120 +53,27 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 w-80 sm:w-96"></div>
 
     <!-- Global Loading Overlay -->
-    <div id="global-loader" class="fixed inset-0 bg-black bg-opacity-10 z-40 hidden items-center justify-center">
-        <div class="bg-white rounded-lg p-6 shadow-lg flex items-center space-x-3">
-            <svg class="w-6 h-6 text-blue-600 spinner" fill="none" viewBox="0 0 24 24">
+    <div id="global-loader" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="apple-card p-6 flex items-center space-x-4">
+            <svg class="w-6 h-6 text-blue-500 spinner" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
             </svg>
-            <span class="text-gray-700 font-medium">実行中...</span>
+            <span class="text-white font-medium">Processing...</span>
         </div>
     </div>
 
-    <footer class="border-t border-gray-200 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <p class="text-center text-gray-500 text-sm">ORBIT MVP v0.1.0</p>
+    <footer class="border-t border-white/5 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-gray-600 text-xs tracking-widest uppercase">ORBIT &bull; VERSION 0.1.0 &bull;
+                DESIGNED BY AG</p>
         </div>
     </footer>
 
-    <script>
-        // HTMX リクエスト時にグローバルローダーを表示
-        document.body.addEventListener('htmx:beforeRequest', function(evt) {
-            const target = evt.target;
-            if (target.matches('button[hx-post*="/run"]')) {
-                const loader = document.getElementById('global-loader');
-                loader.classList.remove('hidden');
-                loader.classList.add('flex');
-                target.disabled = true;
-            }
-        });
-
-        document.body.addEventListener('htmx:afterRequest', function(evt) {
-            const loader = document.getElementById('global-loader');
-            loader.classList.add('hidden');
-            loader.classList.remove('flex');
-            const buttons = document.querySelectorAll('button[hx-post*="/run"]');
-            buttons.forEach(btn => btn.disabled = false);
-        });
-
-        // トーストの自動スクロール
-        const observer = new MutationObserver(function() {
-            const container = document.getElementById('toast-container');
-            if (container) {
-                container.scrollTop = container.scrollHeight;
-            }
-        });
-        const toastContainer = document.getElementById('toast-container');
-        if (toastContainer) {
-            observer.observe(toastContainer, { childList: true });
-        }
-
-        // ワークフロー削除（確認ダイアログ付き）
-        document.addEventListener('click', async (event) => {
-            const target = event.target instanceof Element ? event.target.closest('[data-delete-workflow]') : null;
-            if (!target) {
-                return;
-            }
-            event.preventDefault();
-            const name = target.getAttribute('data-delete-workflow');
-            if (!name) {
-                return;
-            }
-            const confirmed = window.confirm(`「${name}」を削除しますか？この操作は取り消せません。`);
-            if (!confirmed) {
-                return;
-            }
-            try {
-                const response = await fetch(`/api/workflows/${encodeURIComponent(name)}/delete`, { method: 'POST' });
-                if (!response.ok) {
-                    const body = await response.json();
-                    throw new Error(body.detail || '削除に失敗しました');
-                }
-                if (window.location.pathname.startsWith(`/workflows/${name}`)) {
-                    window.location.href = '/';
-                } else {
-                    window.location.reload();
-                }
-            } catch (error) {
-                window.alert(error.message || '削除に失敗しました');
-            }
-        });
-
-        // ワークフロー有効/無効の切り替え
-        document.addEventListener('click', async (event) => {
-            const target = event.target instanceof Element ? event.target.closest('[data-toggle-workflow]') : null;
-            if (!target) {
-                return;
-            }
-            event.preventDefault();
-            const name = target.getAttribute('data-toggle-workflow');
-            const current = target.getAttribute('data-enabled') === 'true';
-            if (!name) {
-                return;
-            }
-            const nextState = !current;
-            const label = nextState ? '有効化' : '停止';
-            const confirmed = window.confirm(`「${name}」を${label}しますか？`);
-            if (!confirmed) {
-                return;
-            }
-            try {
-                const response = await fetch(`/api/workflows/${encodeURIComponent(name)}/toggle`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enabled: nextState })
-                });
-                if (!response.ok) {
-                    const body = await response.json();
-                    throw new Error(body.detail || '更新に失敗しました');
-                }
-                window.location.reload();
-            } catch (error) {
-                window.alert(error.message || '更新に失敗しました');
-            }
-        });
-    </script>
-
+    <script src="{{ url_for('static', path='main.js') }}?v=1.0.1"></script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>
