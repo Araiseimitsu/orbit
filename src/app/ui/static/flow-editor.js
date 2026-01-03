@@ -79,6 +79,120 @@
         { key: "size", desc: "ファイルサイズ（bytes）" },
       ],
     },
+    excel_read: {
+      title: "Excel 読み取り",
+      description: "ローカルの Excel から指定範囲のデータを取得します。",
+      params: [
+        {
+          key: "path",
+          desc: "Excel ファイルパス（必須）",
+          example: "runs/output/sample.xlsx",
+        },
+        {
+          key: "sheet",
+          desc: "シート名（省略時はアクティブ）",
+          example: "Sheet1",
+        },
+        {
+          key: "range",
+          desc: "取得範囲（必須）",
+          example: "A1:D10",
+        },
+        {
+          key: "header_row",
+          desc: "1行目をヘッダーとして扱う",
+          example: "true",
+        },
+        {
+          key: "data_only",
+          desc: "数式の結果を返す",
+          example: "true",
+        },
+      ],
+      outputs: [
+        { key: "headers", desc: "ヘッダー配列" },
+        { key: "rows", desc: "ヘッダー付き行データ" },
+        { key: "raw", desc: "生データ（2次元配列）" },
+        { key: "row_count", desc: "行数" },
+        { key: "col_count", desc: "列数" },
+      ],
+    },
+    excel_list_sheets: {
+      title: "Excel シート一覧",
+      description: "Excel ファイル内のシート一覧を取得します。",
+      params: [
+        {
+          key: "path",
+          desc: "Excel ファイルパス（必須）",
+          example: "runs/output/sample.xlsx",
+        },
+      ],
+      outputs: [{ key: "sheets", desc: "シート一覧（title/index）" }],
+    },
+    excel_append: {
+      title: "Excel 追記",
+      description: "シート末尾に行データを追加します。",
+      params: [
+        {
+          key: "path",
+          desc: "Excel ファイルパス（必須）",
+          example: "runs/output/sample.xlsx",
+        },
+        {
+          key: "sheet",
+          desc: "シート名（省略時はアクティブ）",
+          example: "Sheet1",
+        },
+        {
+          key: "values",
+          desc: "2次元配列（JSON文字列も可）",
+          example: '[["A","B"],["1","2"]]',
+        },
+        {
+          key: "start_cell",
+          desc: "追記開始列（行番号は無視）",
+          example: "A1",
+        },
+      ],
+      outputs: [
+        { key: "updated_range", desc: "更新された範囲" },
+        { key: "appended_rows", desc: "追加行数" },
+        { key: "appended_columns", desc: "列数" },
+        { key: "appended_cells", desc: "更新セル数" },
+      ],
+    },
+    excel_write: {
+      title: "Excel 書き込み",
+      description: "指定範囲に行データを上書きします。",
+      params: [
+        {
+          key: "path",
+          desc: "Excel ファイルパス（必須）",
+          example: "runs/output/sample.xlsx",
+        },
+        {
+          key: "sheet",
+          desc: "シート名（省略時はアクティブ）",
+          example: "Sheet1",
+        },
+        {
+          key: "range",
+          desc: "書き込み範囲（必須）",
+          example: "A1:C2",
+        },
+        {
+          key: "values",
+          desc: "2次元配列（JSON文字列も可）",
+          example: '[["A","B","C"],["1","2","3"]]',
+        },
+      ],
+      outputs: [
+        { key: "updated_range", desc: "更新された範囲" },
+        { key: "updated_rows", desc: "更新行数" },
+        { key: "updated_columns", desc: "列数" },
+        { key: "updated_cells", desc: "更新セル数" },
+      ],
+    },
     sheets_read: {
       title: "Google Sheets 読み取り",
       description: "スプレッドシートから指定範囲のデータを取得します。",
@@ -126,6 +240,85 @@
       outputs: [
         { key: "sheets", desc: "シート一覧（id/title/index）" },
         { key: "title", desc: "スプレッドシート名" },
+      ],
+    },
+    sheets_append: {
+      title: "Google Sheets 追記",
+      description: "シート末尾に行データを追加します。",
+      params: [
+        {
+          key: "spreadsheet_id",
+          desc: "スプレッドシートID（必須）",
+          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+        },
+        {
+          key: "range",
+          desc: "追記先の範囲（必須）",
+          example: "Sheet1!A1",
+        },
+        {
+          key: "values",
+          desc: "2次元配列（JSON文字列も可）",
+          example: '[["A","B"],["1","2"]]',
+        },
+        {
+          key: "value_input_option",
+          desc: "RAW / USER_ENTERED",
+          example: "USER_ENTERED",
+        },
+        {
+          key: "insert_data_option",
+          desc: "INSERT_ROWS / OVERWRITE",
+          example: "INSERT_ROWS",
+        },
+        {
+          key: "credentials_file",
+          desc: "認証JSONのパス",
+          example: "secrets/google_service_account.json",
+        },
+      ],
+      outputs: [
+        { key: "updated_range", desc: "更新された範囲" },
+        { key: "updated_rows", desc: "追加行数" },
+        { key: "updated_columns", desc: "列数" },
+        { key: "updated_cells", desc: "更新セル数" },
+      ],
+    },
+    sheets_write: {
+      title: "Google Sheets 書き込み",
+      description: "指定範囲に行データを上書きします。",
+      params: [
+        {
+          key: "spreadsheet_id",
+          desc: "スプレッドシートID（必須）",
+          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+        },
+        {
+          key: "range",
+          desc: "書き込み範囲（必須）",
+          example: "Sheet1!A1:C2",
+        },
+        {
+          key: "values",
+          desc: "2次元配列（JSON文字列も可）",
+          example: '[["A","B","C"],["1","2","3"]]',
+        },
+        {
+          key: "value_input_option",
+          desc: "RAW / USER_ENTERED",
+          example: "USER_ENTERED",
+        },
+        {
+          key: "credentials_file",
+          desc: "認証JSONのパス",
+          example: "secrets/google_service_account.json",
+        },
+      ],
+      outputs: [
+        { key: "updated_range", desc: "更新された範囲" },
+        { key: "updated_rows", desc: "更新行数" },
+        { key: "updated_columns", desc: "列数" },
+        { key: "updated_cells", desc: "更新セル数" },
       ],
     },
     ai_generate: {
@@ -190,6 +383,7 @@
   const ACTION_GROUPS = [
     { label: "ログ", match: (name) => name === "log" },
     { label: "ファイル", match: (name) => name.startsWith("file_") },
+    { label: "Excel", match: (name) => name.startsWith("excel_") },
     { label: "Google Sheets", match: (name) => name.startsWith("sheets_") },
     { label: "AI", match: (name) => name.startsWith("ai_") },
   ];

@@ -9,4 +9,13 @@ steps:
   meta:
     x: 80
     y: 80
+- id: excel_write_1
+  type: excel_write
+  params:
+    path: runs/output/sample.xlsx
+    range: A1
+    values: '[["a"]]'
+  meta:
+    x: 98
+    y: 159
 enabled: true
