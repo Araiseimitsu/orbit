@@ -85,6 +85,9 @@ class WorkflowScheduler:
         # scheduleトリガーの場合のみ
         if workflow.trigger.type != "schedule":
             return False
+        if not workflow.enabled:
+            logger.info(f"Workflow disabled, skipping schedule: {workflow.name}")
+            return False
 
         cron_expr = workflow.trigger.cron  # type: ignore
 

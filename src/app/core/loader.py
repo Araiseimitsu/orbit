@@ -99,7 +99,8 @@ class WorkflowLoader:
                     trigger_type=workflow.trigger.type,
                     step_count=len(workflow.steps),
                     is_valid=True,
-                    error=None
+                    error=None,
+                    enabled=workflow.enabled
                 )
             else:
                 info = WorkflowInfo(
@@ -110,7 +111,8 @@ class WorkflowLoader:
                     trigger_type="unknown",
                     step_count=0,
                     is_valid=False,
-                    error=error
+                    error=error,
+                    enabled=False
                 )
 
             workflows.append(info)

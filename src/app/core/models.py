@@ -41,6 +41,7 @@ class Workflow(BaseModel):
     trigger: Trigger = Field(..., description="トリガー設定")
     steps: list[Step] = Field(..., min_length=1, description="ステップ一覧")
     description: str | None = Field(default=None, description="説明（任意）")
+    enabled: bool = Field(default=True, description="有効/無効フラグ（スケジュール登録に影響）")
 
 
 class WorkflowInfo(BaseModel):
@@ -53,6 +54,7 @@ class WorkflowInfo(BaseModel):
     step_count: int = 0
     is_valid: bool = True
     error: str | None = None
+    enabled: bool = True
 
 
 class RunLog(BaseModel):

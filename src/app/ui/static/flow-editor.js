@@ -125,7 +125,11 @@
     const triggerSelect = document.getElementById('trigger-type');
     const cronField = document.getElementById('cron-field');
     const cronInput = document.getElementById('trigger-cron');
+    const cronPreset = document.getElementById('cron-preset');
+    const cronPreview = document.getElementById('cron-preview');
+    const cronError = document.getElementById('cron-error');
     const statusEl = document.getElementById('editor-status');
+    const enabledInput = document.getElementById('workflow-enabled');
     const saveButton = document.getElementById('save-workflow');
     const actionListEl = document.getElementById('action-list');
     const canvasEl = document.getElementById('flow-canvas');
@@ -590,6 +594,75 @@
         cronField.style.display = isSchedule ? 'block' : 'none';
     };
 
+    let cronPreviewTimer = null;
+    const setCronPreviewMessage = (message) => {
+        if (cronPreview) {
+            cronPreview.textContent = message || '';
+        }
+    };
+    const setCronErrorMessage = (message) => {
+        if (cronError) {
+            cronError.textContent = message || '';
+        }
+    };
+
+    const formatJst = (iso) => {
+        if (!iso) {
+            return '';
+        }
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) {
+            return iso;
+        }
+        return date.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    };
+
+    const updateCronPreview = () => {
+        if (!cronInput || triggerSelect.value !== 'schedule') {
+            setCronPreviewMessage('');
+            setCronErrorMessage('');
+            return;
+        }
+        const cron = cronInput.value.trim();
+        if (!cron) {
+            setCronPreviewMessage('');
+            setCronErrorMessage('cron を入力してください');
+            return;
+        }
+        setCronErrorMessage('');
+        setCronPreviewMessage('次回実行を確認中...');
+        fetch('/api/scheduler/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cron })
+        })
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.detail || 'cron の解析に失敗しました');
+                }
+                const nextRuns = Array.isArray(data.next_runs) ? data.next_runs : [];
+                if (nextRuns.length === 0) {
+                    setCronPreviewMessage('次回実行: -');
+                } else {
+                    const previewText = nextRuns.map(formatJst).join(' / ');
+                    setCronPreviewMessage(`次回実行: ${previewText}`);
+                }
+                setCronErrorMessage('');
+            })
+            .catch((error) => {
+                setCronPreviewMessage('');
+                setCronErrorMessage(error.message || 'cron の解析に失敗しました');
+            });
+    };
+
+    const scheduleCronPreview = () => {
+        if (cronPreviewTimer) {
+            clearTimeout(cronPreviewTimer);
+        }
+        cronPreviewTimer = setTimeout(updateCronPreview, 350);
+    };
+
     const buildPayload = () => {
         const steps = [...state.workflow.steps]
             .sort((a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x))
@@ -608,6 +681,7 @@
         return {
             name: (nameInput.value || '').trim(),
             description: state.workflow.description || '',
+            enabled: enabledInput ? !!enabledInput.checked : true,
             trigger,
             steps
         };
@@ -724,11 +798,27 @@
     addNodeButton.addEventListener('click', () => addStep());
     saveButton.addEventListener('click', saveWorkflow);
     triggerSelect.addEventListener('change', updateTriggerVisibility);
+    if (cronPreset) {
+        cronPreset.addEventListener('change', () => {
+            if (cronPreset.value) {
+                cronInput.value = cronPreset.value;
+            }
+            scheduleCronPreview();
+        });
+    }
+    if (cronInput) {
+        cronInput.addEventListener('input', scheduleCronPreview);
+        cronInput.addEventListener('blur', updateCronPreview);
+    }
 
     nameInput.value = state.workflow.name || '';
     triggerSelect.value = state.workflow.trigger?.type || 'manual';
     cronInput.value = state.workflow.trigger?.cron || '';
+    if (enabledInput) {
+        enabledInput.checked = state.workflow.enabled !== false;
+    }
     updateTriggerVisibility();
+    scheduleCronPreview();
 
     refreshActions();
     renderCanvas();

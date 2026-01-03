@@ -2,31 +2,45 @@ name: ai_test
 trigger:
   type: manual
 steps:
-  - id: step_1
-    type: ai_generate
-    params:
-      provider: gemini
-      model: gemini-2.5-flash-lite
-      prompt: "ORBIT とはどんなプロジェクトですか？簡潔に説明してください。"
-      max_tokens: 500
+- id: step_1
+  type: ai_generate
+  params:
+    provider: gemini
+    model: gemini-2.5-flash-lite
+    prompt: ORBIT とはどんなプロジェクトですか？簡潔に説明してください。
+    max_tokens: 500
+  meta:
+    x: 80
+    y: 80
+- id: step_2
+  type: log
+  params:
+    message: 'AI レスポンス: {{ step_1.text }}'
+    level: info
+  meta:
+    x: 80
+    y: 199
+- id: step_3
+  type: file_write
+  params:
+    path: runs/output/ai_test_{{ run_id }}.txt
+    content: 'ワークフロー: {{ workflow }}
 
-  - id: step_2
-    type: log
-    params:
-      message: "AI レスポンス: {{ step_1.text }}"
-      level: info
+      実行ID: {{ run_id }}
 
-  - id: step_3
-    type: file_write
-    params:
-      path: "runs/output/ai_test_{{ run_id }}.txt"
-      content: |
-        ワークフロー: {{ workflow }}
-        実行ID: {{ run_id }}
-        日時: {{ now }}
+      日時: {{ now }}
 
-        AI レスポンス:
-        {{ step_1.text }}
 
-        モデル: {{ step_1.model }}
-        プロバイダー: {{ step_1.provider }}
+      AI レスポンス:
+
+      {{ step_1.text }}
+
+
+      モデル: {{ step_1.model }}
+
+      プロバイダー: {{ step_1.provider }}
+
+      '
+  meta:
+    x: 80
+    y: 320

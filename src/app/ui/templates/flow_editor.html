@@ -17,13 +17,38 @@
             <div class="header-field">
                 <label for="trigger-type">トリガー</label>
                 <select id="trigger-type">
-                    <option value="manual">manual</option>
-                    <option value="schedule">schedule</option>
+                    <option value="manual">手動実行</option>
+                    <option value="schedule">スケジュール実行</option>
                 </select>
+            </div>
+            <div class="header-field">
+                <label for="workflow-enabled">状態</label>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+                    <input id="workflow-enabled" type="checkbox" class="h-4 w-4">
+                    アクティブ
+                </label>
             </div>
             <div class="header-field" id="cron-field">
                 <label for="trigger-cron">cron</label>
                 <input id="trigger-cron" type="text" placeholder="0 9 * * *">
+                <label for="cron-preset" class="cron-sub-label">プリセット</label>
+                <select id="cron-preset">
+                    <option value="">選択してください</option>
+                    <option value="*/1 * * * *">毎分</option>
+                    <option value="*/5 * * * *">5分ごと</option>
+                    <option value="0 * * * *">毎時（毎時00分）</option>
+                    <option value="0 9 * * *">毎日 9:00</option>
+                    <option value="0 9 * * 1-5">平日 9:00</option>
+                    <option value="0 9 * * 0">毎週日曜 9:00</option>
+                </select>
+                <div id="cron-preview" class="cron-preview"></div>
+                <div id="cron-error" class="cron-error"></div>
+                <div class="cron-help">
+                    形式: 分(0-59) 時(0-23) 日(1-31) 月(1-12) 曜日(0-6/SUN-SAT)
+                </div>
+                <div class="cron-help">
+                    * = すべて / */n = nごと（例: */5 * * * * = 5分ごと） ※タイムゾーンはJST固定
+                </div>
             </div>
         </div>
         <div class="header-right">

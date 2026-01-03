@@ -4,7 +4,9 @@ ORBIT MVP - FastAPI Application Entry Point
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
@@ -17,6 +19,7 @@ from .core.run_logger import RunLogger
 from .core.scheduler import WorkflowScheduler
 from .core.registry import get_registry
 from .core.models import Workflow
+from apscheduler.triggers.cron import CronTrigger
 
 # アクション登録（インポート時に自動登録）
 from . import actions  # noqa: F401
@@ -77,6 +80,7 @@ def build_editor_data(workflow: Workflow | None) -> dict:
         return {
             "name": "",
             "description": "",
+            "enabled": True,
             "trigger": {"type": "manual"},
             "steps": [],
         }
@@ -103,6 +107,7 @@ def build_editor_data(workflow: Workflow | None) -> dict:
     return {
         "name": workflow.name,
         "description": workflow.description or "",
+        "enabled": workflow.enabled,
         "trigger": trigger_data,
         "steps": steps,
     }
@@ -368,11 +373,18 @@ async def save_workflow(request: Request):
         cron = (trigger.get("cron") or "").strip()
         if not cron:
             raise HTTPException(status_code=400, detail="schedule の cron が必要です")
+        try:
+            CronTrigger.from_crontab(cron, timezone=ZoneInfo("Asia/Tokyo"))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"cron が不正です: {e}") from e
         trigger = {"type": "schedule", "cron": cron}
     else:
         raise HTTPException(status_code=400, detail="未対応のトリガーです")
     steps = payload.get("steps") or []
     description = payload.get("description") or None
+    enabled = payload.get("enabled", True)
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="enabled は true/false で指定してください")
 
     if not isinstance(steps, list) or len(steps) == 0:
         raise HTTPException(status_code=400, detail="少なくとも1つのステップが必要です")
@@ -408,6 +420,7 @@ async def save_workflow(request: Request):
     workflow_data = {
         "name": name,
         "description": description,
+        "enabled": enabled,
         "trigger": trigger,
         "steps": normalized_steps,
     }
@@ -427,8 +440,50 @@ async def save_workflow(request: Request):
         allow_unicode=True
     )
     yaml_path.write_text(yaml_content, encoding="utf-8")
+    workflow_scheduler.reload_workflows()
 
     return {"ok": True, "name": workflow.name, "path": str(yaml_path)}
+
+
+@app.post("/api/workflows/{name}/toggle")
+async def toggle_workflow(name: str, request: Request):
+    """ワークフローの有効/無効を切り替え"""
+    safe_name = (name or "").strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in safe_name for token in ["/", "\\", ".."]):
+        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+
+    payload = await request.json()
+    enabled = payload.get("enabled")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="enabled は true/false で指定してください")
+
+    yaml_path = WORKFLOWS_DIR / f"{safe_name}.yaml"
+    yml_path = WORKFLOWS_DIR / f"{safe_name}.yml"
+    target = yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    if not target or not target.exists():
+        raise HTTPException(status_code=404, detail="ワークフローが見つかりません")
+
+    import yaml
+    data = yaml.safe_load(target.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="ワークフロー定義が不正です")
+    data["enabled"] = enabled
+
+    try:
+        _ = Workflow.model_validate(data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"バリデーションエラー: {e}") from e
+
+    yaml_content = yaml.safe_dump(
+        data,
+        sort_keys=False,
+        allow_unicode=True
+    )
+    target.write_text(yaml_content, encoding="utf-8")
+    workflow_scheduler.reload_workflows()
+    return {"ok": True, "name": safe_name, "enabled": enabled}
 
 
 @app.post("/api/workflows/{name}/delete")
@@ -462,3 +517,33 @@ async def reload_scheduler():
     """スケジューラーのワークフロー再読み込み"""
     count = workflow_scheduler.reload_workflows()
     return {"message": f"Reloaded {count} scheduled workflows"}
+
+
+@app.post("/api/scheduler/preview")
+async def preview_cron(request: Request):
+    """cronの次回実行時刻をプレビュー"""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="無効なリクエスト形式です")
+    cron = (payload.get("cron") or "").strip()
+    if not cron:
+        raise HTTPException(status_code=400, detail="cron が必要です")
+
+    try:
+        trigger = CronTrigger.from_crontab(cron, timezone=ZoneInfo("Asia/Tokyo"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"cron が不正です: {e}") from e
+
+    now = datetime.now(ZoneInfo("Asia/Tokyo"))
+    next_runs = []
+    prev = None
+    current = now
+    for _ in range(5):
+        next_time = trigger.get_next_fire_time(prev, current)
+        if not next_time:
+            break
+        next_runs.append(next_time.isoformat())
+        prev = next_time
+        current = next_time
+
+    return {"ok": True, "next_runs": next_runs}

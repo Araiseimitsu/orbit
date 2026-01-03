@@ -1,5 +1,0 @@
-Scheduled Execution Log
-=======================
-Run ID: 20260102_172300_ecb5
-Time: 2026-01-02T17:23:00.012357+09:00
-Workflow: test_every_minute

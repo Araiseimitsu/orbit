@@ -1,20 +1,31 @@
 name: test_every_minute
 trigger:
   type: schedule
-  cron: "* * * * *"
+  cron: '*/1 * * * *'
 steps:
-  - id: log_time
-    type: log
-    params:
-      message: "Scheduled execution at {{ now }}"
+- id: log_time
+  type: log
+  params:
+    message: Scheduled execution at {{ now }}
+  meta:
+    x: 80
+    y: 80
+- id: save_log
+  type: file_write
+  params:
+    path: runs/output/scheduled_{{ run_id }}.txt
+    content: 'Scheduled Execution Log
 
-  - id: save_log
-    type: file_write
-    params:
-      path: "runs/output/scheduled_{{ run_id }}.txt"
-      content: |
-        Scheduled Execution Log
-        =======================
-        Run ID: {{ run_id }}
-        Time: {{ now }}
-        Workflow: {{ workflow }}
+      =======================
+
+      Run ID: {{ run_id }}
+
+      Time: {{ now }}
+
+      Workflow: {{ workflow }}
+
+      '
+  meta:
+    x: 80
+    y: 200
+enabled: false

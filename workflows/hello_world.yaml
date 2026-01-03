@@ -2,7 +2,11 @@ name: hello_world
 trigger:
   type: manual
 steps:
-  - id: greet
-    type: log
-    params:
-      message: "Hello, ORBIT!"
+- id: greet
+  type: log
+  params:
+    message: Hi
+  meta:
+    x: 80
+    y: 80
+enabled: true

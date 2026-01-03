@@ -38,6 +38,28 @@
             cursor: not-allowed;
             opacity: 0.6;
         }
+
+        .run-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .run-button .htmx-indicator {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .run-button .htmx-content {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -52,9 +74,6 @@
                     <div class="ml-10 flex items-center space-x-4">
                         <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
                             Dashboard
-                        </a>
-                        <a href="/workflows/new/visual" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
-                            Visual
                         </a>
                         <a href="/runs" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
                             Runs
@@ -152,6 +171,40 @@
                 }
             } catch (error) {
                 window.alert(error.message || '削除に失敗しました');
+            }
+        });
+
+        // ワークフロー有効/無効の切り替え
+        document.addEventListener('click', async (event) => {
+            const target = event.target instanceof Element ? event.target.closest('[data-toggle-workflow]') : null;
+            if (!target) {
+                return;
+            }
+            event.preventDefault();
+            const name = target.getAttribute('data-toggle-workflow');
+            const current = target.getAttribute('data-enabled') === 'true';
+            if (!name) {
+                return;
+            }
+            const nextState = !current;
+            const label = nextState ? '有効化' : '停止';
+            const confirmed = window.confirm(`「${name}」を${label}しますか？`);
+            if (!confirmed) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/workflows/${encodeURIComponent(name)}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: nextState })
+                });
+                if (!response.ok) {
+                    const body = await response.json();
+                    throw new Error(body.detail || '更新に失敗しました');
+                }
+                window.location.reload();
+            } catch (error) {
+                window.alert(error.message || '更新に失敗しました');
             }
         });
     </script>
