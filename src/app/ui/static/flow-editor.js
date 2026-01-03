@@ -355,6 +355,54 @@
         { key: "total_tokens", desc: "合計トークン数" },
       ],
     },
+    araichat_send: {
+      title: "アライチャット送信",
+      description: "ARAICHAT の統合APIへメッセージを送信します。",
+      params: [
+        {
+          key: "text",
+          desc: "送信テキスト（text か files のどちらか必須）",
+          example: "障害通知: {{ step_1.message }}",
+        },
+        {
+          key: "files",
+          desc: "添付ファイル配列（JSON文字列も可）",
+          example: '["runs/output/report.txt"]',
+        },
+        {
+          key: "room_id",
+          desc: "送信先ルームID（未指定時は ARAICHAT_ROOM_ID）",
+          example: "1",
+        },
+        {
+          key: "api_key_file",
+          desc: "APIキーのファイルパス（未指定時は ARAICHAT_API_KEY）",
+          example: "secrets/araichat_api_key.txt",
+        },
+        {
+          key: "api_key",
+          desc: "APIキー（直接指定）",
+          example: "your-api-key",
+        },
+        {
+          key: "timeout",
+          desc: "タイムアウト秒（デフォルト: 30）",
+          example: "30",
+        },
+        {
+          key: "retries",
+          desc: "リトライ回数（デフォルト: 3）",
+          example: "3",
+        },
+      ],
+      outputs: [
+        { key: "message_id", desc: "メッセージID" },
+        { key: "room_id", desc: "ルームID" },
+        { key: "files", desc: "添付ファイル情報" },
+        { key: "created_at", desc: "作成日時" },
+        { key: "status_code", desc: "HTTP ステータス" },
+      ],
+    },
   };
 
   const nameInput = document.getElementById("workflow-name");
@@ -386,6 +434,7 @@
     { label: "Excel", match: (name) => name.startsWith("excel_") },
     { label: "Google Sheets", match: (name) => name.startsWith("sheets_") },
     { label: "AI", match: (name) => name.startsWith("ai_") },
+    { label: "通知", match: (name) => name.startsWith("araichat_") },
   ];
 
   const buildActionGroups = (actions) => {

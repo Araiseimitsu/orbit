@@ -8,9 +8,9 @@ steps:
   params:
     provider: gemini
     model: gemini-2.5-flash-lite
-    prompt: 'ORBIT とはどんなプロジェクトですか？簡潔に説明してください。
+    prompt: 'このプロジェクト、ORBITとは？
 
-      HTMLでインフォグラフィックに出力'
+      要約して、出力はHTMLでインフォグラフィックに出力だけにすること'
   meta:
     x: 82
     y: 76
@@ -22,4 +22,16 @@ steps:
   meta:
     x: 77
     y: 213
+- id: araichat_send_1
+  type: araichat_send
+  params:
+    text: 'テスト通知:
+
+      '
+    room_id: '3'
+    api_key: ak_O2TMyQ4gyb6DnJC-acjHA-YHnoRLYkQK_mTsJrr1Nl8
+    files: '["C:/Users/winni/my_projects/1/orbit/runs/output/sample.html"]'
+  meta:
+    x: 71
+    y: 348
 enabled: false
