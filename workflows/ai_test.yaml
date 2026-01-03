@@ -1,46 +1,25 @@
 name: ai_test
 trigger:
-  type: manual
+  type: schedule
+  cron: 0 9 * * *
 steps:
 - id: step_1
   type: ai_generate
   params:
     provider: gemini
     model: gemini-2.5-flash-lite
-    prompt: ORBIT とはどんなプロジェクトですか？簡潔に説明してください。
-    max_tokens: 500
+    prompt: 'ORBIT とはどんなプロジェクトですか？簡潔に説明してください。
+
+      HTMLでインフォグラフィックに出力'
   meta:
-    x: 80
-    y: 80
-- id: step_2
-  type: log
-  params:
-    message: 'AI レスポンス: {{ step_1.text }}'
-    level: info
-  meta:
-    x: 80
-    y: 199
-- id: step_3
+    x: 82
+    y: 76
+- id: file_write_1
   type: file_write
   params:
-    path: runs/output/ai_test_{{ run_id }}.txt
-    content: 'ワークフロー: {{ workflow }}
-
-      実行ID: {{ run_id }}
-
-      日時: {{ now }}
-
-
-      AI レスポンス:
-
-      {{ step_1.text }}
-
-
-      モデル: {{ step_1.model }}
-
-      プロバイダー: {{ step_1.provider }}
-
-      '
+    path: runs\output\sample.html
+    content: '{{ step_1.text }}'
   meta:
-    x: 80
-    y: 320
+    x: 77
+    y: 213
+enabled: false

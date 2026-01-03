@@ -30,6 +30,46 @@ logger = logging.getLogger(__name__)
 DEFAULT_GEMINI_KEY_FILE = "secrets/gemini_api_key.txt"
 
 
+def _coerce_int(value: Any, label: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"{label} は整数で指定してください")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value.is_integer():
+            return int(value)
+        raise ValueError(f"{label} は整数で指定してください")
+    if isinstance(value, str):
+        text = value.strip()
+        if text == "":
+            return None
+        try:
+            return int(text)
+        except ValueError as exc:
+            raise ValueError(f"{label} は整数で指定してください") from exc
+    raise ValueError(f"{label} は整数で指定してください")
+
+
+def _coerce_float(value: Any, label: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"{label} は数値で指定してください")
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if text == "":
+            return None
+        try:
+            return float(text)
+        except ValueError as exc:
+            raise ValueError(f"{label} は数値で指定してください") from exc
+    raise ValueError(f"{label} は数値で指定してください")
+
+
 def _load_api_key(file_path: str, base_dir: Path) -> str:
     """ファイルから API キーを読み込む"""
     path = Path(file_path)
@@ -65,10 +105,7 @@ def _call_gemini(
     # システムプロンプトの設定
     if system:
         # Gemini では system_instruction として設定
-        model_client = genai.GenerativeModel(
-            model,
-            system_instruction=system
-        )
+        model_client = genai.GenerativeModel(model, system_instruction=system)
 
     # 生成設定
     generation_config = {}
@@ -80,23 +117,25 @@ def _call_gemini(
     logger.info(f"Gemini 生成開始: model={model}")
 
     result = model_client.generate_content(
-        prompt,
-        generation_config=generation_config if generation_config else None
+        prompt, generation_config=generation_config if generation_config else None
     )
 
     return {
         "text": result.text,
         "model": model,
         "provider": "gemini",
-        "finish_reason": result.candidates[0].finish_reason.name if result.candidates else None,
-        "prompt_tokens": result.usage_metadata.total_token_count if hasattr(result, "usage_metadata") else None,
+        "finish_reason": result.candidates[0].finish_reason.name
+        if result.candidates
+        else None,
+        "prompt_tokens": result.usage_metadata.total_token_count
+        if hasattr(result, "usage_metadata")
+        else None,
     }
 
 
 @register_action("ai_generate")
 async def action_ai_generate(
-    params: dict[str, Any],
-    context: dict[str, Any]
+    params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
     AI でテキストを生成する
@@ -134,8 +173,8 @@ async def action_ai_generate(
 
     # オプションパラメータ
     system = params.get("system")
-    max_tokens = params.get("max_tokens")
-    temperature = params.get("temperature")
+    max_tokens = _coerce_int(params.get("max_tokens"), "max_tokens")
+    temperature = _coerce_float(params.get("temperature"), "temperature")
 
     # API キーの読み込み
     base_dir = context.get("base_dir", Path.cwd())

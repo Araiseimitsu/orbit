@@ -418,6 +418,49 @@
     statusEl.style.color = isError ? "#b91c1c" : "#475569";
   };
 
+  const copyToClipboard = async (text) => {
+    if (!text) {
+      return false;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        // フォールバックへ
+      }
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+    textarea.remove();
+    return copied;
+  };
+
+  const markCopyFeedback = (el, success) => {
+    if (!el) {
+      return;
+    }
+    el.classList.remove("copied", "copy-failed");
+    el.classList.add(success ? "copied" : "copy-failed");
+    if (el.__copyTimer) {
+      clearTimeout(el.__copyTimer);
+    }
+    el.__copyTimer = setTimeout(() => {
+      el.classList.remove("copied", "copy-failed");
+    }, 1200);
+  };
+
   const uniqueId = (base) => {
     const safeBase = (base || "step").replace(/[^a-zA-Z0-9_]+/g, "_");
     let index = 1;
@@ -712,7 +755,31 @@
       guideDesc.textContent = guide.description;
       guideWrap.appendChild(guideDesc);
 
+      const guideHint = document.createElement("div");
+      guideHint.className = "guide-hint";
+      guideHint.textContent = "例のコードはクリックでコピーできます。";
+      guideWrap.appendChild(guideHint);
+
       const exampleStepId = stepId || "step_id";
+
+      const buildExampleChip = (example) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "guide-example";
+        chip.textContent = example;
+        chip.title = "クリックでコピー";
+        chip.addEventListener("click", async () => {
+          const ok = await copyToClipboard(example);
+          markCopyFeedback(chip, ok);
+        });
+        chip.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            chip.click();
+          }
+        });
+        return chip;
+      };
 
       const buildSection = (label, items, withExamples, sectionClass) => {
         if (!items || items.length === 0) {
@@ -731,11 +798,18 @@
         items.forEach((item) => {
           const line = document.createElement("div");
           line.className = "guide-item";
-          let text = `${item.key}: ${item.desc}`;
+          const text = document.createElement("span");
+          text.className = "guide-text";
+          text.textContent = `${item.key}: ${item.desc}`;
+          line.appendChild(text);
+
           if (withExamples && item.example) {
-            text += `（例: ${item.example}）`;
+            const exampleLabel = document.createElement("span");
+            exampleLabel.className = "guide-example-label";
+            exampleLabel.textContent = "例:";
+            line.appendChild(exampleLabel);
+            line.appendChild(buildExampleChip(item.example));
           }
-          line.textContent = text;
           section.appendChild(line);
         });
 
@@ -775,8 +849,11 @@
       commonVars.appendChild(commonLabel);
       const commonLine = document.createElement("div");
       commonLine.className = "guide-item";
-      commonLine.textContent =
-        "{{ run_id }}, {{ now }}, {{ workflow }}, {{ base_dir }}";
+      ["{{ run_id }}", "{{ now }}", "{{ workflow }}", "{{ base_dir }}"].forEach(
+        (value) => {
+          commonLine.appendChild(buildExampleChip(value));
+        },
+      );
       commonVars.appendChild(commonLine);
       guideWrap.appendChild(commonVars);
 

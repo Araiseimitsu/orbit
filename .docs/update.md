@@ -10,6 +10,13 @@
 - 2026-01-03: AIは `ai_generate` に統一し、要約ショートカット（ai_summarize）を廃止。ワークフロー例とフローエディタの定義を更新。
 - 2026-01-03: Google Sheets の追記/上書きアクション（`sheets_append` / `sheets_write`）を追加。書き込み対応スコープに変更。
 - 2026-01-03: ローカル Excel 連携（`excel_read` / `excel_write` / `excel_append` / `excel_list_sheets`）を追加。フローエディタのガイドも更新。
+- 2026-01-03: フローエディタの設定ガイド内の例をクリックでコピーできるよう改善。
+- 2026-01-03: `ai_generate` の `max_tokens` / `temperature` を文字列でも解釈できるよう型変換を追加。
+- 2026-01-03: Runs 詳細の開閉を inline onclick から data 属性 + main.js のイベント委譲に切り替え。
+- 2026-01-03: main.js の初期化を DOMContentLoaded 依存から即時起動可能にして、イベント未登録を回避。
+- 2026-01-03: main.js 未読込時のフォールバックとして Help / Runs 詳細のイベント登録を base.html に追加。
+- 2026-01-03: 旧サービスワーカーのキャッシュ影響を避けるため、base.html で Service Worker 解除とキャッシュ削除を実行。
+- 2026-01-03: Runs 画面の JSON 出力を HTML エスケープして、AI 出力の HTML/CSS がページを壊す問題を修正。
 
 ## 技術スタック
 - Python 3.13

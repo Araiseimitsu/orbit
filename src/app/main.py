@@ -1,6 +1,7 @@
 """
 ORBIT MVP - FastAPI Application Entry Point
 """
+
 import json
 import logging
 import time
@@ -9,27 +10,24 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request, HTTPException
+from apscheduler.triggers.cron import CronTrigger
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from markupsafe import Markup
-
-from .core.loader import WorkflowLoader
-from .core.executor import Executor
-from .core.run_logger import RunLogger
-from .core.scheduler import WorkflowScheduler
-from .core.registry import get_registry
-from .core.models import Workflow
-from apscheduler.triggers.cron import CronTrigger
 
 # アクション登録（インポート時に自動登録）
 from . import actions  # noqa: F401
+from .core.executor import Executor
+from .core.loader import WorkflowLoader
+from .core.models import Workflow
+from .core.registry import get_registry
+from .core.run_logger import RunLogger
+from .core.scheduler import WorkflowScheduler
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -53,9 +51,9 @@ def static_mtime(path: str) -> str:
         return STATIC_VERSION
 
 
-def tojson_utf8(value, indent: int = 2) -> Markup:
+def tojson_utf8(value, indent: int = 2) -> str:
     """日本語をエスケープせずにJSON表示するテンプレートフィルタ"""
-    return Markup(json.dumps(value, ensure_ascii=False, indent=indent))
+    return json.dumps(value, ensure_ascii=False, indent=indent)
 
 
 templates.env.filters["tojson_utf8"] = tojson_utf8
@@ -90,7 +88,7 @@ app = FastAPI(
     title="ORBIT",
     description="n8nライクなワークフロー実行アプリ（MVP）",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -161,13 +159,12 @@ async def dashboard(request: Request, q: str | None = None):
     if query:
         lowered = query.lower()
         workflows = [
-            wf for wf in workflows
-            if (wf.name or "").lower().find(lowered) != -1
+            wf for wf in workflows if (wf.name or "").lower().find(lowered) != -1
         ]
 
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "workflows": workflows, "search_query": query}
+        {"request": request, "workflows": workflows, "search_query": query},
     )
 
 
@@ -198,8 +195,8 @@ async def workflow_detail(request: Request, name: str):
             "workflow": workflow,
             "error": error,
             "runs": runs,
-            "next_run": next_run
-        }
+            "next_run": next_run,
+        },
     )
 
 
@@ -209,12 +206,7 @@ async def runs_page(request: Request, workflow: str | None = None):
     runs = run_logger.get_all_runs(limit=100, workflow_filter=workflow)
 
     return templates.TemplateResponse(
-        "runs.html",
-        {
-            "request": request,
-            "runs": runs,
-            "workflow_filter": workflow
-        }
+        "runs.html", {"request": request, "runs": runs, "workflow_filter": workflow}
     )
 
 
@@ -241,8 +233,8 @@ steps:
         {
             "request": request,
             "workflows_dir": str(WORKFLOWS_DIR),
-            "sample_yaml": sample_yaml
-        }
+            "sample_yaml": sample_yaml,
+        },
     )
 
 
@@ -258,7 +250,7 @@ async def workflow_new_visual(request: Request):
             "mode": "new",
             "saveUrl": "/api/workflows/save",
         },
-        ensure_ascii=False
+        ensure_ascii=False,
     )
     return templates.TemplateResponse(
         "flow_editor.html",
@@ -268,7 +260,7 @@ async def workflow_new_visual(request: Request):
             "error": None,
             "page_title": "ビジュアルエディタ（新規作成）",
             "static_version": str(int(__import__("time").time())),
-        }
+        },
     )
 
 
@@ -287,7 +279,7 @@ async def workflow_edit(request: Request, name: str):
             "mode": "edit",
             "saveUrl": "/api/workflows/save",
         },
-        ensure_ascii=False
+        ensure_ascii=False,
     )
     return templates.TemplateResponse(
         "flow_editor.html",
@@ -297,7 +289,7 @@ async def workflow_edit(request: Request, name: str):
             "error": error,
             "page_title": f"ビジュアルエディタ - {name}",
             "static_version": str(int(__import__("time").time())),
-        }
+        },
     )
 
 
@@ -314,8 +306,10 @@ async def run_workflow(request: Request, name: str):
 
         if error or not workflow:
             # エラートーストを返す
-            from .core.models import RunLog
             from datetime import datetime
+
+            from .core.models import RunLog
+
             error_run = RunLog(
                 workflow=name,
                 run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
@@ -323,15 +317,11 @@ async def run_workflow(request: Request, name: str):
                 started_at=datetime.now().isoformat(),
                 ended_at=datetime.now().isoformat(),
                 error=error or "Workflow not found",
-                step_results={}
+                step_results={},
             )
             return templates.TemplateResponse(
                 "partials/run_result.html",
-                {
-                    "request": request,
-                    "run": error_run,
-                    "workflow_name": name
-                }
+                {"request": request, "run": error_run, "workflow_name": name},
             )
 
         # ワークフロー実行
@@ -343,18 +333,16 @@ async def run_workflow(request: Request, name: str):
         # レスポンス（トースト通知）
         return templates.TemplateResponse(
             "partials/run_result.html",
-            {
-                "request": request,
-                "run": run_log,
-                "workflow_name": name
-            }
+            {"request": request, "run": run_log, "workflow_name": name},
         )
 
     except Exception as e:
         # 予期しないエラーをキャッチ
         logger.exception(f"Unexpected error running workflow {name}")
-        from .core.models import RunLog
         from datetime import datetime
+
+        from .core.models import RunLog
+
         error_run = RunLog(
             workflow=name,
             run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
@@ -362,15 +350,11 @@ async def run_workflow(request: Request, name: str):
             started_at=datetime.now().isoformat(),
             ended_at=datetime.now().isoformat(),
             error=f"{type(e).__name__}: {str(e)}",
-            step_results={}
+            step_results={},
         )
         return templates.TemplateResponse(
             "partials/run_result.html",
-            {
-                "request": request,
-                "run": error_run,
-                "workflow_name": name
-            }
+            {"request": request, "run": error_run, "workflow_name": name},
         )
 
 
@@ -391,7 +375,9 @@ async def save_workflow(request: Request):
     if not name:
         raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
     if any(token in name for token in ["/", "\\", ".."]):
-        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
 
     trigger = payload.get("trigger") or {"type": "manual"}
     if not isinstance(trigger, dict) or not trigger.get("type"):
@@ -413,7 +399,9 @@ async def save_workflow(request: Request):
     description = payload.get("description") or None
     enabled = payload.get("enabled", True)
     if not isinstance(enabled, bool):
-        raise HTTPException(status_code=400, detail="enabled は true/false で指定してください")
+        raise HTTPException(
+            status_code=400, detail="enabled は true/false で指定してください"
+        )
 
     if not isinstance(steps, list) or len(steps) == 0:
         raise HTTPException(status_code=400, detail="少なくとも1つのステップが必要です")
@@ -422,7 +410,9 @@ async def save_workflow(request: Request):
     step_ids = set()
     for step in steps:
         if not isinstance(step, dict):
-            raise HTTPException(status_code=400, detail="ステップ形式が正しくありません")
+            raise HTTPException(
+                status_code=400, detail="ステップ形式が正しくありません"
+            )
         step_id = (step.get("id") or "").strip()
         step_type = (step.get("type") or "").strip()
         if not step_id or not step_type:
@@ -463,10 +453,9 @@ async def save_workflow(request: Request):
     yaml_path = WORKFLOWS_DIR / f"{workflow.name}.yaml"
 
     import yaml
+
     yaml_content = yaml.safe_dump(
-        workflow.model_dump(exclude_none=True),
-        sort_keys=False,
-        allow_unicode=True
+        workflow.model_dump(exclude_none=True), sort_keys=False, allow_unicode=True
     )
     yaml_path.write_text(yaml_content, encoding="utf-8")
     workflow_scheduler.reload_workflows()
@@ -481,20 +470,27 @@ async def toggle_workflow(name: str, request: Request):
     if not safe_name:
         raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
     if any(token in safe_name for token in ["/", "\\", ".."]):
-        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
 
     payload = await request.json()
     enabled = payload.get("enabled")
     if not isinstance(enabled, bool):
-        raise HTTPException(status_code=400, detail="enabled は true/false で指定してください")
+        raise HTTPException(
+            status_code=400, detail="enabled は true/false で指定してください"
+        )
 
     yaml_path = WORKFLOWS_DIR / f"{safe_name}.yaml"
     yml_path = WORKFLOWS_DIR / f"{safe_name}.yml"
-    target = yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    target = (
+        yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    )
     if not target or not target.exists():
         raise HTTPException(status_code=404, detail="ワークフローが見つかりません")
 
     import yaml
+
     data = yaml.safe_load(target.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise HTTPException(status_code=400, detail="ワークフロー定義が不正です")
@@ -505,11 +501,7 @@ async def toggle_workflow(name: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"バリデーションエラー: {e}") from e
 
-    yaml_content = yaml.safe_dump(
-        data,
-        sort_keys=False,
-        allow_unicode=True
-    )
+    yaml_content = yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
     target.write_text(yaml_content, encoding="utf-8")
     workflow_scheduler.reload_workflows()
     return {"ok": True, "name": safe_name, "enabled": enabled}
@@ -522,11 +514,15 @@ async def delete_workflow(name: str):
     if not safe_name:
         raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
     if any(token in safe_name for token in ["/", "\\", ".."]):
-        raise HTTPException(status_code=400, detail="ワークフロー名に使用できない文字があります")
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
 
     yaml_path = WORKFLOWS_DIR / f"{safe_name}.yaml"
     yml_path = WORKFLOWS_DIR / f"{safe_name}.yml"
-    target = yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    target = (
+        yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
+    )
     if not target or not target.exists():
         raise HTTPException(status_code=404, detail="ワークフローが見つかりません")
 

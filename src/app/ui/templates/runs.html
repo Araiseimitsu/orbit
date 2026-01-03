@@ -1,37 +1,52 @@
-{% extends "base.html" %}
-
-{% block title %}Runs - ORBIT{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Runs - ORBIT{% endblock %} {% block
+content %}
 <div class="mb-12">
-    <h1 class="text-4xl font-extrabold tracking-tight text-white mb-2">Execution History</h1>
-    <p class="text-gray-500 font-medium">Monitor and audit all workflow runs.</p>
+    <h1 class="text-4xl font-extrabold tracking-tight text-white mb-2">
+        Execution History
+    </h1>
+    <p class="text-gray-500 font-medium">
+        Monitor and audit all workflow runs.
+    </p>
 </div>
 
 <div class="space-y-4">
-    {% if runs %}
-    {% for run in runs %}
+    {% if runs %} {% for run in runs %}
     <div class="apple-card overflow-hidden">
         <!-- Header section of the run card -->
-        <div class="flex items-center justify-between p-5 bg-white/5 border-b border-white/5">
+        <div
+            class="flex items-center justify-between p-5 bg-white/5 border-b border-white/5"
+        >
             <div class="flex items-center space-x-4">
                 <span
-                    class="apple-badge {% if run.status == 'success' %}badge-success{% elif run.status == 'failed' %}badge-error{% else %}badge-pending{% endif %}">
+                    class="apple-badge {% if run.status == 'success' %}badge-success{% elif run.status == 'failed' %}badge-error{% else %}badge-pending{% endif %}"
+                >
                     {{ run.status }}
                 </span>
                 <div class="flex flex-col">
-                    <span class="text-sm font-bold text-white leading-tight">{{ run.workflow }}</span>
-                    <span class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-0.5">{{ run.run_id
-                        }}</span>
+                    <span class="text-sm font-bold text-white leading-tight"
+                        >{{ run.workflow }}</span
+                    >
+                    <span
+                        class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-0.5"
+                        >{{ run.run_id }}</span
+                    >
                 </div>
             </div>
             <div class="flex items-center space-x-6 text-xs font-medium">
                 <div class="hidden md:flex flex-col items-end">
-                    <span class="text-gray-500 uppercase text-[9px] tracking-tighter mb-0.5">Started At</span>
+                    <span
+                        class="text-gray-500 uppercase text-[9px] tracking-tighter mb-0.5"
+                        >Started At</span
+                    >
                     <span class="text-gray-300">{{ run.started_at }}</span>
                 </div>
-                <button onclick="toggleRunDetails('{{ run.run_id }}')"
-                    class="apple-button apple-button-secondary px-4 py-2 text-[11px]">
+                <button
+                    type="button"
+                    data-run-details-toggle="{{ run.run_id }}"
+                    aria-controls="details-{{ run.run_id }}"
+                    aria-expanded="false"
+                    class="apple-button apple-button-secondary px-4 py-2 text-[11px]"
+                >
                     View Details
                 </button>
             </div>
@@ -43,62 +58,96 @@
                 <!-- Left: Metadata -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Runtime Info</h4>
+                        <h4
+                            class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3"
+                        >
+                            Runtime Info
+                        </h4>
                         <div class="space-y-2">
-                            <div class="flex justify-between py-1.5 border-b border-white/5">
-                                <span class="text-xs text-gray-400">Duration</span>
+                            <div
+                                class="flex justify-between py-1.5 border-b border-white/5"
+                            >
+                                <span class="text-xs text-gray-400"
+                                    >Duration</span
+                                >
                                 <span class="text-xs text-white">
-                                    {% if run.ended_at %}
-                                    Completed
-                                    {% else %}
-                                    In Progress
-                                    {% endif %}
+                                    {% if run.ended_at %} Completed {% else %}
+                                    In Progress {% endif %}
                                 </span>
                             </div>
-                            <div class="flex justify-between py-1.5 border-b border-white/5">
-                                <span class="text-xs text-gray-400">Status</span>
+                            <div
+                                class="flex justify-between py-1.5 border-b border-white/5"
+                            >
+                                <span class="text-xs text-gray-400"
+                                    >Status</span
+                                >
                                 <span
-                                    class="text-xs {% if run.status == 'success' %}text-green-400{% else %}text-red-400{% endif %} font-bold">{{
-                                    run.status | upper }}</span>
+                                    class="text-xs {% if run.status == 'success' %}text-green-400{% else %}text-red-400{% endif %} font-bold"
+                                    >{{ run.status | upper }}</span
+                                >
                             </div>
                         </div>
                     </div>
 
                     {% if run.error %}
-                    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <h4 class="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-2">Error Trace</h4>
-                        <pre class="text-[11px] text-red-300 whitespace-pre-wrap font-mono">{{ run.error }}</pre>
+                    <div
+                        class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl"
+                    >
+                        <h4
+                            class="text-[10px] uppercase tracking-widest text-red-400 font-bold mb-2"
+                        >
+                            Error Trace
+                        </h4>
+                        <pre
+                            class="text-[11px] text-red-300 whitespace-pre-wrap font-mono"
+                        >
+{{ run.error }}</pre
+                        >
                     </div>
                     {% endif %}
                 </div>
 
                 <!-- Right: Step Execution -->
                 <div>
-                    <h4 class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Step Details</h4>
+                    <h4
+                        class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3"
+                    >
+                        Step Details
+                    </h4>
                     <div class="space-y-2">
-                        {% if run.steps %}
-                        {% for step_result in run.steps %}
-                        <div class="p-3 bg-white/5 rounded-lg border border-white/5">
+                        {% if run.steps %} {% for step_result in run.steps %}
+                        <div
+                            class="p-3 bg-white/5 rounded-lg border border-white/5"
+                        >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-gray-200">{{ step_result.id }}</span>
+                                <span class="text-xs font-bold text-gray-200"
+                                    >{{ step_result.id }}</span
+                                >
                                 <span
-                                    class="{% if step_result.status == 'success' %}text-green-500{% else %}text-red-500{% endif %} text-[10px] font-bold">
+                                    class="{% if step_result.status == 'success' %}text-green-500{% else %}text-red-500{% endif %} text-[10px] font-bold"
+                                >
                                     {{ step_result.status | upper }}
                                 </span>
                             </div>
                             {% if step_result.result %}
                             <details class="mt-2 group">
                                 <summary
-                                    class="text-[10px] text-gray-500 cursor-pointer hover:text-blue-400 transition-colors uppercase font-bold tracking-tighter">
-                                    View Output</summary>
+                                    class="text-[10px] text-gray-500 cursor-pointer hover:text-blue-400 transition-colors uppercase font-bold tracking-tighter"
+                                >
+                                    View Output
+                                </summary>
                                 <pre
-                                    class="mt-2 p-3 bg-black/60 text-gray-300 text-[10px] rounded-lg overflow-x-auto ring-1 ring-white/5 font-mono">{{ step_result.result | tojson_utf8(indent=2) }}</pre>
+                                    class="mt-2 p-3 bg-black/60 text-gray-300 text-[10px] rounded-lg overflow-x-auto ring-1 ring-white/5 font-mono"
+                                >
+{{ step_result.result | tojson_utf8(indent=2) }}</pre
+                                >
                             </details>
                             {% endif %}
                         </div>
-                        {% endfor %}
-                        {% else %}
-                        <p class="text-[11px] text-gray-600 italic">No individual step data available.</p>
+                        {% endfor %} {% else %}
+                        <p class="text-[11px] text-gray-600 italic">
+                            No individual step data available.
+                        </p>
                         {% endif %}
                     </div>
                 </div>
@@ -107,42 +156,43 @@
             <div class="mt-8 pt-6 border-t border-white/5">
                 <details class="group">
                     <summary
-                        class="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400 transition-colors uppercase font-bold tracking-widest">
-                        Raw System Output</summary>
+                        class="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400 transition-colors uppercase font-bold tracking-widest"
+                    >
+                        Raw System Output
+                    </summary>
                     <pre
-                        class="mt-4 p-4 bg-black/80 text-blue-300 text-[10px] rounded-xl overflow-x-auto font-mono ring-1 ring-blue-500/20">{{ run.model_dump() | tojson_utf8(indent=2) }}</pre>
+                        class="mt-4 p-4 bg-black/80 text-blue-300 text-[10px] rounded-xl overflow-x-auto font-mono ring-1 ring-blue-500/20"
+                    >
+{{ run.model_dump() | tojson_utf8(indent=2) }}</pre
+                    >
                 </details>
             </div>
         </div>
     </div>
-    {% endfor %}
-    {% else %}
+    {% endfor %} {% else %}
     <div class="apple-card p-20 text-center">
-        <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div
+            class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6"
+        >
+            <svg
+                class="w-8 h-8 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
             </svg>
         </div>
         <h3 class="text-xl font-bold text-white mb-2">No execution history</h3>
-        <p class="text-gray-500">Run a workflow to see its execution records here.</p>
+        <p class="text-gray-500">
+            Run a workflow to see its execution records here.
+        </p>
     </div>
     {% endif %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function toggleRunDetails(runId) {
-        const detailsRow = document.getElementById('details-' + runId);
-        if (!detailsRow) return;
-
-        if (detailsRow.classList.contains('hidden')) {
-            detailsRow.classList.remove('hidden');
-            detailsRow.classList.add('animate-in', 'fade-in', 'slide-in-from-top-2', 'duration-300');
-        } else {
-            detailsRow.classList.add('hidden');
-        }
-    }
-</script>
-{% endblock %}
+{% endblock %} {% block scripts %}{% endblock %}

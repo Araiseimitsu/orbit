@@ -128,7 +128,7 @@
 }
 
 .ghost-link:hover {
-    background: #3A3A3C;
+    background: #3a3a3c;
 }
 
 .flow-editor-error {
@@ -244,7 +244,7 @@
 }
 
 .ghost-button:hover {
-    background: #3A3A3C;
+    background: #3a3a3c;
 }
 
 .hint {
@@ -256,7 +256,11 @@
 .flow-canvas {
     flex: 1;
     position: relative;
-    background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+    background: radial-gradient(
+        circle at 1px 1px,
+        rgba(255, 255, 255, 0.05) 1px,
+        transparent 0
+    );
     background-size: 32px 32px;
     min-height: 500px;
     touch-action: none;
@@ -272,7 +276,9 @@
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
     cursor: grab;
     user-select: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .flow-node-order {
@@ -369,6 +375,12 @@
     line-height: 1.5;
 }
 
+.guide-hint {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
 .guide-section {
     display: flex;
     flex-direction: column;
@@ -400,9 +412,61 @@
 }
 
 .guide-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
     font-size: 11px;
     color: var(--text-secondary);
     line-height: 1.5;
+}
+
+.guide-text {
+    color: var(--text-secondary);
+}
+
+.guide-example-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.guide-example {
+    border: 1px solid var(--border-thin);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family:
+        "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "Courier New",
+        monospace;
+}
+
+.guide-example:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    background: rgba(0, 122, 255, 0.12);
+}
+
+.guide-example:focus-visible {
+    outline: 2px solid rgba(0, 122, 255, 0.6);
+    outline-offset: 2px;
+}
+
+.guide-example.copied {
+    border-color: rgba(48, 209, 88, 0.55);
+    background: rgba(48, 209, 88, 0.12);
+    color: var(--accent-green);
+}
+
+.guide-example.copy-failed {
+    border-color: rgba(255, 69, 58, 0.5);
+    background: rgba(255, 69, 58, 0.12);
+    color: var(--accent-red);
 }
 
 .inspector-order {
