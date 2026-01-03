@@ -6,6 +6,8 @@
 ## 更新履歴
 - 2026-01-02: フローエディタでドラッグ順序が分かるよう、ノードに実行順バッジと詳細パネルの順序表示を追加。
 - 2026-01-03: ワークフローの有効/無効（アクティブ/停止）切り替えを追加。スケジュール登録は有効時のみ。
+- 2026-01-03: ダッシュボードにワークフロー名検索（部分一致）を追加。
+- 2026-01-03: AIは `ai_generate` に統一し、要約ショートカット（ai_summarize）を廃止。ワークフロー例とフローエディタの定義を更新。
 
 ## 技術スタック
 - Python 3.13
@@ -51,9 +53,8 @@
 
 ### Day 6: AI アクション
 - `ai_generate` アクション実装（Gemini/OpenAI対応）
-- `ai_summarize` アクション実装（要約ショートカット）
 - openai パッケージ追加
-- テストワークフロー作成（ai_test, ai_summarize_test, ai_openai_test）
+- テストワークフロー作成（ai_test, ai_generate_summary_test, ai_openai_test）
 
 ### Day 7-8: UI 仕上げ
 - Alpine.js 導入（トースト通知の展開機能）
@@ -98,7 +99,7 @@ orbit/
 │       │   ├── log.py           # logアクション
 │       │   ├── file_ops.py      # file_write / file_read
 │       │   ├── google_sheets.py # sheets_read / sheets_list
-│       │   └── ai.py            # ai_generate / ai_summarize
+│       │   └── ai.py            # ai_generate
 │       └── ui/
 │           ├── __init__.py
 │           └── templates/
@@ -113,7 +114,7 @@ orbit/
 │   ├── sample_daily_summary.yaml
 │   ├── test_every_minute.yaml   # テスト用（毎分実行）
 │   ├── ai_test.yaml             # AIテスト
-│   ├── ai_summarize_test.yaml   # 要約テスト
+│   ├── ai_generate_summary_test.yaml # 要約テスト
 │   └── ai_openai_test.yaml      # OpenAIテスト
 ├── runs/
 │   └── output/                  # ワークフロー出力ファイル

@@ -148,6 +148,26 @@
 .action-list {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+}
+
+.action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.action-group-items {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
@@ -360,6 +380,7 @@
 }
 
 .param-row input,
+.param-row textarea,
 .param-row select {
     width: 100%;
     min-width: 0;

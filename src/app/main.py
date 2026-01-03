@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from .core.loader import WorkflowLoader
 from .core.executor import Executor
@@ -40,6 +41,14 @@ STATIC_DIR = Path(__file__).resolve().parent / "ui" / "static"
 
 # Jinja2 テンプレート設定
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def tojson_utf8(value, indent: int = 2) -> Markup:
+    """日本語をエスケープせずにJSON表示するテンプレートフィルタ"""
+    return Markup(json.dumps(value, ensure_ascii=False, indent=indent))
+
+
+templates.env.filters["tojson_utf8"] = tojson_utf8
 
 # コンポーネント初期化
 loader = WorkflowLoader(WORKFLOWS_DIR)
@@ -127,18 +136,26 @@ def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, q: str | None = None):
     """ダッシュボード - ワークフロー一覧"""
     workflows = loader.list_workflows()
+    query = (q or "").strip()
 
     # 最新実行ステータスを反映
     for wf in workflows:
         if wf.is_valid:
             wf.status, wf.last_run = get_workflow_status(wf.name)
 
+    if query:
+        lowered = query.lower()
+        workflows = [
+            wf for wf in workflows
+            if (wf.name or "").lower().find(lowered) != -1
+        ]
+
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "workflows": workflows}
+        {"request": request, "workflows": workflows, "search_query": query}
     )
 
 

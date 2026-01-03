@@ -132,7 +132,7 @@
                                         {% if step_result.result %}
                                         <details class="text-xs">
                                             <summary class="cursor-pointer text-gray-600 hover:text-gray-800">出力を表示</summary>
-                                            <pre class="mt-2 p-2 bg-gray-900 text-gray-100 rounded overflow-auto max-h-48">{{ step_result.result | tojson(indent=2) }}</pre>
+                                            <pre class="mt-2 p-2 bg-gray-900 text-gray-100 rounded overflow-auto max-h-48">{{ step_result.result | tojson_utf8(indent=2) }}</pre>
                                         </details>
                                         {% endif %}
                                     </div>
@@ -144,7 +144,7 @@
                             <!-- 完全な JSON -->
                             <details class="text-xs">
                                 <summary class="cursor-pointer text-gray-600 hover:text-gray-800">完全な JSON (デバッグ用)</summary>
-                                <pre class="mt-2 p-3 bg-gray-900 text-gray-100 rounded overflow-auto max-h-64">{{ run.model_dump() | tojson(indent=2) }}</pre>
+                                <pre class="mt-2 p-3 bg-gray-900 text-gray-100 rounded overflow-auto max-h-64">{{ run.model_dump() | tojson_utf8(indent=2) }}</pre>
                             </details>
                         </div>
                     </td>

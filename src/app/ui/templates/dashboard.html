@@ -9,12 +9,39 @@
             <h1 class="text-3xl font-bold text-gray-900">Workflows</h1>
             <p class="mt-2 text-gray-600">ワークフロー一覧</p>
         </div>
-        <a
-            href="/workflows/new/visual"
-            class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-        >
-            + ビジュアル作成
-        </a>
+        <div class="flex items-center gap-3">
+            <form method="get" class="flex items-center gap-2">
+                <label for="search-query" class="text-xs font-medium text-gray-500">検索</label>
+                <input
+                    id="search-query"
+                    type="search"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="ワークフロー名で検索"
+                    class="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+                {% if search_query %}
+                <a
+                    href="/"
+                    class="inline-flex items-center px-3 py-2 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors"
+                >
+                    クリア
+                </a>
+                {% endif %}
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-3 py-2 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                    検索
+                </button>
+            </form>
+            <a
+                href="/workflows/new/visual"
+                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+            >
+                + ビジュアル作成
+            </a>
+        </div>
     </div>
 </div>
 
