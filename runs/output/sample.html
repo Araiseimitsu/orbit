@@ -1,209 +1,109 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ORBITプロジェクト インフォグラフィック</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f7f6;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .infographic-container {
-            width: 90%;
-            max-width: 800px;
-            background-color: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "header"
-                "section-what"
-                "section-goal"
-                "section-key-features"
-                "section-impact";
-        }
-        .infographic-section {
-            padding: 30px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .infographic-section:last-child {
-            border-bottom: none;
-        }
-        .header {
-            grid-area: header;
-            background-color: #4CAF50; /* ORBITのイメージカラー */
-            color: white;
-            padding: 40px 30px;
-            border-radius: 15px 15px 0 0;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: 700;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-        }
-        .header p {
-            margin-top: 10px;
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        h2 {
-            color: #4CAF50;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 10px;
-            display: inline-block;
-        }
-        .icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-            color: #4CAF50;
-        }
-        .section-content ul {
-            list-style: none;
-            padding: 0;
-            margin: 0 auto;
-            max-width: 500px;
-        }
-        .section-content li {
-            margin-bottom: 15px;
-            padding-left: 25px;
-            position: relative;
-            text-align: left;
-            font-size: 1.1em;
-        }
-        .section-content li::before {
-            content: '●'; /* カスタムマーカー */
-            color: #4CAF50;
-            font-weight: bold;
-            display: inline-block;
-            width: 1em;
-            margin-left: -1em;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-        .section-what { grid-area: section-what; }
-        .section-goal { grid-area: section-goal; }
-        .section-key-features { grid-area: section-key-features; }
-        .section-impact { grid-area: section-impact; }
-
-        /* キーフィーチャーのレイアウト */
-        .key-features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 25px;
-            max-width: 700px;
-            margin: 20px auto 0;
-        }
-        .feature-item {
-            background-color: #e8f5e9;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease-in-out;
-        }
-        .feature-item:hover {
-            transform: translateY(-5px);
-        }
-        .feature-item .icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            color: #388E3C;
-        }
-        .feature-item h3 {
-            margin-top: 0;
-            color: #388E3C;
-            font-size: 1.3em;
-            margin-bottom: 10px;
-        }
-        .feature-item p {
-            font-size: 1em;
-            color: #555;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>秩父・横瀬町 インフォグラフィック</title>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+  .infographic { width: 90%; max-width: 800px; margin: 20px auto; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: hidden; }
+  .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-bottom: 3px solid #388E3C; }
+  .header h1 { margin: 0; font-size: 2.2em; }
+  .header p { margin-top: 5px; font-size: 1.1em; }
+  .content { padding: 30px; }
+  .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0; }
+  .section:last-child { border-bottom: none; }
+  .section h2 { color: #4CAF50; margin-top: 0; font-size: 1.8em; border-bottom: 2px solid #81C784; padding-bottom: 5px; }
+  .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+  .card { background-color: #e8f5e9; padding: 20px; border-radius: 8px; text-align: center; transition: transform 0.2s ease-in-out; }
+  .card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+  .card i { font-size: 3em; color: #4CAF50; margin-bottom: 10px; }
+  .card h3 { margin: 0 0 10px 0; font-size: 1.4em; color: #388E3C; }
+  .card p { font-size: 1em; line-height: 1.5; }
+  .icon-text { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
+  .icon-text i { margin-right: 10px; font-size: 2em; color: #4CAF50; }
+  .icon-text span { font-size: 1.5em; font-weight: bold; color: #388E3C; }
+  .stats .item { margin-bottom: 15px; }
+  .stats .item strong { color: #388E3C; font-size: 1.2em; }
+  .stats .item span { font-size: 1.1em; }
+  footer { text-align: center; padding: 20px; font-size: 0.9em; color: #777; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="infographic-container">
 
-        <div class="infographic-section header">
-            <h1>ORBITプロジェクト</h1>
-            <p>未来の宇宙開発を加速する革新的な取り組み</p>
+<div class="infographic">
+  <div class="header">
+    <h1>秩父・横瀬町</h1>
+    <p>自然と文化が息づく、緑豊かな町</p>
+  </div>
+
+  <div class="content">
+    <div class="section">
+      <h2>町の概要</h2>
+      <div class="grid-container">
+        <div class="card">
+          <i class="fas fa-mountain"></i>
+          <h3>豊かな自然</h3>
+          <p>日本百名山の両神山や武甲山を望み、清流・横瀬川が流れる自然豊かな環境。</p>
         </div>
-
-        <div class="infographic-section section-what">
-            <h2>ORBITとは？</h2>
-            <div class="icon">🛰️</div>
-            <p>
-                ORBIT（Orbital Reusability and Breakthrough Innovations for Tomorrow）プロジェクトは、
-                次世代の宇宙輸送システムと宇宙インフラの実現を目指す、野心的な国際共同プロジェクトです。
-                持続可能で、よりアクセスしやすい宇宙空間の構築を目的としています。
-            </p>
+        <div class="card">
+          <i class="fas fa-seedling"></i>
+          <h3>農業と景観</h3>
+          <p>野菜や果物（特に、いちご・ぶどう・梨）の栽培が盛ん。段々畑の美しい景観も魅力。</p>
         </div>
-
-        <div class="infographic-section section-goal">
-            <h2>主な目標</h2>
-            <div class="icon">🚀</div>
-            <div class="section-content">
-                <ul>
-                    <li>再利用可能な宇宙船・ロケットの開発と実証</li>
-                    <li>軌道上での補給・修理・建設技術の確立</li>
-                    <li>宇宙デブリ（宇宙ゴミ）の削減・除去技術の進展</li>
-                    <li>地球低軌道（LEO）から月、火星への効率的な輸送ルートの開拓</li>
-                    <li>宇宙空間での持続可能な活動基盤の構築</li>
-                </ul>
-            </div>
+        <div class="card">
+          <i class="fas fa-hiking"></i>
+          <h3>アクティビティ</h3>
+          <p>ハイキング、キャンプ、サイクリング、渓流釣りなど、アウトドアレジャーが楽しめる。</p>
         </div>
-
-        <div class="infographic-section section-key-features">
-            <h2>注目の技術要素</h2>
-            <div class="key-features-grid">
-                <div class="feature-item">
-                    <div class="icon">♻️</div>
-                    <h3>完全再利用技術</h3>
-                    <p>ロケットや宇宙船の機体を複数回利用し、打ち上げコストを劇的に削減。</p>
-                </div>
-                <div class="feature-item">
-                    <div class="icon">🔧</div>
-                    <h3>軌道上インフラ</h3>
-                    <p>宇宙ステーションや軌道上プラットフォームによる補給・修理・製造。</p>
-                </div>
-                <div class="feature-item">
-                    <div class="icon">🧹</div>
-                    <h3>デブリ対策</h3>
-                    <p>革新的なデブリ除去技術で、宇宙空間の安全を確保。</p>
-                </div>
-                <div class="feature-item">
-                    <div class="icon">🌌</div>
-                    <h3>深宇宙アクセス</h3>
-                    <p>月や火星への到達を容易にする、新世代の推進システム。</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="infographic-section section-impact">
-            <h2>期待されるインパクト</h2>
-            <div class="icon">🌍✨</div>
-            <p>
-                ORBITプロジェクトの成功は、科学研究の加速、宇宙産業の活性化、
-                そして人類の活動圏を宇宙へと広げるための確固たる基盤となります。
-                持続可能な宇宙利用の実現により、地球の未来にも貢献します。
-            </p>
-        </div>
-
+      </div>
     </div>
+
+    <div class="section">
+      <h2>地域の魅力</h2>
+      <div class="grid-container">
+        <div class="card">
+          <i class="fas fa-bullseye"></i>
+          <h3>観光スポット</h3>
+          <p>札所巡り、横瀬町芦ヶ久保の道の駅、あしがくぼの氷柱（冬期）などが人気。</p>
+        </div>
+        <div class="card">
+          <i class="fas fa-users"></i>
+          <h3>地域イベント</h3>
+          <p>横瀬町エンデューロ、いちご品評会、地元の祭りなど、活気あるイベントが開催。</p>
+        </div>
+        <div class="card">
+          <i class="fas fa-utensils"></i>
+          <h3>食の体験</h3>
+          <p>採れたて野菜の直売所、地元食材を使った飲食店、いちご狩り体験。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>アクセス</h2>
+      <div class="grid-container">
+        <div class="card">
+          <i class="fas fa-train"></i>
+          <h3>電車</h3>
+          <p>西武鉄道 横瀬駅。都心からのアクセスも良好。</p>
+        </div>
+        <div class="card">
+          <i class="fas fa-car"></i>
+          <h3>車</h3>
+          <p>関越自動車道・花園ICから約30分。国道299号線沿い。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>埼玉県秩父郡横瀬町｜自然・農業・アクティビティが調和する地域</p>
+  </footer>
+</div>
+
 </body>
 </html>
+```

@@ -16,6 +16,6 @@ steps:
     range: A1
     values: '[["a"]]'
   meta:
-    x: 98
-    y: 159
+    x: 118
+    y: 172
 enabled: true

@@ -355,7 +355,7 @@
         { key: "total_tokens", desc: "合計トークン数" },
       ],
     },
-    araichat_send: {
+    araichat_send_message: {
       title: "アライチャット送信",
       description: "ARAICHAT の統合APIへメッセージを送信します。",
       params: [
@@ -366,8 +366,8 @@
         },
         {
           key: "files",
-          desc: "添付ファイル配列（JSON文字列も可）",
-          example: '["runs/output/report.txt"]',
+          desc: "添付ファイルパス（文字列/配列/JSON文字列も可）",
+          example: "C:\\\\Users\\\\winni\\\\my_projects\\\\1\\\\orbit\\\\runs\\\\output\\\\sample.xlsx",
         },
         {
           key: "room_id",
@@ -418,7 +418,6 @@
   const actionListEl = document.getElementById("action-list");
   const canvasEl = document.getElementById("flow-canvas");
   const inspectorEl = document.getElementById("inspector");
-  const addNodeButton = document.getElementById("add-node");
 
   const REQUIRED_PARAMS = {
     ai_generate: ["prompt"],
@@ -1027,7 +1026,7 @@
 
   const updateTriggerVisibility = () => {
     const isSchedule = triggerSelect.value === "schedule";
-    cronField.style.display = isSchedule ? "block" : "none";
+    cronField.style.display = isSchedule ? "grid" : "none";
   };
 
   let cronPreviewTimer = null;
@@ -1236,7 +1235,6 @@
     window.addEventListener("pointerup", onPointerUp);
   });
 
-  addNodeButton.addEventListener("click", () => addStep());
   saveButton.addEventListener("click", saveWorkflow);
   triggerSelect.addEventListener("change", updateTriggerVisibility);
   if (cronPreset) {

@@ -8,9 +8,11 @@ steps:
   params:
     provider: gemini
     model: gemini-2.5-flash-lite
-    prompt: 'このプロジェクト、ORBITとは？
+    prompt: 'discribe yokoze town in saitama chichibu？
 
-      要約して、出力はHTMLでインフォグラフィックに出力だけにすること'
+      要約して、出力はHTMLでインフォグラフィックに出力だけにすること
+
+      文頭の"""html も不要です'
   meta:
     x: 82
     y: 76
@@ -23,14 +25,11 @@ steps:
     x: 77
     y: 213
 - id: araichat_send_1
-  type: araichat_send
+  type: araichat_send_message
   params:
-    text: 'テスト通知:
-
-      '
     room_id: '3'
     api_key: ak_O2TMyQ4gyb6DnJC-acjHA-YHnoRLYkQK_mTsJrr1Nl8
-    files: '["C:/Users/winni/my_projects/1/orbit/runs/output/sample.html"]'
+    files: C:\Users\winni\my_projects\1\orbit\runs\output\sample.html
   meta:
     x: 71
     y: 348

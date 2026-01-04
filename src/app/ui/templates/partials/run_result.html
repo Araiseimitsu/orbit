@@ -1,6 +1,9 @@
 <!-- Run Result Toast Notification -->
 <div class="toast-item transform transition-all duration-300 ease-out"
      data-toast-id="{{ run.run_id }}"
+     data-workflow-name="{{ workflow_name }}"
+     data-run-status="{{ run.status }}"
+     data-toast-duration="{{ '10000' if run.status == 'failed' else '5000' }}"
      x-data="{ show: true, expanded: false }"
      x-show="show"
      x-transition:enter="translate-x-0 opacity-100"
@@ -84,16 +87,3 @@
         </div>
     </div>
 </div>
-<script>
-    // 成功時は5秒、失敗時は10秒で自動削除
-    (() => {
-        const toast = document.querySelector('[data-toast-id="{{ run.run_id }}"]');
-        if (!toast) return;
-        const duration = {{ '10000' if run.status == 'failed' else '5000' }};
-        setTimeout(() => {
-            toast.style.transform = 'translateX(100%)';
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
-    })();
-</script>

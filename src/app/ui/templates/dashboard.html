@@ -47,7 +47,8 @@
                 <p class="text-[11px] font-mono text-gray-500 mt-1 truncate">{{ workflow.filename }}</p>
             </div>
             <span
-                class="apple-badge {% if workflow.status == '成功' %}badge-success{% elif workflow.status in ['失敗', 'エラー'] %}badge-error{% else %}badge-neutral{% endif %}">
+                class="apple-badge {% if workflow.status == '成功' %}badge-success{% elif workflow.status in ['失敗', 'エラー'] %}badge-error{% else %}badge-neutral{% endif %}"
+                data-workflow-status="{{ workflow.name }}">
                 {{ workflow.status }}
             </span>
         </div>

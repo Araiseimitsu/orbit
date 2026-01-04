@@ -23,6 +23,7 @@ DEFAULT_BASE_URL = "https://araichat-966672454924.asia-northeast1.run.app"
 DEFAULT_TIMEOUT = 30
 DEFAULT_RETRIES = 3
 DEFAULT_API_KEY_FILE = "secrets/araichat_api_key.txt"
+ACTION_TYPE = "araichat_send_message"
 
 
 def _coerce_int(value: Any, label: str) -> int | None:
@@ -70,13 +71,23 @@ def _normalize_files(value: Any, base_dir: Path) -> list[Path]:
         text = value.strip()
         if not text:
             return []
-        try:
-            value = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValueError("files は配列(JSON)で指定してください") from exc
+
+        if text.startswith("[") or text.startswith('"'):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError("files は配列または文字列（JSON可）で指定してください") from exc
+            if isinstance(parsed, list):
+                value = parsed
+            elif isinstance(parsed, str):
+                value = [parsed]
+            else:
+                raise ValueError("files は配列または文字列で指定してください")
+        else:
+            value = [text]
 
     if not isinstance(value, list):
-        raise ValueError("files は配列で指定してください")
+        raise ValueError("files は配列または文字列で指定してください")
 
     paths: list[Path] = []
     for item in value:
@@ -110,8 +121,8 @@ def _extract_error_detail(response: requests.Response | None) -> str:
     return ""
 
 
-@register_action("araichat_send")
-async def action_araichat_send(
+@register_action(ACTION_TYPE)
+async def action_araichat_send_message(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
@@ -119,7 +130,7 @@ async def action_araichat_send(
 
     params:
         text: 送信するテキスト（text または files のいずれか必須）
-        files: 添付ファイル配列（JSON 文字列も可）
+        files: 添付ファイル（文字列/配列/JSON 文字列も可）
         room_id: 送信先ルームID（未指定時は環境変数 ARAICHAT_ROOM_ID）
         api_key: 統合APIキー（直接指定）
         api_key_file: APIキーのファイルパス（未指定時は ARAICHAT_API_KEY または既定ファイル）

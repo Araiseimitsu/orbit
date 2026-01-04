@@ -49,13 +49,71 @@ function initHtmxEvents() {
 /**
  * Toast Management
  */
+const BADGE_CLASSES = ["badge-success", "badge-error", "badge-neutral"];
+
+function escapeSelector(value) {
+  if (window.CSS && CSS.escape) return CSS.escape(value);
+  return String(value).replace(/["\\]/g, "\\$&");
+}
+
+function updateDashboardBadge(workflowName, runStatus) {
+  if (!workflowName || !runStatus) return;
+  const selector = `[data-workflow-status="${escapeSelector(workflowName)}"]`;
+  const badge = document.querySelector(selector);
+  if (!badge) return;
+
+  const statusMap = {
+    success: { label: "成功", className: "badge-success" },
+    failed: { label: "失敗", className: "badge-error" },
+    running: { label: "実行中", className: "badge-neutral" },
+  };
+  const next = statusMap[runStatus] || {
+    label: runStatus,
+    className: "badge-neutral",
+  };
+
+  badge.textContent = next.label;
+  BADGE_CLASSES.forEach((name) => badge.classList.remove(name));
+  badge.classList.add(next.className);
+}
+
+function registerToast(toast) {
+  if (!toast || toast.dataset.toastInitialized === "true") return;
+  toast.dataset.toastInitialized = "true";
+
+  const duration = Number.parseInt(toast.dataset.toastDuration || "5000", 10);
+  const workflowName = toast.dataset.workflowName;
+  const runStatus = toast.dataset.runStatus;
+
+  updateDashboardBadge(workflowName, runStatus);
+
+  if (Number.isFinite(duration) && duration > 0) {
+    setTimeout(() => {
+      toast.style.transform = "translateX(100%)";
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+}
+
 function initToastAutoScroll() {
   const toastContainer = document.getElementById("toast-container");
   if (toastContainer) {
-    const observer = new MutationObserver(() => {
+    toastContainer.querySelectorAll(".toast-item").forEach(registerToast);
+    const observer = new MutationObserver((mutations) => {
       toastContainer.scrollTop = toastContainer.scrollHeight;
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches(".toast-item")) {
+            registerToast(node);
+            return;
+          }
+          node.querySelectorAll(".toast-item").forEach(registerToast);
+        });
+      });
     });
-    observer.observe(toastContainer, { childList: true });
+    observer.observe(toastContainer, { childList: true, subtree: true });
   }
 }
 

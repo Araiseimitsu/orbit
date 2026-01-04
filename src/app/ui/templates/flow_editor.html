@@ -29,18 +29,22 @@
                 </label>
             </div>
             <div class="header-field" id="cron-field">
-                <label for="trigger-cron">cron</label>
-                <input id="trigger-cron" type="text" placeholder="0 9 * * *">
-                <label for="cron-preset" class="cron-sub-label">プリセット</label>
-                <select id="cron-preset">
-                    <option value="">選択してください</option>
-                    <option value="*/1 * * * *">毎分</option>
-                    <option value="*/5 * * * *">5分ごと</option>
-                    <option value="0 * * * *">毎時（毎時00分）</option>
-                    <option value="0 9 * * *">毎日 9:00</option>
-                    <option value="0 9 * * 1-5">平日 9:00</option>
-                    <option value="0 9 * * 0">毎週日曜 9:00</option>
-                </select>
+                <div class="cron-col">
+                    <label for="trigger-cron">cron</label>
+                    <input id="trigger-cron" type="text" placeholder="0 9 * * *">
+                </div>
+                <div class="cron-col">
+                    <label for="cron-preset" class="cron-sub-label">プリセット</label>
+                    <select id="cron-preset">
+                        <option value="">選択してください</option>
+                        <option value="*/1 * * * *">毎分</option>
+                        <option value="*/5 * * * *">5分ごと</option>
+                        <option value="0 * * * *">毎時（毎時00分）</option>
+                        <option value="0 9 * * *">毎日 9:00</option>
+                        <option value="0 9 * * 1-5">平日 9:00</option>
+                        <option value="0 9 * * 0">毎週日曜 9:00</option>
+                    </select>
+                </div>
                 <div id="cron-preview" class="cron-preview"></div>
                 <div id="cron-error" class="cron-error"></div>
                 <div class="cron-help">
@@ -72,8 +76,7 @@
 
         <section class="flow-canvas-wrap">
             <div class="canvas-toolbar">
-                <button class="ghost-button" id="add-node">+ 追加</button>
-                <span class="hint">クリックで追加 / ドラッグで移動 / クリックで編集（実行順は上から下）</span>
+                <span class="hint">左のアクションから追加 / ドラッグで移動 / クリックで編集（実行順は上から下）</span>
             </div>
             <div id="flow-canvas" class="flow-canvas"></div>
         </section>
