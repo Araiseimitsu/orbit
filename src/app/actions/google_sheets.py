@@ -146,7 +146,51 @@ def _parse_values_with_header(
         }
 
 
-@register_action("sheets_read")
+@register_action(
+    "sheets_read",
+    metadata={
+        "title": "Google Sheets 読み込み",
+        "description": "Google Sheetsからデータを読み取ります。",
+        "category": "Google Sheets",
+        "params": [
+            {
+                "key": "spreadsheet_id",
+                "description": "スプレッドシートID (URL から取得可能)",
+                "required": True,
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+            },
+            {
+                "key": "range",
+                "description": "読み取り範囲 (例: 'Sheet1!A1:D10', 'Sheet1' など)",
+                "required": True,
+                "example": "Sheet1!A1:D10"
+            },
+            {
+                "key": "header_row",
+                "description": "1行目をヘッダーとして扱う",
+                "required": False,
+                "default": True,
+                "example": "true"
+            },
+            {
+                "key": "credentials_file",
+                "description": "認証情報ファイルパス",
+                "required": False,
+                "default": "secrets/google_service_account.json",
+                "example": "secrets/google_service_account.json"
+            }
+        ],
+        "outputs": [
+            {"key": "headers", "description": "ヘッダー行"},
+            {"key": "rows", "description": "データ行"},
+            {"key": "raw", "description": "生データ"},
+            {"key": "row_count", "description": "行数"},
+            {"key": "col_count", "description": "列数"},
+            {"key": "spreadsheet_id", "description": "スプレッドシートID"},
+            {"key": "range", "description": "範囲"}
+        ]
+    }
+)
 async def action_sheets_read(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -225,7 +269,34 @@ async def action_sheets_read(
         raise
 
 
-@register_action("sheets_list")
+@register_action(
+    "sheets_list",
+    metadata={
+        "title": "Google Sheets シート一覧",
+        "description": "スプレッドシート内のシート一覧を取得します。",
+        "category": "Google Sheets",
+        "params": [
+            {
+                "key": "spreadsheet_id",
+                "description": "スプレッドシートID",
+                "required": True,
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+            },
+            {
+                "key": "credentials_file",
+                "description": "認証情報ファイルパス",
+                "required": False,
+                "default": "secrets/google_service_account.json",
+                "example": "secrets/google_service_account.json"
+            }
+        ],
+        "outputs": [
+            {"key": "sheets", "description": "シート情報のリスト"},
+            {"key": "title", "description": "スプレッドシートのタイトル"},
+            {"key": "spreadsheet_id", "description": "スプレッドシートID"}
+        ]
+    }
+)
 async def action_sheets_list(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -292,7 +363,63 @@ async def action_sheets_list(
         raise RuntimeError(error_msg) from e
 
 
-@register_action("sheets_append")
+@register_action(
+    "sheets_append",
+    metadata={
+        "title": "Google Sheets 追記",
+        "description": "Google Sheetsの最後に行を追加（追記）します。",
+        "category": "Google Sheets",
+        "params": [
+            {
+                "key": "spreadsheet_id",
+                "description": "スプレッドシートID",
+                "required": True,
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+            },
+            {
+                "key": "range",
+                "description": "追記先の範囲（例: 'Sheet1!A1' または 'Sheet1'）",
+                "required": True,
+                "example": "Sheet1!A1"
+            },
+            {
+                "key": "values",
+                "description": "2次元配列 or JSON文字列",
+                "required": True,
+                "example": '[["A1", "B1"], ["A2", "B2"]]'
+            },
+            {
+                "key": "value_input_option",
+                "description": "RAW / USER_ENTERED",
+                "required": False,
+                "default": "USER_ENTERED",
+                "example": "USER_ENTERED"
+            },
+            {
+                "key": "insert_data_option",
+                "description": "INSERT_ROWS / OVERWRITE",
+                "required": False,
+                "default": "INSERT_ROWS",
+                "example": "INSERT_ROWS"
+            },
+            {
+                "key": "credentials_file",
+                "description": "認証情報ファイルパス",
+                "required": False,
+                "default": "secrets/google_service_account.json",
+                "example": "secrets/google_service_account.json"
+            }
+        ],
+        "outputs": [
+            {"key": "spreadsheet_id", "description": "スプレッドシートID"},
+            {"key": "range", "description": "範囲"},
+            {"key": "updated_range", "description": "更新範囲"},
+            {"key": "updated_rows", "description": "更新行数"},
+            {"key": "updated_columns", "description": "更新列数"},
+            {"key": "updated_cells", "description": "更新セル数"}
+        ]
+    }
+)
 async def action_sheets_append(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -368,7 +495,56 @@ async def action_sheets_append(
         raise RuntimeError(error_msg) from e
 
 
-@register_action("sheets_write")
+@register_action(
+    "sheets_write",
+    metadata={
+        "title": "Google Sheets 書き込み",
+        "description": "Google Sheetsの指定範囲にデータを書き込みます（上書き）。",
+        "category": "Google Sheets",
+        "params": [
+            {
+                "key": "spreadsheet_id",
+                "description": "スプレッドシートID",
+                "required": True,
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+            },
+            {
+                "key": "range",
+                "description": "書き込み範囲（例: 'Sheet1!A1:C2'）",
+                "required": True,
+                "example": "Sheet1!A1:C2"
+            },
+            {
+                "key": "values",
+                "description": "2次元配列 or JSON文字列",
+                "required": True,
+                "example": '[["A1", "B1"], ["A2", "B2"]]'
+            },
+            {
+                "key": "value_input_option",
+                "description": "RAW / USER_ENTERED",
+                "required": False,
+                "default": "USER_ENTERED",
+                "example": "USER_ENTERED"
+            },
+            {
+                "key": "credentials_file",
+                "description": "認証情報ファイルパス",
+                "required": False,
+                "default": "secrets/google_service_account.json",
+                "example": "secrets/google_service_account.json"
+            }
+        ],
+        "outputs": [
+            {"key": "spreadsheet_id", "description": "スプレッドシートID"},
+            {"key": "range", "description": "範囲"},
+            {"key": "updated_range", "description": "更新範囲"},
+            {"key": "updated_rows", "description": "更新行数"},
+            {"key": "updated_columns", "description": "更新列数"},
+            {"key": "updated_cells", "description": "更新セル数"}
+        ]
+    }
+)
 async def action_sheets_write(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:

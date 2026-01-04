@@ -1,0 +1,14 @@
+name: scheduled_task
+description: スケジュール定期実行のサンプル（毎日9:00）
+enabled: true
+trigger:
+  type: schedule
+  cron: "0 9 * * *"
+steps:
+  - id: log_time
+    type: log
+    params:
+      message: "定期実行: {{ now }}"
+    meta:
+      x: 80
+      y: 80

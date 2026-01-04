@@ -121,7 +121,67 @@ def _extract_error_detail(response: requests.Response | None) -> str:
     return ""
 
 
-@register_action(ACTION_TYPE)
+@register_action(
+    ACTION_TYPE,
+    metadata={
+        "title": "ARAICHAT 送信",
+        "description": "ARAICHAT の統合APIに対してメッセージを送信します。",
+        "category": "外部連携",
+        "params": [
+            {
+                "key": "text",
+                "description": "送信するテキスト（text または files のいずれか必須）",
+                "required": False,
+                "example": "こんにちは"
+            },
+            {
+                "key": "files",
+                "description": "添付ファイル（文字列/配列/JSON文字列も可）。Windowsパスはエクスプローラーからコピーしたそのまま使用可能",
+                "required": False,
+                "example": 'C:\\Users\\winni\\my_projects\\1\\orbit\\runs\\output\\sample.html または ["runs/output/file1.txt", "runs/output/file2.png"]'
+            },
+            {
+                "key": "room_id",
+                "description": "送信先ルームID（未指定時は環境変数 ARAICHAT_ROOM_ID）",
+                "required": False,
+                "example": "your-room-id"
+            },
+            {
+                "key": "api_key",
+                "description": "統合APIキー（直接指定）",
+                "required": False,
+                "example": "your-api-key"
+            },
+            {
+                "key": "api_key_file",
+                "description": "APIキーのファイルパス（未指定時は ARAICHAT_API_KEY または既定ファイル）",
+                "required": False,
+                "example": "secrets/araichat_api_key.txt"
+            },
+            {
+                "key": "timeout",
+                "description": "タイムアウト秒（デフォルト: 30）",
+                "required": False,
+                "default": 30,
+                "example": "30"
+            },
+            {
+                "key": "retries",
+                "description": "リトライ回数（デフォルト: 3）",
+                "required": False,
+                "default": 3,
+                "example": "3"
+            }
+        ],
+        "outputs": [
+            {"key": "message_id", "description": "メッセージID"},
+            {"key": "room_id", "description": "ルームID"},
+            {"key": "files", "description": "添付ファイル"},
+            {"key": "created_at", "description": "作成日時"},
+            {"key": "status_code", "description": "HTTPステータスコード"}
+        ]
+    }
+)
 async def action_araichat_send_message(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -130,7 +190,7 @@ async def action_araichat_send_message(
 
     params:
         text: 送信するテキスト（text または files のいずれか必須）
-        files: 添付ファイル（文字列/配列/JSON 文字列も可）
+        files: 添付ファイル（文字列/配列/JSON文字列も可）。Windowsパスは \\ または / で指定
         room_id: 送信先ルームID（未指定時は環境変数 ARAICHAT_ROOM_ID）
         api_key: 統合APIキー（直接指定）
         api_key_file: APIキーのファイルパス（未指定時は ARAICHAT_API_KEY または既定ファイル）

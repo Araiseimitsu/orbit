@@ -145,7 +145,55 @@ def _calc_updated_range(
     return f"{start_cell}:{end_cell}"
 
 
-@register_action("excel_read")
+@register_action(
+    "excel_read",
+    metadata={
+        "title": "Excel 読み込み",
+        "description": "Excelファイルからデータを読み取ります。",
+        "category": "Excel",
+        "params": [
+            {
+                "key": "path",
+                "description": "Excelファイルパス",
+                "required": True,
+                "example": "data.xlsx"
+            },
+            {
+                "key": "sheet",
+                "description": "シート名（省略時はアクティブシート）",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
+                "key": "range",
+                "description": "取得範囲（例: 'A1:D10' または 'Sheet1!A1:D10'）",
+                "required": True,
+                "example": "A1:D10"
+            },
+            {
+                "key": "header_row",
+                "description": "1行目をヘッダーとして扱う",
+                "required": False,
+                "default": True,
+                "example": "true"
+            },
+            {
+                "key": "data_only",
+                "description": "数式の結果を返す",
+                "required": False,
+                "default": True,
+                "example": "true"
+            }
+        ],
+        "outputs": [
+            {"key": "headers", "description": "ヘッダー行"},
+            {"key": "rows", "description": "データ行"},
+            {"key": "raw", "description": "生データ"},
+            {"key": "row_count", "description": "行数"},
+            {"key": "col_count", "description": "列数"}
+        ]
+    }
+)
 async def action_excel_read(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -195,7 +243,26 @@ async def action_excel_read(
     }
 
 
-@register_action("excel_list_sheets")
+@register_action(
+    "excel_list_sheets",
+    metadata={
+        "title": "Excel シート一覧",
+        "description": "Excelファイルのシート一覧を取得します。",
+        "category": "Excel",
+        "params": [
+            {
+                "key": "path",
+                "description": "Excelファイルパス",
+                "required": True,
+                "example": "data.xlsx"
+            }
+        ],
+        "outputs": [
+            {"key": "sheets", "description": "シート名のリスト"},
+            {"key": "path", "description": "ファイルパス"}
+        ]
+    }
+)
 async def action_excel_list_sheets(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -211,7 +278,48 @@ async def action_excel_list_sheets(
     return {"path": str(path), "sheets": sheets}
 
 
-@register_action("excel_write")
+@register_action(
+    "excel_write",
+    metadata={
+        "title": "Excel 書き込み",
+        "description": "Excelファイルの指定範囲にデータを書き込みます（上書き）。",
+        "category": "Excel",
+        "params": [
+            {
+                "key": "path",
+                "description": "Excelファイルパス",
+                "required": True,
+                "example": "data.xlsx"
+            },
+            {
+                "key": "sheet",
+                "description": "シート名（省略時はアクティブシート）",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
+                "key": "range",
+                "description": "書き込み範囲（例: 'A1:C2' または 'Sheet1!A1:C2'）",
+                "required": True,
+                "example": "A1:C2"
+            },
+            {
+                "key": "values",
+                "description": "2次元配列 or JSON文字列",
+                "required": True,
+                "example": '[["A1", "B1"], ["A2", "B2"]]'
+            }
+        ],
+        "outputs": [
+            {"key": "path", "description": "ファイルパス"},
+            {"key": "sheet", "description": "シート名"},
+            {"key": "range", "description": "範囲"},
+            {"key": "updated_range", "description": "更新範囲"},
+            {"key": "updated_rows", "description": "更新行数"},
+            {"key": "updated_columns", "description": "更新列数"}
+        ]
+    }
+)
 async def action_excel_write(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -269,7 +377,48 @@ async def action_excel_write(
     }
 
 
-@register_action("excel_append")
+@register_action(
+    "excel_append",
+    metadata={
+        "title": "Excel 追記",
+        "description": "Excelファイルの最後に行を追加（追記）します。",
+        "category": "Excel",
+        "params": [
+            {
+                "key": "path",
+                "description": "Excelファイルパス",
+                "required": True,
+                "example": "data.xlsx"
+            },
+            {
+                "key": "sheet",
+                "description": "シート名（省略時はアクティブシート）",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
+                "key": "values",
+                "description": "2次元配列 or JSON文字列",
+                "required": True,
+                "example": '[["A1", "B1"], ["A2", "B2"]]'
+            },
+            {
+                "key": "start_cell",
+                "description": "追記開始列を指定（例: 'B1'。行番号は無視）",
+                "required": False,
+                "default": "A1",
+                "example": "A1"
+            }
+        ],
+        "outputs": [
+            {"key": "path", "description": "ファイルパス"},
+            {"key": "sheet", "description": "シート名"},
+            {"key": "appended_range", "description": "追記範囲"},
+            {"key": "appended_rows", "description": "追記行数"},
+            {"key": "appended_columns", "description": "追記列数"}
+        ]
+    }
+)
 async def action_excel_append(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:

@@ -1,28 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}New Workflow - ORBIT{% endblock %}
+{% block title %}新規ワークフロー作成 - ORBIT{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
-    <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <h1 class="text-3xl font-bold text-gray-900">新規ワークフロー作成</h1>
-        <p class="mt-2 text-gray-600">
-            ワークフローはビジュアル作成画面で完結します。YAML を直接編集する必要はありません。
-        </p>
-        <div class="mt-6">
-            <a href="/workflows/new/visual" class="inline-flex items-center px-5 py-2 rounded-md text-sm font-medium bg-gray-900 text-white hover:bg-gray-800">
-                ビジュアルで作成する
-            </a>
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-extrabold tracking-tight text-white mb-2">新規ワークフロー作成</h1>
+    <p class="text-gray-500 font-medium mb-8">テンプレートから選択するか、空白のワークフローを作成してください。</p>
+
+    {% if templates %}
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-4">テンプレートから選択</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for template in templates %}
+            <div class="apple-card p-6 hover:border-blue-500/50 transition-colors">
+                <h3 class="text-lg font-bold text-white mb-2">{{ template.title }}</h3>
+                <p class="text-sm text-gray-400 mb-4">{{ template.description }}</p>
+                <a href="/workflows/new/from-template/{{ template.name }}"
+                   class="apple-button apple-button-primary px-4 py-2 text-sm inline-block">
+                    このテンプレートを使用
+                </a>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
-    <div class="mt-6 flex items-center gap-3">
-        <a href="/" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
-            ダッシュボードへ戻る
-        </a>
-        <a href="/runs" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50">
-            実行履歴を見る
+    <div class="border-t border-white/10 pt-6">
+        <h2 class="text-xl font-semibold text-white mb-4">または空白で作成</h2>
+        <a href="/workflows/new/visual"
+           class="apple-button apple-button-secondary px-6 py-3 text-sm">
+            空白のワークフローを作成
         </a>
     </div>
+    {% else %}
+    <div class="apple-card p-12 text-center">
+        <p class="text-gray-400">テンプレートが見つかりませんでした。</p>
+        <a href="/workflows/new/visual"
+           class="apple-button apple-button-primary px-6 py-3 text-sm mt-4 inline-block">
+            空白のワークフローを作成
+        </a>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

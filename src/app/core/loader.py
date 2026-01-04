@@ -26,16 +26,26 @@ class WorkflowLoader:
             files.extend(self.workflows_dir.glob("*.yml"))
         return sorted(files, key=lambda x: x.stem)
 
-    def load_workflow(self, name: str) -> tuple[Workflow | None, str | None]:
+    def load_workflow(self, name: str, templates_dir: bool = False) -> tuple[Workflow | None, str | None]:
         """
         ワークフローを読み込み、バリデーション
+
+        Args:
+            name: ワークフロー名
+            templates_dir: テンプレートディレクトリから読み込むかどうか
 
         Returns:
             (Workflow, None) - 成功時
             (None, error_message) - 失敗時
         """
-        yaml_path = self.workflows_dir / f"{name}.yaml"
-        yml_path = self.workflows_dir / f"{name}.yml"
+        # テンプレートディレクトリから読み込む場合
+        if templates_dir:
+            base_dir = self.workflows_dir / "templates"
+        else:
+            base_dir = self.workflows_dir
+
+        yaml_path = base_dir / f"{name}.yaml"
+        yml_path = base_dir / f"{name}.yml"
 
         file_path = yaml_path if yaml_path.exists() else yml_path if yml_path.exists() else None
 

@@ -11,7 +11,40 @@ from ..core.registry import register_action
 logger = logging.getLogger(__name__)
 
 
-@register_action("file_write")
+@register_action(
+    "file_write",
+    metadata={
+        "title": "ファイル書き込み",
+        "description": "指定パスへ内容を書き込みます（相対パスはプロジェクトルート基準）。",
+        "category": "ファイル",
+        "params": [
+            {
+                "key": "path",
+                "description": "出力先パス",
+                "required": True,
+                "example": "runs/output/{{ run_id }}.txt"
+            },
+            {
+                "key": "content",
+                "description": "書き込む内容",
+                "required": True,
+                "example": "結果: {{ step_1.text }}"
+            },
+            {
+                "key": "encoding",
+                "description": "文字コード",
+                "required": False,
+                "default": "utf-8",
+                "example": "utf-8"
+            }
+        ],
+        "outputs": [
+            {"key": "written", "description": "書き込み成功フラグ"},
+            {"key": "path", "description": "書き込んだパス"},
+            {"key": "size", "description": "ファイルサイズ（bytes）"}
+        ]
+    }
+)
 async def action_file_write(params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     """
     ファイル書き込みアクション
@@ -56,7 +89,34 @@ async def action_file_write(params: dict[str, Any], context: dict[str, Any]) -> 
     }
 
 
-@register_action("file_read")
+@register_action(
+    "file_read",
+    metadata={
+        "title": "ファイル読み込み",
+        "description": "指定パスの内容を読み込みます（相対パスはプロジェクトルート基準）。",
+        "category": "ファイル",
+        "params": [
+            {
+                "key": "path",
+                "description": "読み込み元パス",
+                "required": True,
+                "example": "runs/output/{{ run_id }}.txt"
+            },
+            {
+                "key": "encoding",
+                "description": "文字コード",
+                "required": False,
+                "default": "utf-8",
+                "example": "utf-8"
+            }
+        ],
+        "outputs": [
+            {"key": "content", "description": "ファイル内容"},
+            {"key": "path", "description": "読み込んだパス"},
+            {"key": "size", "description": "ファイルサイズ（bytes）"}
+        ]
+    }
+)
 async def action_file_read(params: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     """
     ファイル読み込みアクション

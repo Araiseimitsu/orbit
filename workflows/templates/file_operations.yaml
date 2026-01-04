@@ -1,0 +1,21 @@
+name: file_operations
+description: ファイル読み書きのサンプル
+enabled: true
+trigger:
+  type: manual
+steps:
+  - id: write_file
+    type: file_write
+    params:
+      path: "runs/output/{{ run_id }}.txt"
+      content: "実行ID: {{ run_id }}\n日時: {{ now }}"
+    meta:
+      x: 80
+      y: 80
+  - id: read_file
+    type: file_read
+    params:
+      path: "runs/output/{{ run_id }}.txt"
+    meta:
+      x: 80
+      y: 200

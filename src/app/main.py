@@ -213,28 +213,26 @@ async def runs_page(request: Request, workflow: str | None = None):
 
 @app.get("/workflows/new", response_class=HTMLResponse)
 async def workflow_new(request: Request):
-    """ワークフロー新規作成ガイド"""
-    sample_yaml = """name: hello_world
-trigger:
-  type: manual
-steps:
-  - id: step_1
-    type: log
-    params:
-      message: "Hello {{ now }}"
+    """ワークフロー新規作成（テンプレート選択）"""
+    # テンプレート一覧を取得
+    templates = []
+    templates_dir = WORKFLOWS_DIR / "templates"
+    if templates_dir.exists():
+        for yaml_file in templates_dir.glob("*.yaml"):
+            workflow, error = loader.load_workflow(yaml_file.stem, templates_dir=True)
+            if workflow:
+                templates.append({
+                    "name": yaml_file.stem,
+                    "title": workflow.name,
+                    "description": workflow.description or "",
+                    "filename": yaml_file.name
+                })
 
-  - id: step_2
-    type: file_write
-    params:
-      path: "runs/output/{{ run_id }}.txt"
-      content: "Result from step_1: {{ step_1.result }}"
-"""
     return templates.TemplateResponse(
         "new_workflow.html",
         {
             "request": request,
-            "workflows_dir": str(WORKFLOWS_DIR),
-            "sample_yaml": sample_yaml,
+            "templates": templates
         },
     )
 
@@ -289,6 +287,36 @@ async def workflow_edit(request: Request, name: str):
             "config_json": config_json,
             "error": error,
             "page_title": f"ビジュアルエディタ - {name}",
+            "static_version": str(int(__import__("time").time())),
+        },
+    )
+
+
+@app.get("/workflows/new/from-template/{template_name}")
+async def workflow_from_template(request: Request, template_name: str):
+    """テンプレートからワークフローを作成"""
+    workflow, error = loader.load_workflow(template_name, templates_dir=True)
+    if error or not workflow:
+        raise HTTPException(status_code=400, detail=f"テンプレートの読み込みに失敗: {error}")
+
+    actions = sorted(get_registry().list_actions())
+    editor_data = build_editor_data(workflow)
+    config_json = json.dumps(
+        {
+            "workflow": editor_data,
+            "actions": actions,
+            "mode": "new",
+            "saveUrl": "/api/workflows/save",
+        },
+        ensure_ascii=False,
+    )
+    return templates.TemplateResponse(
+        "flow_editor.html",
+        {
+            "request": request,
+            "config_json": config_json,
+            "error": None,
+            "page_title": f"テンプレートから作成 - {workflow.name}",
             "static_version": str(int(__import__("time").time())),
         },
     )
@@ -362,7 +390,17 @@ async def run_workflow(request: Request, name: str):
 @app.get("/api/actions")
 async def list_actions():
     """登録済みアクション一覧（UI用）"""
-    return {"actions": sorted(get_registry().list_actions())}
+    registry = get_registry()
+    actions = sorted(registry.list_actions())
+
+    # メタデータも含めて返す
+    metadata = {}
+    for action_type in actions:
+        meta = registry.get_metadata(action_type)
+        if meta:
+            metadata[action_type] = meta.dict()
+
+    return {"actions": actions, "metadata": metadata}
 
 
 @app.post("/api/workflows/save")

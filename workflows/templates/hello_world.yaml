@@ -1,0 +1,13 @@
+name: hello_world
+description: 基本的なログ出力のサンプル
+enabled: true
+trigger:
+  type: manual
+steps:
+  - id: greet
+    type: log
+    params:
+      message: "Hello {{ now }}"
+    meta:
+      x: 80
+      y: 80

@@ -133,7 +133,66 @@ def _call_gemini(
     }
 
 
-@register_action("ai_generate")
+@register_action(
+    "ai_generate",
+    metadata={
+        "title": "AI 生成",
+        "description": "プロンプトをAIに渡してテキストを生成します。",
+        "category": "AI",
+        "params": [
+            {
+                "key": "prompt",
+                "description": "生成指示",
+                "required": True,
+                "example": "次を要約: {{ step_1.text }}"
+            },
+            {
+                "key": "system",
+                "description": "システムプロンプト",
+                "required": False,
+                "example": "あなたは優秀なアシスタントです"
+            },
+            {
+                "key": "provider",
+                "description": "プロバイダー",
+                "required": False,
+                "default": "gemini",
+                "example": "gemini"
+            },
+            {
+                "key": "model",
+                "description": "モデル名",
+                "required": False,
+                "example": "gemini-2.5-flash-lite"
+            },
+            {
+                "key": "max_tokens",
+                "description": "最大出力トークン数",
+                "required": False,
+                "example": "1000"
+            },
+            {
+                "key": "temperature",
+                "description": "温度パラメータ（0.0〜1.0）",
+                "required": False,
+                "example": "0.7"
+            },
+            {
+                "key": "api_key_file",
+                "description": "APIキーのファイルパス",
+                "required": False,
+                "example": "secrets/gemini_api_key.txt"
+            }
+        ],
+        "outputs": [
+            {"key": "text", "description": "生成テキスト"},
+            {"key": "model", "description": "使用モデル"},
+            {"key": "provider", "description": "プロバイダー"},
+            {"key": "finish_reason", "description": "完了理由"},
+            {"key": "prompt_tokens", "description": "入力トークン数"}
+        ]
+    }
+)
 async def action_ai_generate(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:

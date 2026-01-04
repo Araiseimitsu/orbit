@@ -13,396 +13,29 @@
       steps: [],
     },
     actions: config.actions || [],
+    metadata: {},
+    ACTION_GUIDES: {},
     selectedId: null,
   };
 
-  const ACTION_GUIDES = {
-    log: {
-      title: "ログ出力",
-      description:
-        "指定メッセージをログに出力します。テンプレートで前のステップ結果を参照できます。",
-      params: [
-        {
-          key: "message",
-          desc: "出力メッセージ（必須）",
-          example: "Hello {{ step_1.text }}",
-        },
-        {
-          key: "level",
-          desc: "debug / info / warning / error",
-          example: "info",
-        },
-      ],
-      outputs: [
-        { key: "logged", desc: "出力成功フラグ" },
-        { key: "message", desc: "出力したメッセージ" },
-      ],
-    },
-    file_write: {
-      title: "ファイル書き込み",
-      description:
-        "指定パスへ内容を書き込みます（相対パスはプロジェクトルート基準）。",
-      params: [
-        {
-          key: "path",
-          desc: "出力先パス（必須）",
-          example: "runs/output/{{ run_id }}.txt",
-        },
-        {
-          key: "content",
-          desc: "書き込む内容（必須）",
-          example: "結果: {{ step_1.text }}",
-        },
-        { key: "encoding", desc: "文字コード（任意）", example: "utf-8" },
-      ],
-      outputs: [
-        { key: "written", desc: "書き込み成功フラグ" },
-        { key: "path", desc: "書き込んだパス" },
-        { key: "size", desc: "ファイルサイズ（bytes）" },
-      ],
-    },
-    file_read: {
-      title: "ファイル読み込み",
-      description:
-        "指定パスの内容を読み込みます（相対パスはプロジェクトルート基準）。",
-      params: [
-        {
-          key: "path",
-          desc: "読み込み元パス（必須）",
-          example: "runs/output/{{ run_id }}.txt",
-        },
-        { key: "encoding", desc: "文字コード（任意）", example: "utf-8" },
-      ],
-      outputs: [
-        { key: "content", desc: "ファイル内容" },
-        { key: "path", desc: "読み込んだパス" },
-        { key: "size", desc: "ファイルサイズ（bytes）" },
-      ],
-    },
-    excel_read: {
-      title: "Excel 読み取り",
-      description: "ローカルの Excel から指定範囲のデータを取得します。",
-      params: [
-        {
-          key: "path",
-          desc: "Excel ファイルパス（必須）",
-          example: "runs/output/sample.xlsx",
-        },
-        {
-          key: "sheet",
-          desc: "シート名（省略時はアクティブ）",
-          example: "Sheet1",
-        },
-        {
-          key: "range",
-          desc: "取得範囲（必須）",
-          example: "A1:D10",
-        },
-        {
-          key: "header_row",
-          desc: "1行目をヘッダーとして扱う",
-          example: "true",
-        },
-        {
-          key: "data_only",
-          desc: "数式の結果を返す",
-          example: "true",
-        },
-      ],
-      outputs: [
-        { key: "headers", desc: "ヘッダー配列" },
-        { key: "rows", desc: "ヘッダー付き行データ" },
-        { key: "raw", desc: "生データ（2次元配列）" },
-        { key: "row_count", desc: "行数" },
-        { key: "col_count", desc: "列数" },
-      ],
-    },
-    excel_list_sheets: {
-      title: "Excel シート一覧",
-      description: "Excel ファイル内のシート一覧を取得します。",
-      params: [
-        {
-          key: "path",
-          desc: "Excel ファイルパス（必須）",
-          example: "runs/output/sample.xlsx",
-        },
-      ],
-      outputs: [{ key: "sheets", desc: "シート一覧（title/index）" }],
-    },
-    excel_append: {
-      title: "Excel 追記",
-      description: "シート末尾に行データを追加します。",
-      params: [
-        {
-          key: "path",
-          desc: "Excel ファイルパス（必須）",
-          example: "runs/output/sample.xlsx",
-        },
-        {
-          key: "sheet",
-          desc: "シート名（省略時はアクティブ）",
-          example: "Sheet1",
-        },
-        {
-          key: "values",
-          desc: "2次元配列（JSON文字列も可）",
-          example: '[["A","B"],["1","2"]]',
-        },
-        {
-          key: "start_cell",
-          desc: "追記開始列（行番号は無視）",
-          example: "A1",
-        },
-      ],
-      outputs: [
-        { key: "updated_range", desc: "更新された範囲" },
-        { key: "appended_rows", desc: "追加行数" },
-        { key: "appended_columns", desc: "列数" },
-        { key: "appended_cells", desc: "更新セル数" },
-      ],
-    },
-    excel_write: {
-      title: "Excel 書き込み",
-      description: "指定範囲に行データを上書きします。",
-      params: [
-        {
-          key: "path",
-          desc: "Excel ファイルパス（必須）",
-          example: "runs/output/sample.xlsx",
-        },
-        {
-          key: "sheet",
-          desc: "シート名（省略時はアクティブ）",
-          example: "Sheet1",
-        },
-        {
-          key: "range",
-          desc: "書き込み範囲（必須）",
-          example: "A1:C2",
-        },
-        {
-          key: "values",
-          desc: "2次元配列（JSON文字列も可）",
-          example: '[["A","B","C"],["1","2","3"]]',
-        },
-      ],
-      outputs: [
-        { key: "updated_range", desc: "更新された範囲" },
-        { key: "updated_rows", desc: "更新行数" },
-        { key: "updated_columns", desc: "列数" },
-        { key: "updated_cells", desc: "更新セル数" },
-      ],
-    },
-    sheets_read: {
-      title: "Google Sheets 読み取り",
-      description: "スプレッドシートから指定範囲のデータを取得します。",
-      params: [
-        {
-          key: "spreadsheet_id",
-          desc: "スプレッドシートID（必須）",
-          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-        },
-        { key: "range", desc: "取得範囲（必須）", example: "Sheet1!A1:D10" },
-        {
-          key: "header_row",
-          desc: "1行目をヘッダーとして扱う",
-          example: "true",
-        },
-        {
-          key: "credentials_file",
-          desc: "認証JSONのパス",
-          example: "secrets/google_service_account.json",
-        },
-      ],
-      outputs: [
-        { key: "headers", desc: "ヘッダー配列" },
-        { key: "rows", desc: "ヘッダー付き行データ" },
-        { key: "raw", desc: "生データ（2次元配列）" },
-        { key: "row_count", desc: "行数" },
-        { key: "col_count", desc: "列数" },
-      ],
-    },
-    sheets_list: {
-      title: "Google Sheets シート一覧",
-      description: "スプレッドシート内のシート情報を取得します。",
-      params: [
-        {
-          key: "spreadsheet_id",
-          desc: "スプレッドシートID（必須）",
-          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-        },
-        {
-          key: "credentials_file",
-          desc: "認証JSONのパス",
-          example: "secrets/google_service_account.json",
-        },
-      ],
-      outputs: [
-        { key: "sheets", desc: "シート一覧（id/title/index）" },
-        { key: "title", desc: "スプレッドシート名" },
-      ],
-    },
-    sheets_append: {
-      title: "Google Sheets 追記",
-      description: "シート末尾に行データを追加します。",
-      params: [
-        {
-          key: "spreadsheet_id",
-          desc: "スプレッドシートID（必須）",
-          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-        },
-        {
-          key: "range",
-          desc: "追記先の範囲（必須）",
-          example: "Sheet1!A1",
-        },
-        {
-          key: "values",
-          desc: "2次元配列（JSON文字列も可）",
-          example: '[["A","B"],["1","2"]]',
-        },
-        {
-          key: "value_input_option",
-          desc: "RAW / USER_ENTERED",
-          example: "USER_ENTERED",
-        },
-        {
-          key: "insert_data_option",
-          desc: "INSERT_ROWS / OVERWRITE",
-          example: "INSERT_ROWS",
-        },
-        {
-          key: "credentials_file",
-          desc: "認証JSONのパス",
-          example: "secrets/google_service_account.json",
-        },
-      ],
-      outputs: [
-        { key: "updated_range", desc: "更新された範囲" },
-        { key: "updated_rows", desc: "追加行数" },
-        { key: "updated_columns", desc: "列数" },
-        { key: "updated_cells", desc: "更新セル数" },
-      ],
-    },
-    sheets_write: {
-      title: "Google Sheets 書き込み",
-      description: "指定範囲に行データを上書きします。",
-      params: [
-        {
-          key: "spreadsheet_id",
-          desc: "スプレッドシートID（必須）",
-          example: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-        },
-        {
-          key: "range",
-          desc: "書き込み範囲（必須）",
-          example: "Sheet1!A1:C2",
-        },
-        {
-          key: "values",
-          desc: "2次元配列（JSON文字列も可）",
-          example: '[["A","B","C"],["1","2","3"]]',
-        },
-        {
-          key: "value_input_option",
-          desc: "RAW / USER_ENTERED",
-          example: "USER_ENTERED",
-        },
-        {
-          key: "credentials_file",
-          desc: "認証JSONのパス",
-          example: "secrets/google_service_account.json",
-        },
-      ],
-      outputs: [
-        { key: "updated_range", desc: "更新された範囲" },
-        { key: "updated_rows", desc: "更新行数" },
-        { key: "updated_columns", desc: "列数" },
-        { key: "updated_cells", desc: "更新セル数" },
-      ],
-    },
-    ai_generate: {
-      title: "AI 生成",
-      description: "プロンプトをAIに渡してテキストを生成します。",
-      params: [
-        {
-          key: "prompt",
-          desc: "生成指示（必須）",
-          example: "次を要約: {{ step_1.text }}",
-        },
-        {
-          key: "system",
-          desc: "システムプロンプト",
-          example: "あなたは優秀なアシスタントです",
-        },
-        { key: "provider", desc: "gemini", example: "gemini" },
-        { key: "model", desc: "モデル名", example: "gemini-2.5-flash-lite" },
-        { key: "max_tokens", desc: "最大出力トークン数", example: "1000" },
-        { key: "temperature", desc: "0.0〜1.0", example: "0.7" },
-        {
-          key: "api_key_file",
-          desc: "APIキーのファイルパス",
-          example: "secrets/gemini_api_key.txt",
-        },
-      ],
-      outputs: [
-        { key: "text", desc: "生成テキスト" },
-        { key: "model", desc: "使用モデル" },
-        { key: "provider", desc: "gemini" },
-        { key: "finish_reason", desc: "完了理由" },
-        { key: "prompt_tokens", desc: "入力トークン数" },
-        { key: "completion_tokens", desc: "出力トークン数" },
-        { key: "total_tokens", desc: "合計トークン数" },
-      ],
-    },
-    araichat_send_message: {
-      title: "アライチャット送信",
-      description: "ARAICHAT の統合APIへメッセージを送信します。",
-      params: [
-        {
-          key: "text",
-          desc: "送信テキスト（text か files のどちらか必須）",
-          example: "障害通知: {{ step_1.message }}",
-        },
-        {
-          key: "files",
-          desc: "添付ファイルパス（文字列/配列/JSON文字列も可）",
-          example: "C:\\\\Users\\\\winni\\\\my_projects\\\\1\\\\orbit\\\\runs\\\\output\\\\sample.xlsx",
-        },
-        {
-          key: "room_id",
-          desc: "送信先ルームID（未指定時は ARAICHAT_ROOM_ID）",
-          example: "1",
-        },
-        {
-          key: "api_key_file",
-          desc: "APIキーのファイルパス（未指定時は ARAICHAT_API_KEY）",
-          example: "secrets/araichat_api_key.txt",
-        },
-        {
-          key: "api_key",
-          desc: "APIキー（直接指定）",
-          example: "your-api-key",
-        },
-        {
-          key: "timeout",
-          desc: "タイムアウト秒（デフォルト: 30）",
-          example: "30",
-        },
-        {
-          key: "retries",
-          desc: "リトライ回数（デフォルト: 3）",
-          example: "3",
-        },
-      ],
-      outputs: [
-        { key: "message_id", desc: "メッセージID" },
-        { key: "room_id", desc: "ルームID" },
-        { key: "files", desc: "添付ファイル情報" },
-        { key: "created_at", desc: "作成日時" },
-        { key: "status_code", desc: "HTTP ステータス" },
-      ],
-    },
+  const buildActionGuides = (metadata) => {
+    const guides = {};
+    for (const [type, meta] of Object.entries(metadata)) {
+      guides[type] = {
+        title: meta.title,
+        description: meta.description,
+        params: (meta.params || []).map((p) => ({
+          key: p.key,
+          desc: p.description,
+          example: p.example,
+        })),
+        outputs: (meta.outputs || []).map((o) => ({
+          key: o.key,
+          desc: o.description,
+        })),
+      };
+    }
+    return guides;
   };
 
   const nameInput = document.getElementById("workflow-name");
@@ -427,31 +60,22 @@
     ai_generate: { prompt: "" },
   };
 
-  const ACTION_GROUPS = [
-    { label: "ログ", match: (name) => name === "log" },
-    { label: "ファイル", match: (name) => name.startsWith("file_") },
-    { label: "Excel", match: (name) => name.startsWith("excel_") },
-    { label: "Google Sheets", match: (name) => name.startsWith("sheets_") },
-    { label: "AI", match: (name) => name.startsWith("ai_") },
-    { label: "通知", match: (name) => name.startsWith("araichat_") },
-  ];
-
   const buildActionGroups = (actions) => {
-    const remaining = new Set(actions);
-    const groups = [];
+    const categoryMap = new Map();
 
-    ACTION_GROUPS.forEach((group) => {
-      const matched = actions.filter((action) => group.match(action));
-      if (matched.length > 0) {
-        matched.forEach((action) => remaining.delete(action));
-        groups.push({ label: group.label, actions: matched });
+    actions.forEach((action) => {
+      const meta = state.metadata[action];
+      const category = meta?.category || "その他";
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, []);
       }
+      categoryMap.get(category).push(action);
     });
 
-    const others = actions.filter((action) => remaining.has(action));
-    if (others.length > 0) {
-      groups.push({ label: "その他", actions: others });
-    }
+    const groups = [];
+    categoryMap.forEach((actionList, category) => {
+      groups.push({ label: category, actions: actionList });
+    });
 
     return groups;
   };
@@ -579,7 +203,18 @@
         const item = document.createElement("button");
         item.type = "button";
         item.className = "action-item";
-        item.textContent = action;
+
+        // メタデータから表示名を取得
+        const meta = state.metadata[action];
+        const displayName = meta?.title || action;
+        const description = meta?.description || "";
+
+        item.innerHTML = `
+          <div class="action-item-name">${displayName}</div>
+          <div class="action-item-desc">${description}</div>
+        `;
+        item.title = description;
+
         item.addEventListener("click", () => addStep(action));
         groupItems.appendChild(item);
       });
@@ -590,16 +225,17 @@
   };
 
   const refreshActions = async () => {
-    if (state.actions.length > 0) {
-      renderActionList();
-      return;
-    }
     try {
       const response = await fetch("/api/actions");
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data.actions)) {
           state.actions = data.actions;
+        }
+        // メタデータを保存
+        if (data.metadata) {
+          state.metadata = data.metadata;
+          state.ACTION_GUIDES = buildActionGuides(data.metadata);
         }
       }
     } catch (error) {
@@ -785,7 +421,7 @@
     typeRow.appendChild(typeSelect);
 
     const buildGuide = (stepType, stepId) => {
-      const guide = ACTION_GUIDES[stepType];
+      const guide = state.ACTION_GUIDES[stepType];
       if (!guide) {
         return null;
       }
@@ -916,7 +552,7 @@
 
     const paramsList = document.createElement("div");
     const entries = Object.entries(step.params || {});
-    const availableKeys = (ACTION_GUIDES[step.type]?.params || []).map(
+    const availableKeys = (state.ACTION_GUIDES[step.type]?.params || []).map(
       (item) => item.key,
     );
     if (entries.length === 0) {

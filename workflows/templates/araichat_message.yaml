@@ -1,0 +1,13 @@
+name: araichat_message
+description: ARAICHATで定型文を送信するサンプル
+enabled: true
+trigger:
+  type: manual
+steps:
+  - id: send_message
+    type: araichat_send_message
+    params:
+      text: "こんにちは、現在時刻は {{ now }} です。"
+    meta:
+      x: 80
+      y: 80
