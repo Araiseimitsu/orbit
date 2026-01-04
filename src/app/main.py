@@ -112,6 +112,7 @@ def build_editor_data(workflow: Workflow | None) -> dict:
                 "id": step.id,
                 "type": step.type,
                 "params": step.params,
+                "when": step.when.model_dump(exclude_defaults=True) if step.when else None,
                 "position": {
                     "x": int(meta.get("x", 80)),
                     "y": int(meta.get("y", 80 + index * 120)),
@@ -422,19 +423,45 @@ async def save_workflow(request: Request):
         step_ids.add(step_id)
 
         params = step.get("params") or {}
+        when = step.get("when")
+        normalized_when = None
+        if when is not None:
+            if not isinstance(when, dict):
+                raise HTTPException(status_code=400, detail="条件の形式が正しくありません")
+            when_step = (when.get("step") or "").strip()
+            if not when_step:
+                raise HTTPException(status_code=400, detail="条件の step が必要です")
+            field = (when.get("field") or "text").strip()
+            if not field:
+                field = "text"
+            if "equals" not in when:
+                raise HTTPException(status_code=400, detail="条件の equals が必要です")
+            equals = when.get("equals")
+            if isinstance(equals, str) and equals.strip() == "":
+                raise HTTPException(status_code=400, detail="条件の equals が必要です")
+            normalized_when = {
+                "step": when_step,
+                "field": field,
+                "equals": equals,
+            }
+            if isinstance(when.get("trim"), bool):
+                normalized_when["trim"] = when["trim"]
+            if isinstance(when.get("case_insensitive"), bool):
+                normalized_when["case_insensitive"] = when["case_insensitive"]
         position = step.get("position") or {}
         meta = {
             "x": int(position.get("x", 0)),
             "y": int(position.get("y", 0)),
         }
-        normalized_steps.append(
-            {
-                "id": step_id,
-                "type": step_type,
-                "params": params,
-                "meta": meta,
-            }
-        )
+        step_data = {
+            "id": step_id,
+            "type": step_type,
+            "params": params,
+            "meta": meta,
+        }
+        if normalized_when is not None:
+            step_data["when"] = normalized_when
+        normalized_steps.append(step_data)
 
     workflow_data = {
         "name": name,

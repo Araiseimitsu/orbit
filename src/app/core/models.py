@@ -27,11 +27,23 @@ class TriggerWebhook(BaseModel):
 Trigger = TriggerSchedule | TriggerManual | TriggerWebhook
 
 
+class StepCondition(BaseModel):
+    """ステップ実行条件"""
+    step: str = Field(..., description="参照するステップID")
+    field: str = Field(default="text", description="参照する出力キー")
+    equals: Any = Field(..., description="一致判定値")
+    trim: bool = Field(default=True, description="文字列比較時の前後空白を除去")
+    case_insensitive: bool = Field(default=True, description="文字列比較時の大文字小文字を無視")
+
+
 class Step(BaseModel):
     """ワークフローステップ"""
     id: str = Field(..., description="ステップID（一意）")
     type: str = Field(..., description="アクションタイプ (log, file_write, ai, etc.)")
     params: dict[str, Any] = Field(default_factory=dict, description="パラメータ")
+    when: StepCondition | None = Field(
+        default=None, description="実行条件（満たさない場合はスキップ）"
+    )
     meta: dict[str, Any] | None = Field(default=None, description="UI用メタ情報（位置など）")
 
 

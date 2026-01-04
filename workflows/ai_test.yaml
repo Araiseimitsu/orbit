@@ -16,21 +16,57 @@ steps:
   meta:
     x: 82
     y: 76
+- id: judge
+  type: ai_generate
+  params:
+    provider: gemini
+    model: gemini-2.5-flash-lite
+    prompt: '次のHTMLの全文字数が１００文字以内かyesかnoのみで判定
+
+      {{ step_1.text }}'
+  meta:
+    x: 330
+    y: 160
 - id: file_write_1
   type: file_write
   params:
     path: runs\output\sample.html
     content: '{{ step_1.text }}'
+  when:
+    step: judge
+    field: text
+    equals: 'Yes'
+    trim: true
+    case_insensitive: true
   meta:
     x: 77
     y: 213
+- id: log_no
+  type: log
+  params:
+    message: 判定がNoのため送信をスキップしました。
+  when:
+    step: judge
+    field: text
+    equals: 'No'
+    trim: true
+    case_insensitive: true
+  meta:
+    x: 330
+    y: 320
 - id: araichat_send_1
   type: araichat_send_message
   params:
     room_id: '3'
     api_key: ak_O2TMyQ4gyb6DnJC-acjHA-YHnoRLYkQK_mTsJrr1Nl8
     files: C:\Users\winni\my_projects\1\orbit\runs\output\sample.html
+  when:
+    step: judge
+    field: text
+    equals: 'Yes'
+    trim: true
+    case_insensitive: true
   meta:
-    x: 71
-    y: 348
+    x: 70
+    y: 346
 enabled: false

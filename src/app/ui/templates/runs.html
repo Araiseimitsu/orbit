@@ -124,7 +124,7 @@ content %}
                                     >{{ step_result.id }}</span
                                 >
                                 <span
-                                    class="{% if step_result.status == 'success' %}text-green-500{% else %}text-red-500{% endif %} text-[10px] font-bold"
+                                    class="{% if step_result.status == 'success' %}text-green-500{% elif step_result.status == 'skipped' %}text-gray-400{% else %}text-red-500{% endif %} text-[10px] font-bold"
                                 >
                                     {{ step_result.status | upper }}
                                 </span>

@@ -34,8 +34,8 @@
                         {% for step_result in run.steps %}
                         <div class="mb-1">
                             <span class="text-gray-600">{{ step_result.id }}:</span>
-                            <span class="{% if step_result.status == 'success' %}text-green-600{% else %}text-red-600{% endif %}">
-                                {% if step_result.status == 'success' %}OK{% else %}NG{% endif %}
+                            <span class="{% if step_result.status == 'success' %}text-green-600{% elif step_result.status == 'skipped' %}text-gray-500{% else %}text-red-600{% endif %}">
+                                {% if step_result.status == 'success' %}OK{% elif step_result.status == 'skipped' %}SKIP{% else %}NG{% endif %}
                             </span>
                         </div>
                         {% endfor %}
@@ -65,7 +65,7 @@
                         {% if run.steps %}
                         <p class="mt-2 text-sm font-medium text-gray-700">失敗したステップ:</p>
                         {% for step_result in run.steps %}
-                            {% if step_result.status != 'success' %}
+                            {% if step_result.status == 'failed' %}
                             <p class="text-sm text-red-600">{{ step_result.id }}</p>
                             {% endif %}
                         {% endfor %}

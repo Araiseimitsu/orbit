@@ -1,109 +1,208 @@
 ```html
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>秩父・横瀬町 インフォグラフィック</title>
-<style>
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
-  .infographic { width: 90%; max-width: 800px; margin: 20px auto; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: hidden; }
-  .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-bottom: 3px solid #388E3C; }
-  .header h1 { margin: 0; font-size: 2.2em; }
-  .header p { margin-top: 5px; font-size: 1.1em; }
-  .content { padding: 30px; }
-  .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0; }
-  .section:last-child { border-bottom: none; }
-  .section h2 { color: #4CAF50; margin-top: 0; font-size: 1.8em; border-bottom: 2px solid #81C784; padding-bottom: 5px; }
-  .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-  .card { background-color: #e8f5e9; padding: 20px; border-radius: 8px; text-align: center; transition: transform 0.2s ease-in-out; }
-  .card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-  .card i { font-size: 3em; color: #4CAF50; margin-bottom: 10px; }
-  .card h3 { margin: 0 0 10px 0; font-size: 1.4em; color: #388E3C; }
-  .card p { font-size: 1em; line-height: 1.5; }
-  .icon-text { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
-  .icon-text i { margin-right: 10px; font-size: 2em; color: #4CAF50; }
-  .icon-text span { font-size: 1.5em; font-weight: bold; color: #388E3C; }
-  .stats .item { margin-bottom: 15px; }
-  .stats .item strong { color: #388E3C; font-size: 1.2em; }
-  .stats .item span { font-size: 1.1em; }
-  footer { text-align: center; padding: 20px; font-size: 0.9em; color: #777; }
-</style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-
 <div class="infographic">
-  <div class="header">
-    <h1>秩父・横瀬町</h1>
-    <p>自然と文化が息づく、緑豊かな町</p>
-  </div>
+  <h1 class="title">秩父・横瀬町：自然と文化が織りなす里山</h1>
 
-  <div class="content">
-    <div class="section">
-      <h2>町の概要</h2>
-      <div class="grid-container">
-        <div class="card">
-          <i class="fas fa-mountain"></i>
-          <h3>豊かな自然</h3>
-          <p>日本百名山の両神山や武甲山を望み、清流・横瀬川が流れる自然豊かな環境。</p>
+  <section class="section">
+    <h2 class="section-title">地理と景観</h2>
+    <div class="content">
+      <p class="description">
+        埼玉県秩父地方の南東部に位置し、荒川水系に育まれた豊かな自然に恵まれた町。西側には秩父連山が広がり、四季折々の美しい景観を楽しめます。特に、山々を背景にした田園風景や、清流沿いの渓谷美が魅力です。</p>
+      <div class="image-container">
+        <img src="yokoze_landscape.jpg" alt="横瀬町の風景" class="landscape-image">
+        <p class="caption">山々が連なる美しい自然景観</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">農業と特産品</h2>
+    <div class="content">
+      <p class="description">
+        温暖な気候と豊かな土壌を活かした農業が盛んです。特に、<strong>「岡部みかん」</strong>は有名で、甘みと酸味のバランスが絶妙な逸品。その他、<strong>茶</strong>や<strong>野菜</strong>なども栽培されており、地元の味覚を堪能できます。</p>
+      <div class="product-highlights">
+        <div class="product">
+          <img src="okabe_mikan.jpg" alt="岡部みかん" class="product-image">
+          <p class="product-name">岡部みかん</p>
         </div>
-        <div class="card">
-          <i class="fas fa-seedling"></i>
-          <h3>農業と景観</h3>
-          <p>野菜や果物（特に、いちご・ぶどう・梨）の栽培が盛ん。段々畑の美しい景観も魅力。</p>
-        </div>
-        <div class="card">
-          <i class="fas fa-hiking"></i>
-          <h3>アクティビティ</h3>
-          <p>ハイキング、キャンプ、サイクリング、渓流釣りなど、アウトドアレジャーが楽しめる。</p>
+        <div class="product">
+          <img src="yokoze_tea.jpg" alt="横瀬のお茶" class="product-image">
+          <p class="product-name">横瀬のお茶</p>
         </div>
       </div>
     </div>
+  </section>
 
-    <div class="section">
-      <h2>地域の魅力</h2>
-      <div class="grid-container">
-        <div class="card">
-          <i class="fas fa-bullseye"></i>
-          <h3>観光スポット</h3>
-          <p>札所巡り、横瀬町芦ヶ久保の道の駅、あしがくぼの氷柱（冬期）などが人気。</p>
-        </div>
-        <div class="card">
-          <i class="fas fa-users"></i>
-          <h3>地域イベント</h3>
-          <p>横瀬町エンデューロ、いちご品評会、地元の祭りなど、活気あるイベントが開催。</p>
-        </div>
-        <div class="card">
-          <i class="fas fa-utensils"></i>
-          <h3>食の体験</h3>
-          <p>採れたて野菜の直売所、地元食材を使った飲食店、いちご狩り体験。</p>
-        </div>
+  <section class="section">
+    <h2 class="section-title">文化と歴史</h2>
+    <div class="content">
+      <p class="description">
+        古くから修験道の霊場としても栄えた秩父地域に属し、<strong>横瀬寺</strong>のような歴史ある寺社仏閣が点在しています。また、<strong>「札所巡り」</strong>の文化も色濃く残っており、地域の人々の信仰心に触れることができます。山里の暮らしや伝統行事も健在です。</p>
+      <div class="image-container">
+        <img src="yokoze_temple.jpg" alt="横瀬寺" class="cultural-image">
+        <p class="caption">歴史を感じさせる横瀬寺</p>
       </div>
     </div>
+  </section>
 
-    <div class="section">
-      <h2>アクセス</h2>
-      <div class="grid-container">
-        <div class="card">
-          <i class="fas fa-train"></i>
-          <h3>電車</h3>
-          <p>西武鉄道 横瀬駅。都心からのアクセスも良好。</p>
-        </div>
-        <div class="card">
-          <i class="fas fa-car"></i>
-          <h3>車</h3>
-          <p>関越自動車道・花園ICから約30分。国道299号線沿い。</p>
-        </div>
-      </div>
+  <section class="section">
+    <h2 class="section-title">レジャーとアクティビティ</h2>
+    <div class="content">
+      <p class="description">
+        豊かな自然を活かしたレジャーが楽しめます。<strong>ハイキング</strong>や<strong>登山</strong>はもちろん、<strong>キャンプ</strong>や<strong>サイクリング</strong>にも最適。秋には<strong>紅葉狩り</strong>、春には<strong>桜</strong>や<strong>ツツジ</strong>など、季節ごとの自然を満喫できるスポットが豊富です。</p>
+      <ul class="activities">
+        <li>ハイキング・登山</li>
+        <li>キャンプ</li>
+        <li>サイクリング</li>
+        <li>紅葉狩り・花見</li>
+      </ul>
     </div>
-  </div>
+  </section>
 
-  <footer>
-    <p>埼玉県秩父郡横瀬町｜自然・農業・アクティビティが調和する地域</p>
+  <footer class="footer">
+    <p>横瀬町は、都会の喧騒から離れて、自然の美しさ、地元ならではの味覚、そして古くから伝わる文化を静かに体験できる、魅力あふれる町です。</p>
   </footer>
 </div>
 
-</body>
-</html>
+<style>
+.infographic {
+  font-family: 'Arial', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+}
+
+.title {
+  text-align: center;
+  color: #4CAF50;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 15px;
+}
+
+.section {
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 1px dashed #ccc;
+}
+
+.section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.section-title {
+  color: #8BC34A;
+  margin-bottom: 15px;
+  font-size: 1.8em;
+  position: relative;
+  padding-left: 20px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: #8BC34A;
+  border-radius: 50%;
+}
+
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.description {
+  flex: 2;
+  min-width: 300px;
+  font-size: 1.1em;
+}
+
+.image-container {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+}
+
+.landscape-image, .cultural-image {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.caption {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 8px;
+}
+
+.product-highlights {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.product {
+  text-align: center;
+}
+
+.product-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.product-name {
+  font-weight: bold;
+  margin-top: 5px;
+  font-size: 1.05em;
+}
+
+.activities {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.activities li {
+  background: #e0f2f1;
+  color: #00796b;
+  padding: 8px 15px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  font-style: italic;
+  color: #777;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+strong {
+  color: #7CB342;
+}
+</style>
 ```

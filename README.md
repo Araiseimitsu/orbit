@@ -76,6 +76,39 @@ steps:
       content: "Result from step_1: {{ step_1.result }}"
 ```
 
+### 条件付きステップ（when）
+
+`when` を指定すると、条件に一致した場合だけステップを実行します。  
+（一致しない場合はスキップ）
+
+```yaml
+steps:
+  - id: judge
+    type: ai_generate
+    params:
+      prompt: "次の質問に Yes/No だけで答えてください: ... "
+
+  - id: do_yes
+    type: log
+    when:
+      step: judge
+      field: text
+      equals: "Yes"
+    params:
+      message: "Yes のときだけ実行"
+
+  - id: do_no
+    type: log
+    when:
+      step: judge
+      field: text
+      equals: "No"
+    params:
+      message: "No のときだけ実行"
+```
+
+※ 文字列比較はデフォルトで **前後空白の除去 + 大文字小文字を無視** します。
+
 ### テンプレート変数
 
 - `{{ run_id }}`: 実行ID（YYYYMMDD_HHMMSS_xxxx）

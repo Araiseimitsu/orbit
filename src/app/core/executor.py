@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any
 from pathlib import Path
 
-from .models import Workflow, RunLog
+from .models import Workflow, RunLog, StepCondition
 from .registry import get_registry
 from .templating import render_params
 
@@ -31,6 +31,42 @@ class Executor:
     def __init__(self, base_dir: Path):
         self.base_dir = base_dir
         self.registry = get_registry()
+
+    @staticmethod
+    def _normalize_string(value: str, trim: bool, case_insensitive: bool) -> str:
+        text = value
+        if trim:
+            text = text.strip()
+        if case_insensitive:
+            text = text.lower()
+        return text
+
+    def _evaluate_when(
+        self, condition: StepCondition, context: dict[str, Any]
+    ) -> tuple[bool, str | None]:
+        step_result = context.get(condition.step)
+        if step_result is None:
+            return False, f"condition_step_missing:{condition.step}"
+
+        if isinstance(step_result, dict):
+            actual = step_result.get(condition.field)
+        else:
+            actual = getattr(step_result, condition.field, None)
+
+        if actual is None:
+            return False, f"condition_field_missing:{condition.field}"
+
+        expected = condition.equals
+        if isinstance(actual, str) and isinstance(expected, str):
+            left = self._normalize_string(
+                actual, condition.trim, condition.case_insensitive
+            )
+            right = self._normalize_string(
+                expected, condition.trim, condition.case_insensitive
+            )
+            return left == right, None
+
+        return actual == expected, None
 
     async def run(self, workflow: Workflow) -> RunLog:
         """
@@ -67,6 +103,25 @@ class Executor:
         try:
             # ステップを順番に実行
             for step in workflow.steps:
+                if step.when:
+                    matched, reason = self._evaluate_when(step.when, context)
+                    if not matched:
+                        skip_reason = reason or "condition_not_met"
+                        logger.info(
+                            f"Skipping step: {step.id} (reason: {skip_reason})"
+                        )
+                        run_log.steps.append(
+                            {
+                                "id": step.id,
+                                "type": step.type,
+                                "status": "skipped",
+                                "result": {
+                                    "reason": skip_reason,
+                                    "when": step.when.model_dump(),
+                                },
+                            }
+                        )
+                        continue
                 step_result = await self._execute_step(step.id, step.type, step.params, context)
                 run_log.steps.append(step_result)
 

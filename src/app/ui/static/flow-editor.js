@@ -974,6 +974,87 @@
 
     const guide = buildGuide(step.type, step.id);
 
+    const whenRow = document.createElement("div");
+    whenRow.className = "inspector-row";
+    const whenLabel = document.createElement("label");
+    whenLabel.textContent = "実行条件（任意）";
+    whenRow.appendChild(whenLabel);
+
+    const whenToggleLabel = document.createElement("label");
+    whenToggleLabel.className = "condition-toggle";
+    const whenToggle = document.createElement("input");
+    whenToggle.type = "checkbox";
+    whenToggle.checked = !!step.when;
+    whenToggleLabel.appendChild(whenToggle);
+    whenToggleLabel.appendChild(document.createTextNode("条件を使う"));
+    whenRow.appendChild(whenToggleLabel);
+
+    const whenFields = document.createElement("div");
+    whenFields.className = "condition-fields";
+
+    const whenStepInput = document.createElement("input");
+    whenStepInput.type = "text";
+    whenStepInput.placeholder = "判定ステップID (例: judge)";
+    whenStepInput.value = step.when?.step || "";
+
+    const whenFieldInput = document.createElement("input");
+    whenFieldInput.type = "text";
+    whenFieldInput.placeholder = "出力キー (例: text)";
+    whenFieldInput.value = step.when?.field || "text";
+
+    const whenEqualsInput = document.createElement("input");
+    whenEqualsInput.type = "text";
+    whenEqualsInput.placeholder = "一致値 (例: Yes)";
+    whenEqualsInput.value =
+      step.when && step.when.equals !== undefined && step.when.equals !== null
+        ? step.when.equals
+        : "";
+
+    whenFields.appendChild(whenStepInput);
+    whenFields.appendChild(whenFieldInput);
+    whenFields.appendChild(whenEqualsInput);
+    whenRow.appendChild(whenFields);
+
+    const whenHelp = document.createElement("div");
+    whenHelp.className = "condition-help";
+    whenHelp.textContent =
+      "指定ステップの出力が一致した時だけ実行されます（前後空白と大文字小文字は無視）。";
+    whenRow.appendChild(whenHelp);
+
+    const whenOptions = {
+      trim: step.when?.trim,
+      case_insensitive: step.when?.case_insensitive,
+    };
+
+    const syncWhen = () => {
+      if (!whenToggle.checked) {
+        step.when = null;
+        whenFields.style.display = "none";
+        whenHelp.style.display = "none";
+        return;
+      }
+      whenFields.style.display = "grid";
+      whenHelp.style.display = "block";
+      const nextWhen = {
+        step: whenStepInput.value.trim(),
+        field: (whenFieldInput.value || "text").trim() || "text",
+        equals: whenEqualsInput.value,
+      };
+      if (whenOptions.trim === false) {
+        nextWhen.trim = false;
+      }
+      if (whenOptions.case_insensitive === false) {
+        nextWhen.case_insensitive = false;
+      }
+      step.when = nextWhen;
+    };
+
+    whenToggle.addEventListener("change", syncWhen);
+    whenStepInput.addEventListener("input", syncWhen);
+    whenFieldInput.addEventListener("input", syncWhen);
+    whenEqualsInput.addEventListener("input", syncWhen);
+    syncWhen();
+
     const actionsRow = document.createElement("div");
     actionsRow.className = "inspector-actions";
     const deleteButton = document.createElement("button");
@@ -990,6 +1071,7 @@
       inspectorEl.appendChild(guide);
     }
     inspectorEl.appendChild(paramsRow);
+    inspectorEl.appendChild(whenRow);
     inspectorEl.appendChild(actionsRow);
 
     const updateId = () => {
@@ -1103,12 +1185,18 @@
       .sort(
         (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
       )
-      .map((step) => ({
-        id: step.id,
-        type: step.type,
-        params: step.params || {},
-        position: step.position,
-      }));
+      .map((step) => {
+        const payloadStep = {
+          id: step.id,
+          type: step.type,
+          params: step.params || {},
+          position: step.position,
+        };
+        if (step.when) {
+          payloadStep.when = step.when;
+        }
+        return payloadStep;
+      });
 
     const trigger = { type: triggerSelect.value };
     if (trigger.type === "schedule") {
@@ -1127,14 +1215,32 @@
   const validateRequiredParams = (payload) => {
     for (const step of payload.steps) {
       const required = REQUIRED_PARAMS[step.type];
-      if (!required) {
-        continue;
+      if (required) {
+        for (const key of required) {
+          const value = step.params ? step.params[key] : undefined;
+          if (typeof value !== "string" || value.trim() === "") {
+            setStatus(`"${step.id}" の ${key} が必要です`, true);
+            return false;
+          }
+        }
       }
-      for (const key of required) {
-        const value = step.params ? step.params[key] : undefined;
-        if (typeof value !== "string" || value.trim() === "") {
-          setStatus(`"${step.id}" の ${key} が必要です`, true);
+      if (step.when) {
+        const whenStep = (step.when.step || "").trim();
+        const whenEquals = step.when.equals;
+        if (!whenStep) {
+          setStatus(`"${step.id}" の条件ステップIDが必要です`, true);
           return false;
+        }
+        if (
+          whenEquals === undefined ||
+          whenEquals === null ||
+          (typeof whenEquals === "string" && whenEquals.trim() === "")
+        ) {
+          setStatus(`"${step.id}" の条件の一致値が必要です`, true);
+          return false;
+        }
+        if (!step.when.field || step.when.field.trim() === "") {
+          step.when.field = "text";
         }
       }
     }

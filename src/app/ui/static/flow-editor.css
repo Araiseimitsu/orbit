@@ -563,6 +563,27 @@
     opacity: 0.7;
 }
 
+.condition-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.condition-fields {
+    display: grid;
+    gap: 8px;
+}
+
+.condition-help {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    line-height: 1.5;
+}
+
 .inspector-actions {
     display: flex;
     gap: 10px;
