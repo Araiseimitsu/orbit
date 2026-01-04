@@ -170,13 +170,19 @@ async def dashboard(request: Request, q: str | None = None):
 
 
 @app.get("/workflows/{name}", response_class=HTMLResponse)
-async def workflow_detail(request: Request, name: str):
+async def workflow_detail(request: Request, name: str, page: int = 1):
     """ワークフロー詳細画面"""
     workflow, error = loader.load_workflow(name)
     yaml_content = loader.get_yaml_content(name)
 
+    # ページネーションパラメータ
+    per_page = 50
+    offset = (page - 1) * per_page
+
     # 実行履歴を取得
-    runs = run_logger.get_runs_for_workflow(name, limit=20)
+    runs = run_logger.get_runs_for_workflow(name, limit=per_page, offset=offset)
+    total_runs = run_logger.count_runs_for_workflow(name)
+    total_pages = (total_runs + per_page - 1) // per_page  # 切り上げ
 
     # 次回実行予定を取得
     next_run = None
@@ -197,17 +203,44 @@ async def workflow_detail(request: Request, name: str):
             "error": error,
             "runs": runs,
             "next_run": next_run,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total_runs,
+                "total_pages": total_pages,
+                "has_prev": page > 1,
+                "has_next": page < total_pages,
+            },
         },
     )
 
 
 @app.get("/runs", response_class=HTMLResponse)
-async def runs_page(request: Request, workflow: str | None = None):
+async def runs_page(request: Request, workflow: str | None = None, page: int = 1):
     """実行履歴一覧"""
-    runs = run_logger.get_all_runs(limit=100, workflow_filter=workflow)
+    # ページネーションパラメータ
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    runs = run_logger.get_all_runs(limit=per_page, offset=offset, workflow_filter=workflow)
+    total_runs = run_logger.count_all_runs(workflow_filter=workflow)
+    total_pages = (total_runs + per_page - 1) // per_page  # 切り上げ
 
     return templates.TemplateResponse(
-        "runs.html", {"request": request, "runs": runs, "workflow_filter": workflow}
+        "runs.html",
+        {
+            "request": request,
+            "runs": runs,
+            "workflow_filter": workflow,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total_runs,
+                "total_pages": total_pages,
+                "has_prev": page > 1,
+                "has_next": page < total_pages,
+            },
+        },
     )
 
 

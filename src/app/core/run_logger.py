@@ -41,8 +41,14 @@ class RunLogger:
 
         logger.debug(f"Run log saved: {run_log.run_id} -> {log_file}")
 
-    def get_runs_for_workflow(self, workflow_name: str, limit: int = 20) -> list[RunLog]:
-        """特定ワークフローの実行履歴を取得（新しい順）"""
+    def get_runs_for_workflow(self, workflow_name: str, limit: int = 50, offset: int = 0) -> list[RunLog]:
+        """特定ワークフローの実行履歴を取得（新しい順）
+
+        Args:
+            workflow_name: ワークフロー名
+            limit: 取得件数（デフォルト: 50）
+            offset: オフセット（デフォルト: 0）
+        """
         runs = []
 
         # 全ログファイルを日付降順で読む
@@ -52,13 +58,18 @@ class RunLogger:
             file_runs = self._read_log_file(log_file, workflow_name)
             runs.extend(file_runs)
 
-            if len(runs) >= limit:
-                break
+        # ソートしてからオフセットと制限を適用
+        sorted_runs = sorted(runs, key=lambda x: x.started_at, reverse=True)
+        return sorted_runs[offset:offset + limit]
 
-        return sorted(runs, key=lambda x: x.started_at, reverse=True)[:limit]
+    def get_all_runs(self, limit: int = 50, offset: int = 0, workflow_filter: str | None = None) -> list[RunLog]:
+        """全実行履歴を取得（新しい順）
 
-    def get_all_runs(self, limit: int = 100, workflow_filter: str | None = None) -> list[RunLog]:
-        """全実行履歴を取得（新しい順）"""
+        Args:
+            limit: 取得件数（デフォルト: 50）
+            offset: オフセット（デフォルト: 0）
+            workflow_filter: フィルタするワークフロー名（オプション）
+        """
         runs = []
 
         log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
@@ -67,10 +78,9 @@ class RunLogger:
             file_runs = self._read_log_file(log_file, workflow_filter)
             runs.extend(file_runs)
 
-            if len(runs) >= limit:
-                break
-
-        return sorted(runs, key=lambda x: x.started_at, reverse=True)[:limit]
+        # ソートしてからオフセットと制限を適用
+        sorted_runs = sorted(runs, key=lambda x: x.started_at, reverse=True)
+        return sorted_runs[offset:offset + limit]
 
     def get_latest_run(self, workflow_name: str) -> RunLog | None:
         """ワークフローの最新実行結果を取得"""
@@ -104,3 +114,25 @@ class RunLogger:
             logger.error(f"Failed to read log file {log_file}: {e}")
 
         return runs
+
+    def count_runs_for_workflow(self, workflow_name: str) -> int:
+        """特定ワークフローの実行履歴の総件数を取得"""
+        count = 0
+        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
+
+        for log_file in log_files:
+            file_runs = self._read_log_file(log_file, workflow_name)
+            count += len(file_runs)
+
+        return count
+
+    def count_all_runs(self, workflow_filter: str | None = None) -> int:
+        """全実行履歴の総件数を取得"""
+        count = 0
+        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
+
+        for log_file in log_files:
+            file_runs = self._read_log_file(log_file, workflow_filter)
+            count += len(file_runs)
+
+        return count
