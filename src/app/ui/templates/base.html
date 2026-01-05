@@ -71,8 +71,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}" />
-    <link rel="apple-touch-icon" href="{{ url_for('static', path='app-icon.svg') }}" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='splash-dark.png') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='splash-dark.png') }}" />
     <link rel="stylesheet" href="{{ url_for('static', path='index.css') }}?v={{ static_mtime('index.css') }}" />
     {% block head %}{% endblock %}
 </head>
@@ -84,7 +84,9 @@
         <div
             class="splash-content relative w-full max-w-xl px-12 opacity-0 scale-95 transition-all duration-1000 ease-out">
             <img src="{{ url_for('static', path='splash-dark.png') }}"
-                class="w-full h-auto object-contain drop-shadow-2xl" alt="ORBIT Splash">
+                class="w-full h-auto object-contain drop-shadow-2xl"
+                style="-webkit-mask-image: radial-gradient(ellipse closest-side, black 85%, transparent 100%); mask-image: radial-gradient(ellipse closest-side, black 85%, transparent 100%);"
+                alt="ORBIT Splash">
         </div>
     </div>
     <nav class="nav-glass">
@@ -94,7 +96,7 @@
                     <a href="/" class="flex items-center space-x-3 group">
                         <div
                             class="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-blue-500/50 transition-colors">
-                            <img src="{{ url_for('static', path='favicon.svg') }}" class="w-6 h-6" alt="ORBIT Logo" />
+                            <img src="{{ url_for('static', path='splash-dark.png') }}" class="w-6 h-6" alt="ORBIT Logo" />
                         </div>
                         <span
                             class="text-2xl font-bold tracking-tight text-white group-hover:text-blue-400 transition-colors">ORBIT</span>
