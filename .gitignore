@@ -48,6 +48,9 @@ logs/
 
 # OS
 .DS_Store
+
+# Workflows
+workflows/*.yaml
 Thumbs.db
 
 # Project specific
