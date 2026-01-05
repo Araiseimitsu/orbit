@@ -93,22 +93,48 @@ def _coerce_bool(value: Any, label: str) -> bool | None:
     raise ValueError(f"{label} は true/false で指定してください")
 
 
-def _load_api_key(file_path: str, base_dir: Path) -> str:
-    """ファイルから API キーを読み込む"""
+def _load_api_key(file_path: str, base_dir: Path, env_var_name: str) -> str:
+    """
+    API キーを環境変数 → ファイルの順で読み込む
+
+    Args:
+        file_path: フォールバック用ファイルパス
+        base_dir: ベースディレクトリ
+        env_var_name: 環境変数名（例: "GEMINI_API_KEY"）
+
+    Returns:
+        API キー文字列
+
+    Raises:
+        FileNotFoundError: 環境変数もファイルも存在しない
+        ValueError: APIキーが空
+    """
+    import os
+
+    # 環境変数を優先
+    api_key = os.getenv(env_var_name)
+    if api_key:
+        api_key = api_key.strip()
+        if api_key:
+            logger.debug(f"API key loaded from environment variable: {env_var_name}")
+            return api_key
+
+    # フォールバック: ファイルから読み込み
     path = Path(file_path)
     if not path.is_absolute():
         path = base_dir / path
 
     if not path.exists():
         raise FileNotFoundError(
-            f"API キーファイルが見つかりません: {path}\n"
-            f"{path.name} に API キーを配置してください。"
+            f"API キーが見つかりません。\n"
+            f"環境変数 {env_var_name} またはファイル {path} に設定してください。"
         )
 
     key = path.read_text().strip()
     if not key:
         raise ValueError(f"API キーファイルが空です: {path}")
 
+    logger.debug(f"API key loaded from file: {path}")
     return key
 
 
@@ -340,7 +366,7 @@ async def action_ai_generate(
         raise ValueError(f"未対応の provider です: {provider}")
 
     api_key_file = params.get("api_key_file", DEFAULT_GEMINI_KEY_FILE)
-    api_key = _load_api_key(api_key_file, base_dir)
+    api_key = _load_api_key(api_key_file, base_dir, "GEMINI_API_KEY")
 
     if use_search:
         return _call_gemini_rest(

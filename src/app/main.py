@@ -10,6 +10,14 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+# ========== 環境変数読み込み（最優先） ==========
+from dotenv import load_dotenv
+
+# プロジェクトルートの.envを読み込み
+BASE_DIR_ENV = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR_ENV / ".env")
+# ===============================================
+
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response

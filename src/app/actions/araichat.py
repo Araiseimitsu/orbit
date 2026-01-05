@@ -48,13 +48,37 @@ def _coerce_int(value: Any, label: str) -> int | None:
     raise ValueError(f"{label} は整数で指定してください")
 
 
-def _load_api_key(file_path: str, base_dir: Path) -> str:
+def _load_api_key(file_path: str, base_dir: Path, env_var_name: str = "ARAICHAT_API_KEY") -> str:
+    """
+    API キーを環境変数 → ファイルの順で読み込む
+
+    Args:
+        file_path: フォールバック用ファイルパス
+        base_dir: ベースディレクトリ
+        env_var_name: 環境変数名
+
+    Returns:
+        API キー文字列
+    """
+    import os
+
+    # 環境変数を優先
+    api_key = os.getenv(env_var_name)
+    if api_key:
+        api_key = api_key.strip()
+        if api_key:
+            return api_key
+
+    # フォールバック: ファイルから読み込み
     path = Path(file_path)
     if not path.is_absolute():
         path = base_dir / path
 
     if not path.exists():
-        raise FileNotFoundError(f"API キーファイルが見つかりません: {path}")
+        raise FileNotFoundError(
+            f"API キーが見つかりません。\n"
+            f"環境変数 {env_var_name} またはファイル {path} に設定してください。"
+        )
 
     key = path.read_text().strip()
     if not key:
@@ -234,10 +258,8 @@ async def action_araichat_send_message(
     if isinstance(api_key, str):
         api_key = api_key.strip()
     if not api_key:
-        api_key = os.getenv("ARAICHAT_API_KEY")
-    if not api_key:
         api_key_file = params.get("api_key_file", DEFAULT_API_KEY_FILE)
-        api_key = _load_api_key(str(api_key_file), base_dir)
+        api_key = _load_api_key(str(api_key_file), base_dir, "ARAICHAT_API_KEY")
 
     timeout = _coerce_int(params.get("timeout"), "timeout")
     if timeout is None:

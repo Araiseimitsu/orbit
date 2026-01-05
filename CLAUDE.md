@@ -148,6 +148,39 @@ orbit/
 - stdout: ログレベル INFO 以上が出力
 - JSONL ファイル: `runs/YYYYMMDD.jsonl` に実行結果を記録
 
+## APIキー設定
+
+ORBIT は環境変数を優先してAPIキーを読み込みます。
+
+### 設定方法
+
+1. `.env.example` を `.env` にコピー
+2. 各APIキーを設定
+
+```bash
+cp .env.example .env
+# .env を編集
+```
+
+### 環境変数一覧
+
+| 環境変数 | 説明 | 必須 |
+|---------|------|------|
+| `GEMINI_API_KEY` | Gemini API キー | ai_generate アクション使用時 |
+| `ARAICHAT_API_KEY` | ARAICHAT 統合APIキー | araichat_send_message アクション使用時 |
+| `ARAICHAT_ROOM_ID` | ARAICHAT デフォルトルームID | araichat_send_message アクション使用時 |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google サービスアカウントJSONパス | sheets_* アクション使用時 |
+
+### フォールバック
+
+環境変数が設定されていない場合、以下のファイルから読み込みます：
+
+- Gemini: `secrets/gemini_api_key.txt`
+- ARAICHAT: `secrets/araichat_api_key.txt`
+- Google Sheets: `secrets/google_service_account.json`
+
+**推奨**: 環境変数での設定を推奨します。
+
 ## Cron 式の例
 
 ```

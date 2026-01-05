@@ -55,14 +55,34 @@ DEFAULT_CREDENTIALS_FILE = "secrets/google_service_account.json"
 
 
 def _get_sheets_service(credentials_path: Path):
-    """Google Sheets API サービスを取得"""
+    """
+    Google Sheets API サービスを取得
+
+    環境変数 GOOGLE_APPLICATION_CREDENTIALS を優先し、
+    なければ credentials_path を使用する。
+    """
+    import os
+
+    # 環境変数を優先
+    env_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    if env_creds:
+        env_path = Path(env_creds)
+        if env_path.exists():
+            logger.debug(f"Using credentials from env: {env_path}")
+            credentials = Credentials.from_service_account_file(
+                str(env_path), scopes=SCOPES
+            )
+            service = build("sheets", "v4", credentials=credentials)
+            return service
+
+    # フォールバック: パラメータ指定のパス
     if not credentials_path.exists():
         raise FileNotFoundError(
-            f"サービスアカウント認証情報が見つかりません: {credentials_path}\n"
-            "Google Cloud Console でサービスアカウントを作成し、"
-            "JSON キーファイルをダウンロードして配置してください。"
+            f"サービスアカウント認証情報が見つかりません。\n"
+            f"環境変数 GOOGLE_APPLICATION_CREDENTIALS またはファイル {credentials_path} に設定してください。"
         )
 
+    logger.debug(f"Using credentials from file: {credentials_path}")
     credentials = Credentials.from_service_account_file(
         str(credentials_path), scopes=SCOPES
     )
