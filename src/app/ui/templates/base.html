@@ -1,433 +1,404 @@
 <!doctype html>
 <html lang="ja">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{% block title %}ORBIT{% endblock %}</title>
-        <script>
-            (() => {
-                if (!("serviceWorker" in navigator)) return;
-                navigator.serviceWorker
-                    .getRegistrations()
-                    .then((regs) => regs.forEach((reg) => reg.unregister()))
-                    .catch(() => {});
-                if ("caches" in window) {
-                    caches
-                        .keys()
-                        .then((keys) =>
-                            keys.forEach((key) => caches.delete(key)),
-                        )
-                        .catch(() => {});
-                }
-            })();
-        </script>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-        <script
-            defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-        ></script>
-        <link
-            rel="icon"
-            type="image/svg+xml"
-            href="{{ url_for('static', path='favicon.svg') }}"
-        />
-        <link
-            rel="apple-touch-icon"
-            href="{{ url_for('static', path='app-icon.svg') }}"
-        />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', path='index.css') }}?v={{ static_mtime('index.css') }}"
-        />
-        {% block head %}{% endblock %}
-    </head>
 
-    <body class="min-h-screen flex flex-col">
-        <nav class="nav-glass">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <a href="/" class="flex items-center space-x-3 group">
-                            <div
-                                class="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-blue-500/50 transition-colors"
-                            >
-                                <img
-                                    src="{{ url_for('static', path='favicon.svg') }}"
-                                    class="w-6 h-6"
-                                    alt="ORBIT Logo"
-                                />
-                            </div>
-                            <span
-                                class="text-2xl font-bold tracking-tight text-white group-hover:text-blue-400 transition-colors"
-                                >ORBIT</span
-                            >
-                        </a>
-                        <div class="ml-10 flex items-center space-x-4">
-                            <a
-                                href="/"
-                                class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors"
-                            >
-                                Dashboard
-                            </a>
-                            <a
-                                href="/runs"
-                                class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors"
-                            >
-                                Runs
-                            </a>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button
-                            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors border border-white/10 rounded-lg hover:border-blue-500/50"
-                            type="button"
-                            data-help-open
-                            aria-haspopup="dialog"
-                            aria-controls="help-modal"
-                            aria-expanded="false"
-                        >
-                            Help
-                        </button>
-                        <span
-                            class="text-[10px] text-gray-500 font-mono"
-                            id="status-indicator"
-                            >SYSTEM ONLINE</span
-                        >
-                    </div>
-                </div>
-            </div>
-        </nav>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}ORBIT{% endblock %}</title>
+    <script>
+        // Splash screen session check
+        if (sessionStorage.getItem('orbit_splash_seen')) {
+            document.documentElement.classList.add('splash-hidden');
+        }
 
-        <main
-            class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full"
-        >
-            {% block content %}{% endblock %}
-        </main>
+        document.addEventListener('DOMContentLoaded', () => {
+            const splash = document.getElementById('splash-screen');
+            // If it's already marked as seen (class added) or element missing, bail
+            if (!splash || document.documentElement.classList.contains('splash-hidden')) {
+                if (splash) splash.remove();
+                return;
+            }
 
-        <!-- Toast Notifications Container -->
+            // Sequence: 
+            // 1. Trigger entrance animation (via CSS)
+            // 2. Wait 2000ms (viewing time)
+            // 3. Fade out over 500ms
+            // 4. Remove from DOM and set session flag
+
+            // Trigger entrance
+            const userContent = splash.querySelector('.splash-content');
+            if (userContent) {
+                // Small delay to ensure transition works
+                requestAnimationFrame(() => {
+                    userContent.classList.remove('opacity-0', 'scale-95');
+                    userContent.classList.add('opacity-100', 'scale-100');
+                });
+            }
+
+            setTimeout(() => {
+                splash.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    splash.remove();
+                    sessionStorage.setItem('orbit_splash_seen', 'true');
+                }, 500);
+            }, 2000);
+        });
+    </script>
+    <style>
+        .splash-hidden #splash-screen {
+            display: none !important;
+        }
+
+        /* Custom animation for pulse effect if needed, though Tailwind has animate-pulse */
+    </style>
+    <script>
+        (() => {
+            if (!("serviceWorker" in navigator)) return;
+            navigator.serviceWorker
+                .getRegistrations()
+                .then((regs) => regs.forEach((reg) => reg.unregister()))
+                .catch(() => { });
+            if ("caches" in window) {
+                caches
+                    .keys()
+                    .then((keys) =>
+                        keys.forEach((key) => caches.delete(key)),
+                    )
+                    .catch(() => { });
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', path='app-icon.svg') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', path='index.css') }}?v={{ static_mtime('index.css') }}" />
+    {% block head %}{% endblock %}
+</head>
+
+<body class="min-h-screen flex flex-col">
+    <!-- Splash Screen -->
+    <div id="splash-screen"
+        class="fixed inset-0 z-[9999] bg-[#09090b] flex items-center justify-center transition-opacity duration-500">
         <div
-            id="toast-container"
-            class="fixed bottom-6 right-6 z-50 space-y-3 w-80 sm:w-96"
-        ></div>
-
-        <!-- Global Loading Overlay -->
-        <div
-            id="global-loader"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center"
-        >
-            <div class="apple-card p-6 flex items-center space-x-4">
-                <svg
-                    class="w-6 h-6 text-blue-500 spinner"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                >
-                    <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                    ></circle>
-                    <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                </svg>
-                <span class="text-white font-medium">Processing...</span>
-            </div>
+            class="splash-content relative w-full max-w-xl px-12 opacity-0 scale-95 transition-all duration-1000 ease-out">
+            <img src="{{ url_for('static', path='splash-dark.png') }}"
+                class="w-full h-auto object-contain drop-shadow-2xl" alt="ORBIT Splash">
         </div>
-
-        <!-- Help Modal -->
-        <div
-            id="help-modal"
-            class="fixed inset-0 z-50 hidden items-center justify-center"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="help-modal-title"
-        >
-            <div
-                class="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                data-help-overlay
-            ></div>
-            <div class="relative w-full max-w-3xl mx-4 sm:mx-6">
-                <div class="apple-card p-6 sm:p-8">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p
-                                class="text-xs uppercase tracking-[0.3em] text-gray-500"
-                            >
-                                ORBIT Help
-                            </p>
-                            <h2
-                                id="help-modal-title"
-                                class="text-2xl sm:text-3xl font-semibold mt-2"
-                            >
-                                このアプリの使用方法
-                            </h2>
-                        </div>
-                        <button
-                            type="button"
-                            class="text-gray-400 hover:text-white border border-white/10 rounded-full w-9 h-9 flex items-center justify-center transition-colors"
-                            aria-label="ヘルプを閉じる"
-                            data-help-close
-                        >
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-
-                    <div class="mt-6 grid gap-6 sm:grid-cols-2">
+    </div>
+    <nav class="nav-glass">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-3 group">
                         <div
-                            class="space-y-4 text-sm text-gray-300 leading-relaxed"
-                        >
-                            <div>
-                                <h3 class="text-white font-semibold text-base">
-                                    基本フロー
-                                </h3>
-                                <ol
-                                    class="list-decimal list-inside space-y-2 mt-2 text-gray-300"
-                                >
-                                    <li>
-                                        Dashboard
-                                        の「新規作成」からビジュアルエディタを開く
-                                    </li>
-                                    <li>
-                                        左の「アクション」からノードを追加し、右の詳細で設定
-                                    </li>
-                                    <li>
-                                        保存するとワークフローが登録される（YAML
-                                        は自動生成）
-                                    </li>
-                                    <li>
-                                        Dashboard で一覧を確認し、「Run」または
-                                        schedule で実行
-                                    </li>
-                                    <li>Runs で履歴と結果を確認</li>
-                                </ol>
-                            </div>
-                            <div>
-                                <h3 class="text-white font-semibold text-base">
-                                    ビジュアルエディタ
-                                </h3>
-                                <p class="mt-2 text-gray-300">
-                                    ワークフローはビジュアル画面で完結します。YAML
-                                    を直接編集する必要はありません。
-                                    実行順は上から下、ノードをクリックして詳細を編集できます。
-                                </p>
-                            </div>
+                            class="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-blue-500/50 transition-colors">
+                            <img src="{{ url_for('static', path='favicon.svg') }}" class="w-6 h-6" alt="ORBIT Logo" />
                         </div>
-                        <div class="space-y-4">
-                            <div
-                                class="apple-card p-4 border border-white/10 bg-black/30"
-                            >
-                                <h3
-                                    class="text-white font-semibold text-base mb-3"
-                                >
-                                    プロジェクト情報
-                                </h3>
-                                <dl class="text-sm text-gray-300 space-y-2">
-                                    <div class="flex justify-between">
-                                        <dt>Version</dt>
-                                        <dd class="font-mono text-white">
-                                            0.5.0
-                                        </dd>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <dt>Latest</dt>
-                                        <dd class="font-mono text-white">
-                                            2026-01-03
-                                        </dd>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <dt>Created By</dt>
-                                        <dd class="text-white">
-                                            DIP Department/ A・T
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </div>
-                            <div class="text-xs text-gray-500 leading-relaxed">
-                                テンプレート変数（<code
-                                    class="font-mono text-white/80"
-                                    >{{ '{{ run_id }}' }}</code
-                                >
-                                など）は
-                                アクションのパラメータ欄で利用できます。拡張方法は
-                                <code class="font-mono text-white/80"
-                                    >src/app/actions/</code
-                                >
-                                を参照してください。
-                            </div>
-                        </div>
+                        <span
+                            class="text-2xl font-bold tracking-tight text-white group-hover:text-blue-400 transition-colors">ORBIT</span>
+                    </a>
+                    <div class="ml-10 flex items-center space-x-4">
+                        <a href="/"
+                            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                            Dashboard
+                        </a>
+                        <a href="/runs"
+                            class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors">
+                            Runs
+                        </a>
                     </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button
+                        class="text-gray-400 hover:text-white px-3 py-2 text-sm font-medium transition-colors border border-white/10 rounded-lg hover:border-blue-500/50"
+                        type="button" data-help-open aria-haspopup="dialog" aria-controls="help-modal"
+                        aria-expanded="false">
+                        Help
+                    </button>
+                    <span class="text-[10px] text-gray-500 font-mono" id="status-indicator">SYSTEM ONLINE</span>
                 </div>
             </div>
         </div>
+    </nav>
 
-        <!-- Delete Confirmation Modal -->
-        <div id="delete-modal"
-            class="fixed inset-0 z-50 hidden items-center justify-center"
-            role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-delete-overlay></div>
-            <div class="relative w-full max-w-md mx-4">
-                <div class="apple-card p-6 sm:p-8">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-shrink-0 w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 id="delete-modal-title" class="text-lg font-bold text-white">
-                                ワークフローの削除
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 w-80 sm:w-96"></div>
+
+    <!-- Global Loading Overlay -->
+    <div id="global-loader" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="apple-card p-6 flex items-center space-x-4">
+            <svg class="w-6 h-6 text-blue-500 spinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <span class="text-white font-medium">Processing...</span>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center" role="dialog" aria-modal="true"
+        aria-labelledby="help-modal-title">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-help-overlay></div>
+        <div class="relative w-full max-w-3xl mx-4 sm:mx-6">
+            <div class="apple-card p-6 sm:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-gray-500">
+                            ORBIT Help
+                        </p>
+                        <h2 id="help-modal-title" class="text-2xl sm:text-3xl font-semibold mt-2">
+                            このアプリの使用方法
+                        </h2>
+                    </div>
+                    <button type="button"
+                        class="text-gray-400 hover:text-white border border-white/10 rounded-full w-9 h-9 flex items-center justify-center transition-colors"
+                        aria-label="ヘルプを閉じる" data-help-close>
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+
+                <div class="mt-6 grid gap-6 sm:grid-cols-2">
+                    <div class="space-y-4 text-sm text-gray-300 leading-relaxed">
+                        <div>
+                            <h3 class="text-white font-semibold text-base">
+                                基本フロー
                             </h3>
-                            <p class="mt-2 text-sm text-gray-400">
-                                <span id="delete-modal-workflow-name" class="text-white font-bold"></span>
-                                を削除しますか?
-                            </p>
-                            <div id="delete-modal-schedule-info" class="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg hidden">
-                                <p class="text-xs text-amber-400">
-                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    スケジュール実行が設定されています:
-                                    <code id="delete-modal-cron" class="ml-1 font-mono text-amber-300"></code>
-                                </p>
-                            </div>
-                            <p class="mt-3 text-xs text-red-400">
-                                この操作は取り消せません。
+                            <ol class="list-decimal list-inside space-y-2 mt-2 text-gray-300">
+                                <li>
+                                    Dashboard
+                                    の「新規作成」からビジュアルエディタを開く
+                                </li>
+                                <li>
+                                    左の「アクション」からノードを追加し、右の詳細で設定
+                                </li>
+                                <li>
+                                    保存するとワークフローが登録される（YAML
+                                    は自動生成）
+                                </li>
+                                <li>
+                                    Dashboard で一覧を確認し、「Run」または
+                                    schedule で実行
+                                </li>
+                                <li>Runs で履歴と結果を確認</li>
+                            </ol>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-semibold text-base">
+                                ビジュアルエディタ
+                            </h3>
+                            <p class="mt-2 text-gray-300">
+                                ワークフローはビジュアル画面で完結します。YAML
+                                を直接編集する必要はありません。
+                                実行順は上から下、ノードをクリックして詳細を編集できます。
                             </p>
                         </div>
                     </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button"
-                            class="apple-button apple-button-secondary px-5 py-2.5 text-sm"
-                            data-delete-cancel>
-                            キャンセル
-                        </button>
-                        <button type="button"
-                            class="apple-button apple-button-danger px-5 py-2.5 text-sm"
-                            data-delete-confirm>
-                            削除する
-                        </button>
+                    <div class="space-y-4">
+                        <div class="apple-card p-4 border border-white/10 bg-black/30">
+                            <h3 class="text-white font-semibold text-base mb-3">
+                                プロジェクト情報
+                            </h3>
+                            <dl class="text-sm text-gray-300 space-y-2">
+                                <div class="flex justify-between">
+                                    <dt>Version</dt>
+                                    <dd class="font-mono text-white">
+                                        0.5.0
+                                    </dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt>Latest</dt>
+                                    <dd class="font-mono text-white">
+                                        2026-01-03
+                                    </dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt>Created By</dt>
+                                    <dd class="text-white">
+                                        DIP Department/ A・T
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="text-xs text-gray-500 leading-relaxed">
+                            テンプレート変数（<code class="font-mono text-white/80">{{ '{{ run_id }}' }}</code>
+                            など）は
+                            アクションのパラメータ欄で利用できます。拡張方法は
+                            <code class="font-mono text-white/80">src/app/actions/</code>
+                            を参照してください。
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <footer class="border-t border-white/5 mt-auto">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <p
-                    class="text-center text-gray-600 text-xs tracking-widest uppercase"
-                >
-                    ORBIT / Araiseimitsu / CREATED BY A・T
-                </p>
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center" role="dialog" aria-modal="true"
+        aria-labelledby="delete-modal-title">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-delete-overlay></div>
+        <div class="relative w-full max-w-md mx-4">
+            <div class="apple-card p-6 sm:p-8">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="delete-modal-title" class="text-lg font-bold text-white">
+                            ワークフローの削除
+                        </h3>
+                        <p class="mt-2 text-sm text-gray-400">
+                            <span id="delete-modal-workflow-name" class="text-white font-bold"></span>
+                            を削除しますか?
+                        </p>
+                        <div id="delete-modal-schedule-info"
+                            class="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg hidden">
+                            <p class="text-xs text-amber-400">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                スケジュール実行が設定されています:
+                                <code id="delete-modal-cron" class="ml-1 font-mono text-amber-300"></code>
+                            </p>
+                        </div>
+                        <p class="mt-3 text-xs text-red-400">
+                            この操作は取り消せません。
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="apple-button apple-button-secondary px-5 py-2.5 text-sm"
+                        data-delete-cancel>
+                        キャンセル
+                    </button>
+                    <button type="button" class="apple-button apple-button-danger px-5 py-2.5 text-sm"
+                        data-delete-confirm>
+                        削除する
+                    </button>
+                </div>
             </div>
-        </footer>
+        </div>
+    </div>
 
-        <script src="{{ url_for('static', path='main.js') }}?v={{ static_mtime('main.js') }}"></script>
-        <script>
-            if (!window.__orbitMainLoaded) {
-                const initHelpFallback = () => {
-                    const modal = document.getElementById("help-modal");
-                    if (!modal) return;
-                    const openButtons =
-                        document.querySelectorAll("[data-help-open]");
-                    const closeButtons =
-                        modal.querySelectorAll("[data-help-close]");
-                    const overlay = modal.querySelector("[data-help-overlay]");
+    <footer class="border-t border-white/5 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-gray-600 text-xs tracking-widest uppercase">
+                ORBIT / Araiseimitsu / CREATED BY A・T
+            </p>
+        </div>
+    </footer>
 
-                    const openModal = () => {
-                        modal.classList.remove("hidden");
-                        modal.classList.add("flex");
-                        document.body.classList.add("overflow-hidden");
-                        openButtons.forEach((btn) =>
-                            btn.setAttribute("aria-expanded", "true"),
-                        );
-                    };
+    <script src="{{ url_for('static', path='main.js') }}?v={{ static_mtime('main.js') }}"></script>
+    <script>
+        if (!window.__orbitMainLoaded) {
+            const initHelpFallback = () => {
+                const modal = document.getElementById("help-modal");
+                if (!modal) return;
+                const openButtons =
+                    document.querySelectorAll("[data-help-open]");
+                const closeButtons =
+                    modal.querySelectorAll("[data-help-close]");
+                const overlay = modal.querySelector("[data-help-overlay]");
 
-                    const closeModal = () => {
-                        modal.classList.add("hidden");
-                        modal.classList.remove("flex");
-                        document.body.classList.remove("overflow-hidden");
-                        openButtons.forEach((btn) =>
-                            btn.setAttribute("aria-expanded", "false"),
-                        );
-                    };
-
+                const openModal = () => {
+                    modal.classList.remove("hidden");
+                    modal.classList.add("flex");
+                    document.body.classList.add("overflow-hidden");
                     openButtons.forEach((btn) =>
-                        btn.addEventListener("click", openModal),
+                        btn.setAttribute("aria-expanded", "true"),
                     );
-                    closeButtons.forEach((btn) =>
-                        btn.addEventListener("click", closeModal),
+                };
+
+                const closeModal = () => {
+                    modal.classList.add("hidden");
+                    modal.classList.remove("flex");
+                    document.body.classList.remove("overflow-hidden");
+                    openButtons.forEach((btn) =>
+                        btn.setAttribute("aria-expanded", "false"),
                     );
-                    if (overlay) {
-                        overlay.addEventListener("click", closeModal);
+                };
+
+                openButtons.forEach((btn) =>
+                    btn.addEventListener("click", openModal),
+                );
+                closeButtons.forEach((btn) =>
+                    btn.addEventListener("click", closeModal),
+                );
+                if (overlay) {
+                    overlay.addEventListener("click", closeModal);
+                }
+                document.addEventListener("keydown", (event) => {
+                    if (
+                        event.key === "Escape" &&
+                        !modal.classList.contains("hidden")
+                    ) {
+                        closeModal();
                     }
-                    document.addEventListener("keydown", (event) => {
-                        if (
-                            event.key === "Escape" &&
-                            !modal.classList.contains("hidden")
-                        ) {
-                            closeModal();
-                        }
-                    });
-                };
+                });
+            };
 
-                const initRunDetailsFallback = () => {
-                    document.addEventListener("click", (event) => {
-                        const target =
-                            event.target instanceof Element
-                                ? event.target.closest(
-                                      "[data-run-details-toggle]",
-                                  )
-                                : null;
-                        if (!target) return;
-                        event.preventDefault();
-                        const runId = target.getAttribute(
-                            "data-run-details-toggle",
-                        );
-                        if (!runId) return;
-                        const detailsRow = document.getElementById(
-                            `details-${runId}`,
-                        );
-                        if (!detailsRow) return;
+            const initRunDetailsFallback = () => {
+                document.addEventListener("click", (event) => {
+                    const target =
+                        event.target instanceof Element
+                            ? event.target.closest(
+                                "[data-run-details-toggle]",
+                            )
+                            : null;
+                    if (!target) return;
+                    event.preventDefault();
+                    const runId = target.getAttribute(
+                        "data-run-details-toggle",
+                    );
+                    if (!runId) return;
+                    const detailsRow = document.getElementById(
+                        `details-${runId}`,
+                    );
+                    if (!detailsRow) return;
 
-                        const isHidden =
-                            detailsRow.classList.contains("hidden");
-                        if (isHidden) {
-                            detailsRow.classList.remove("hidden");
-                            detailsRow.classList.add(
-                                "animate-in",
-                                "fade-in",
-                                "slide-in-from-top-2",
-                                "duration-300",
-                            );
-                        } else {
-                            detailsRow.classList.add("hidden");
-                        }
-                        target.setAttribute(
-                            "aria-expanded",
-                            isHidden ? "true" : "false",
+                    const isHidden =
+                        detailsRow.classList.contains("hidden");
+                    if (isHidden) {
+                        detailsRow.classList.remove("hidden");
+                        detailsRow.classList.add(
+                            "animate-in",
+                            "fade-in",
+                            "slide-in-from-top-2",
+                            "duration-300",
                         );
-                    });
-                };
+                    } else {
+                        detailsRow.classList.add("hidden");
+                    }
+                    target.setAttribute(
+                        "aria-expanded",
+                        isHidden ? "true" : "false",
+                    );
+                });
+            };
 
-                if (document.readyState === "loading") {
-                    document.addEventListener("DOMContentLoaded", () => {
-                        initHelpFallback();
-                        initRunDetailsFallback();
-                    });
-                } else {
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", () => {
                     initHelpFallback();
                     initRunDetailsFallback();
-                }
+                });
+            } else {
+                initHelpFallback();
+                initRunDetailsFallback();
             }
-        </script>
-        {% block scripts %}{% endblock %}
-    </body>
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
 </html>
