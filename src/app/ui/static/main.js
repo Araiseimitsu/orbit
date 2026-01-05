@@ -10,6 +10,8 @@ const initApp = () => {
   initGlobalEventListeners();
   initHelpModal();
   initRunDetailsToggle();
+  initDeleteModal();
+  initImportWorkflow();
 };
 
 if (document.readyState === "loading") {
@@ -121,7 +123,23 @@ function initToastAutoScroll() {
  * Global Interactivity
  */
 function initGlobalEventListeners() {
-  document.addEventListener("click", async (event) => {
+  // Toast close handler
+  document.addEventListener("click", (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-toast-close]")
+        : null;
+    if (!target) return;
+
+    event.preventDefault();
+    const toast = target.closest(".toast-item");
+    if (toast) {
+      toast.remove();
+    }
+  });
+
+  // Delete workflow handler (モーダルを表示)
+  document.addEventListener("click", (event) => {
     const target =
       event.target instanceof Element
         ? event.target.closest("[data-delete-workflow]")
@@ -130,32 +148,13 @@ function initGlobalEventListeners() {
 
     event.preventDefault();
     const name = target.getAttribute("data-delete-workflow");
+    const cron = target.getAttribute("data-cron") || null;
     if (!name) return;
 
-    const confirmed = window.confirm(
-      `「${name}」を削除しますか？この操作は取り消せません。`,
-    );
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(
-        `/api/workflows/${encodeURIComponent(name)}/delete`,
-        { method: "POST" },
-      );
-      if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.detail || "削除に失敗しました");
-      }
-      if (window.location.pathname.startsWith(`/workflows/${name}`)) {
-        window.location.href = "/";
-      } else {
-        window.location.reload();
-      }
-    } catch (error) {
-      window.alert(error.message || "削除に失敗しました");
-    }
+    showDeleteModal(name, cron);
   });
 
+  // Toggle workflow handler
   document.addEventListener("click", async (event) => {
     const target =
       event.target instanceof Element
@@ -188,6 +187,92 @@ function initGlobalEventListeners() {
       window.location.reload();
     } catch (error) {
       window.alert(error.message || "更新に失敗しました");
+    }
+  });
+}
+
+/**
+ * Delete Modal Management
+ */
+let pendingDeleteWorkflow = null;
+
+function showDeleteModal(name, cron = null) {
+  const modal = document.getElementById("delete-modal");
+  if (!modal) return;
+
+  pendingDeleteWorkflow = name;
+
+  document.getElementById("delete-modal-workflow-name").textContent = name;
+
+  const scheduleInfo = document.getElementById("delete-modal-schedule-info");
+  const cronEl = document.getElementById("delete-modal-cron");
+  if (cron) {
+    cronEl.textContent = cron;
+    scheduleInfo.classList.remove("hidden");
+  } else {
+    scheduleInfo.classList.add("hidden");
+  }
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  document.body.classList.add("overflow-hidden");
+}
+
+function initDeleteModal() {
+  const modal = document.getElementById("delete-modal");
+  if (!modal) return;
+
+  const overlay = modal.querySelector("[data-delete-overlay]");
+  const cancelBtn = modal.querySelector("[data-delete-cancel]");
+  const confirmBtn = modal.querySelector("[data-delete-confirm]");
+
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    document.body.classList.remove("overflow-hidden");
+    pendingDeleteWorkflow = null;
+  };
+
+  overlay?.addEventListener("click", closeModal);
+  cancelBtn?.addEventListener("click", closeModal);
+
+  confirmBtn?.addEventListener("click", async () => {
+    if (!pendingDeleteWorkflow) return;
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "削除中...";
+
+    try {
+      const response = await fetch(
+        `/api/workflows/${encodeURIComponent(pendingDeleteWorkflow)}/delete`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        const body = await response.json();
+        throw new Error(body.detail || "削除に失敗しました");
+      }
+
+      closeModal();
+
+      if (
+        window.location.pathname.startsWith(
+          `/workflows/${pendingDeleteWorkflow}`,
+        )
+      ) {
+        window.location.href = "/";
+      } else {
+        window.location.reload();
+      }
+    } catch (error) {
+      window.alert(error.message || "削除に失敗しました");
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "削除する";
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
     }
   });
 }
@@ -260,4 +345,47 @@ function initRunDetailsToggle() {
 
     target.setAttribute("aria-expanded", isHidden ? "true" : "false");
   });
+}
+
+function initImportWorkflow() {
+  const input = document.querySelector("[data-import-input]");
+  const triggerButtons = document.querySelectorAll("[data-import-trigger]");
+  if (!input || triggerButtons.length === 0) return;
+
+  triggerButtons.forEach((button) => {
+    button.addEventListener("click", () => input.click());
+  });
+
+  input.addEventListener("change", () => importWorkflow(input));
+}
+
+/**
+ * Workflow Import
+ */
+async function importWorkflow(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("/api/workflows/import", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || "インポートに失敗しました");
+    }
+
+    window.alert(`ワークフロー「${result.name}」をインポートしました`);
+    window.location.reload();
+  } catch (error) {
+    window.alert(error.message || "インポートに失敗しました");
+  } finally {
+    input.value = "";
+  }
 }

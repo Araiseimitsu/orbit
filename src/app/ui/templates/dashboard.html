@@ -24,6 +24,17 @@
                     Search
                 </button>
             </form>
+            <button type="button"
+                class="apple-button apple-button-secondary px-6 py-2.5 text-sm"
+                data-import-trigger>
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import
+            </button>
+            <input type="file" id="import-file-input" accept=".yaml,.yml" class="hidden"
+                data-import-input />
             <a href="/workflows/new/visual" class="apple-button apple-button-primary px-6 py-2.5 text-sm">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -110,7 +121,8 @@
             </button>
 
             <button class="apple-button apple-button-danger w-full py-2 text-xs"
-                data-delete-workflow="{{ workflow.name }}">
+                data-delete-workflow="{{ workflow.name }}"
+                data-cron="{{ workflow.cron or '' }}">
                 Delete
             </button>
         </div>

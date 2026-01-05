@@ -53,6 +53,7 @@ Thumbs.db
 # Project specific
 runs/*.jsonl
 !runs/.gitkeep
+backups/
 
 # cache
 .cache/

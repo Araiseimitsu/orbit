@@ -193,3 +193,20 @@ input[type="text"]:focus {
     outline: none;
     border-color: var(--accent-blue);
 }
+
+select {
+    background-color: var(--surface-dark);
+    border: 1px solid var(--border-thin);
+    color: white;
+    border-radius: 8px;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+select option {
+    background-color: var(--surface-dark);
+    color: white;
+}

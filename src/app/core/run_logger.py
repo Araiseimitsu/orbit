@@ -136,3 +136,53 @@ class RunLogger:
             count += len(file_runs)
 
         return count
+
+    def cleanup(self, retention_days: int = 30) -> dict:
+        """
+        古いログファイルを削除
+
+        Args:
+            retention_days: 保持日数（デフォルト: 30日）
+
+        Returns:
+            削除結果の統計情報
+        """
+        cutoff_date = datetime.now(JST) - timedelta(days=retention_days)
+        deleted_files = []
+        deleted_size = 0
+        kept_files = []
+
+        for log_file in self.runs_dir.glob("*.jsonl"):
+            try:
+                # ファイル名から日付を抽出（YYYYMMDD.jsonl）
+                date_str = log_file.stem
+                file_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=JST)
+
+                if file_date < cutoff_date:
+                    file_size = log_file.stat().st_size
+                    log_file.unlink()
+                    deleted_files.append(log_file.name)
+                    deleted_size += file_size
+                    logger.info(f"Deleted old log file: {log_file}")
+                else:
+                    kept_files.append(log_file.name)
+
+            except ValueError:
+                # 日付形式でないファイルはスキップ
+                logger.warning(f"Skipped non-date log file: {log_file}")
+                continue
+            except Exception as e:
+                logger.error(f"Error deleting {log_file}: {e}")
+                continue
+
+        result = {
+            "retention_days": retention_days,
+            "cutoff_date": cutoff_date.isoformat(),
+            "deleted_count": len(deleted_files),
+            "deleted_files": deleted_files,
+            "deleted_size_bytes": deleted_size,
+            "kept_count": len(kept_files),
+        }
+
+        logger.info(f"Log cleanup completed: {len(deleted_files)} files deleted")
+        return result

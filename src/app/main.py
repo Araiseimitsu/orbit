@@ -11,13 +11,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # アクション登録（インポート時に自動登録）
 from . import actions  # noqa: F401
+from .core.backup import BackupManager
 from .core.executor import Executor
 from .core.loader import WorkflowLoader
 from .core.models import Workflow
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 WORKFLOWS_DIR = BASE_DIR / "workflows"
 RUNS_DIR = BASE_DIR / "runs"
+BACKUPS_DIR = BASE_DIR / "backups"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "ui" / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "ui" / "static"
 
@@ -64,6 +66,7 @@ templates.env.globals["static_mtime"] = static_mtime
 loader = WorkflowLoader(WORKFLOWS_DIR)
 executor = Executor(BASE_DIR)
 run_logger = RunLogger(RUNS_DIR)
+backup_manager = BackupManager(BACKUPS_DIR, max_backups=10)
 workflow_scheduler = WorkflowScheduler(loader, executor, run_logger)
 
 
@@ -72,9 +75,26 @@ async def lifespan(app: FastAPI):
     """FastAPI lifespan: スケジューラーの起動/停止を管理"""
     # 起動時: スケジューラー開始
     logger.info("Starting ORBIT application...")
+
+    # ログローテーション実行
+    cleanup_result = run_logger.cleanup(retention_days=30)
+    logger.info(f"Log cleanup: {cleanup_result['deleted_count']} old files removed")
+
     workflow_scheduler.start()
     registered = workflow_scheduler.register_workflows()
     logger.info(f"Scheduler ready: {registered} workflows registered")
+    try:
+        workflow_scheduler.scheduler.add_job(
+            run_logger.cleanup,
+            trigger=CronTrigger.from_crontab("0 3 * * *", timezone=ZoneInfo("Asia/Tokyo")),
+            kwargs={"retention_days": 30},
+            id="log_cleanup",
+            name="Log Cleanup",
+            replace_existing=True,
+        )
+        logger.info("Scheduled daily log cleanup (03:00 JST)")
+    except Exception as e:
+        logger.warning(f"Failed to schedule log cleanup: {e}")
 
     yield
 
@@ -144,6 +164,57 @@ def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
         }
         return status_map.get(latest.status, latest.status), latest.started_at
     return "未実行", None
+
+
+@app.get("/health")
+async def health_check():
+    """
+    ヘルスチェックエンドポイント
+
+    Returns:
+        スケジューラ状態、登録ジョブ数、直近実行状況
+    """
+    # スケジューラ状態
+    scheduler_running = workflow_scheduler.scheduler.running
+
+    # 登録ジョブ数
+    scheduled_jobs = workflow_scheduler.get_scheduled_jobs()
+    workflow_jobs = [
+        job for job in scheduled_jobs if job.get("id", "").startswith("workflow_")
+    ]
+    job_count = len(workflow_jobs)
+
+    # 直近実行状況（最新5件）
+    recent_runs = run_logger.get_all_runs(limit=5)
+    recent_status = [
+        {
+            "workflow": run.workflow,
+            "status": run.status,
+            "started_at": run.started_at,
+        }
+        for run in recent_runs
+    ]
+
+    # ワークフロー統計
+    workflows = loader.list_workflows()
+    valid_count = sum(1 for wf in workflows if wf.is_valid)
+    error_count = sum(1 for wf in workflows if not wf.is_valid)
+
+    return {
+        "status": "healthy" if scheduler_running else "degraded",
+        "timestamp": datetime.now().isoformat(),
+        "scheduler": {
+            "running": scheduler_running,
+            "job_count": job_count,
+            "jobs": workflow_jobs,
+        },
+        "workflows": {
+            "total": len(workflows),
+            "valid": valid_count,
+            "error": error_count,
+        },
+        "recent_runs": recent_status,
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -222,6 +293,9 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
     per_page = 50
     offset = (page - 1) * per_page
 
+    workflow_options = sorted({wf.name for wf in loader.list_workflows() if wf.name})
+    if workflow and workflow not in workflow_options:
+        workflow_options = [workflow, *workflow_options]
     runs = run_logger.get_all_runs(limit=per_page, offset=offset, workflow_filter=workflow)
     total_runs = run_logger.count_all_runs(workflow_filter=workflow)
     total_pages = (total_runs + per_page - 1) // per_page  # 切り上げ
@@ -232,6 +306,7 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
             "request": request,
             "runs": runs,
             "workflow_filter": workflow,
+            "workflow_options": workflow_options,
             "pagination": {
                 "page": page,
                 "per_page": per_page,
@@ -552,6 +627,11 @@ async def save_workflow(request: Request):
 
     import yaml
 
+    # 既存のワークフローがあればバックアップ
+    if yaml_path.exists():
+        existing_content = yaml_path.read_text(encoding="utf-8")
+        backup_manager.backup_workflow(workflow.name, existing_content)
+
     yaml_content = yaml.safe_dump(
         workflow.model_dump(exclude_none=True), sort_keys=False, allow_unicode=True
     )
@@ -670,3 +750,95 @@ async def preview_cron(request: Request):
         current = next_time
 
     return {"ok": True, "next_runs": next_runs}
+
+
+@app.post("/api/logs/cleanup")
+async def cleanup_logs(request: Request):
+    """ログファイルの手動クリーンアップ"""
+    payload = await request.json()
+    retention_days = payload.get("retention_days", 30)
+
+    if not isinstance(retention_days, int) or retention_days < 1:
+        raise HTTPException(
+            status_code=400, detail="retention_days は1以上の整数で指定してください"
+        )
+
+    result = run_logger.cleanup(retention_days=retention_days)
+    return {"ok": True, **result}
+
+
+@app.get("/api/workflows/{name}/export")
+async def export_workflow(name: str):
+    """ワークフローをYAMLファイルとしてエクスポート"""
+    safe_name = (name or "").strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in safe_name for token in ["/", "\\", ".."]):
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
+
+    yaml_content = loader.get_yaml_content(safe_name)
+    if not yaml_content:
+        raise HTTPException(status_code=404, detail="ワークフローが見つかりません")
+
+    return Response(
+        content=yaml_content,
+        media_type="application/x-yaml",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}.yaml"'},
+    )
+
+
+@app.post("/api/workflows/import")
+async def import_workflow(file: UploadFile = File(...)):
+    """YAMLファイルからワークフローをインポート"""
+    if not file.filename or not file.filename.endswith((".yaml", ".yml")):
+        raise HTTPException(
+            status_code=400, detail="YAMLファイルをアップロードしてください"
+        )
+
+    try:
+        content = await file.read()
+        yaml_content = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="UTF-8でエンコードされたファイルをアップロードしてください",
+        )
+
+    import yaml as yaml_lib
+
+    try:
+        data = yaml_lib.safe_load(yaml_content)
+    except yaml_lib.YAMLError as e:
+        raise HTTPException(status_code=400, detail=f"YAML構文エラー: {e}")
+
+    if not isinstance(data, dict) or "name" not in data:
+        raise HTTPException(status_code=400, detail="ワークフロー定義にnameが必要です")
+
+    name = (data.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が空です")
+    if any(token in name for token in ["/", "\\", ".."]):
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
+
+    # バリデーション
+    try:
+        _ = Workflow.model_validate(data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"バリデーションエラー: {e}")
+
+    # 既存ファイルのバックアップ
+    yaml_path = WORKFLOWS_DIR / f"{name}.yaml"
+    if yaml_path.exists():
+        existing_content = yaml_path.read_text(encoding="utf-8")
+        backup_manager.backup_workflow(name, existing_content)
+
+    # 保存
+    WORKFLOWS_DIR.mkdir(parents=True, exist_ok=True)
+    yaml_path.write_text(yaml_content, encoding="utf-8")
+    workflow_scheduler.reload_workflows()
+
+    return {"ok": True, "name": name, "path": str(yaml_path)}

@@ -63,6 +63,7 @@ class WorkflowInfo(BaseModel):
     status: str = "未実行"
     last_run: str | None = None
     trigger_type: str = "manual"
+    cron: str | None = None
     step_count: int = 0
     is_valid: bool = True
     error: str | None = None

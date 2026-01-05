@@ -61,6 +61,15 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
+            <a href="/api/workflows/{{ name }}/export"
+                class="apple-button apple-button-secondary px-6 py-2.5 text-sm"
+                download="{{ name }}.yaml">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export
+            </a>
             <a href="/workflows/{{ name }}/edit" class="apple-button apple-button-secondary px-6 py-2.5 text-sm">
                 Visual Editor
             </a>
@@ -70,7 +79,9 @@
                 {% if workflow.enabled %}Pause{% else %}Enable{% endif %}
             </button>
             {% endif %}
-            <button class="apple-button apple-button-danger px-6 py-2.5 text-sm" data-delete-workflow="{{ name }}">
+            <button class="apple-button apple-button-danger px-6 py-2.5 text-sm"
+                data-delete-workflow="{{ name }}"
+                data-cron="{% if workflow and workflow.trigger.type == 'schedule' %}{{ workflow.trigger.cron }}{% endif %}">
                 Delete
             </button>
             <button
@@ -164,7 +175,7 @@
                         <div class="flex items-center space-x-4">
                             <span class="text-[10px] font-medium text-gray-500 uppercase tracking-tighter">{{
                                 run.started_at }}</span>
-                            <button onclick="toggleDetails('{{ run.run_id }}')"
+                            <button data-run-details-toggle="{{ run.run_id }}" aria-controls="details-{{ run.run_id }}" aria-expanded="false"
                                 class="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest transition-colors">Details</button>
                         </div>
                     </div>
@@ -243,12 +254,4 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    function toggleDetails(runId) {
-        const el = document.getElementById('details-' + runId);
-        if (!el) return;
-        el.classList.toggle('hidden');
-    }
-</script>
-{% endblock %}
+{% block scripts %}{% endblock %}

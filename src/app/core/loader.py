@@ -101,12 +101,16 @@ class WorkflowLoader:
             workflow, error = self.load_workflow(name)
 
             if workflow:
+                cron = None
+                if workflow.trigger.type == "schedule":
+                    cron = workflow.trigger.cron
                 info = WorkflowInfo(
                     name=workflow.name,
                     filename=yaml_file.name,
                     status="未実行",
                     last_run=None,
                     trigger_type=workflow.trigger.type,
+                    cron=cron,
                     step_count=len(workflow.steps),
                     is_valid=True,
                     error=None,
