@@ -149,8 +149,8 @@
     <div id="help-modal" class="fixed inset-0 z-50 hidden items-center justify-center" role="dialog" aria-modal="true"
         aria-labelledby="help-modal-title">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-help-overlay></div>
-        <div class="relative w-full max-w-3xl mx-4 sm:mx-6">
-            <div class="apple-card p-6 sm:p-8">
+            <div class="relative w-full max-w-3xl mx-4 sm:mx-6">
+                <div class="apple-card p-6 sm:p-8 max-h-[80vh] overflow-y-auto">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-xs uppercase tracking-[0.3em] text-gray-500">
@@ -171,70 +171,113 @@
                     <div class="space-y-4 text-sm text-gray-300 leading-relaxed">
                         <div>
                             <h3 class="text-white font-semibold text-base">
-                                基本フロー
+                                クイックスタート
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 mt-2 text-gray-300">
                                 <li>
-                                    Dashboard
-                                    の「新規作成」からビジュアルエディタを開く
+                                    Dashboard から新規作成（または Import で YAML 取り込み）
                                 </li>
                                 <li>
-                                    左の「アクション」からノードを追加し、右の詳細で設定
+                                    ワークフロー名 / トリガー（手動・スケジュール）/ Active を設定
                                 </li>
                                 <li>
-                                    保存するとワークフローが登録される（YAML
-                                    は自動生成）
+                                    左のアクションからノード追加、右の詳細でパラメータ設定
                                 </li>
                                 <li>
-                                    Dashboard で一覧を確認し、「Run」または
-                                    schedule で実行
+                                    実行順は上から下。ドラッグで並び替え可能
                                 </li>
-                                <li>Runs で履歴と結果を確認</li>
+                                <li>
+                                    保存すると <code class="font-mono text-white/80">workflows/</code> に YAML が自動生成
+                                </li>
+                                <li>
+                                    Dashboard で Run / Schedule 実行、Runs で履歴・結果・出力を確認
+                                </li>
                             </ol>
                         </div>
                         <div>
                             <h3 class="text-white font-semibold text-base">
-                                ビジュアルエディタ
+                                AI フロー自動構築
+                            </h3>
+                            <ul class="list-disc list-inside space-y-2 mt-2 text-gray-300">
+                                <li>
+                                    文章からステップ構成を生成（置き換え / 追加）
+                                </li>
+                                <li>
+                                    ファイルパス・ルーム番号・シート名・範囲・条件・出力キーなど細かく書くほど精度が上がります
+                                </li>
+                                <li>
+                                    Web検索は必要時のみ ON（既定は OFF）
+                                </li>
+                                <li>
+                                    生成後はノードをクリックして詳細調整できます
+                                </li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-semibold text-base">
+                                条件分岐と参照
                             </h3>
                             <p class="mt-2 text-gray-300">
-                                ワークフローはビジュアル画面で完結します。YAML
-                                を直接編集する必要はありません。
-                                実行順は上から下、ノードをクリックして詳細を編集できます。
+                                「条件を使う」で <code class="font-mono text-white/80">step / field / match / equals</code>
+                                を指定。比較は前後空白除去＋大文字小文字を無視します。
+                                テンプレートは <code class="font-mono text-white/80">{{ '{{ step_id.key }}' }}</code>
+                                で前ステップ結果を参照できます。
                             </p>
                         </div>
                     </div>
                     <div class="space-y-4">
                         <div class="apple-card p-4 border border-white/10 bg-black/30">
                             <h3 class="text-white font-semibold text-base mb-3">
-                                プロジェクト情報
+                                主要アクションの例
                             </h3>
-                            <dl class="text-sm text-gray-300 space-y-2">
-                                <div class="flex justify-between">
-                                    <dt>Version</dt>
-                                    <dd class="font-mono text-white">
-                                        0.5.0
-                                    </dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt>Latest</dt>
-                                    <dd class="font-mono text-white">
-                                        2026-01-03
-                                    </dd>
-                                </div>
-                                <div class="flex justify-between">
-                                    <dt>Created By</dt>
-                                    <dd class="text-white">
-                                        DIP Department/ A・T
-                                    </dd>
-                                </div>
-                            </dl>
+                            <ul class="text-sm text-gray-300 space-y-2">
+                                <li>AI 生成: プロンプトを渡して要約・分類・生成</li>
+                                <li>ARAICHAT 送信: room_id / text / files を指定して送信</li>
+                                <li>Excel: 読み込み / 書き込み / 追記 / シート一覧</li>
+                                <li>Google Sheets: 読み込み / 書き込み / 追記 / シート一覧</li>
+                                <li>ファイル: 読み込み / 書き込み（相対パスはプロジェクト基準）</li>
+                                <li>Log: 任意メッセージを実行ログに記録</li>
+                            </ul>
+                        </div>
+                        <div class="apple-card p-4 border border-white/10 bg-black/30">
+                            <h3 class="text-white font-semibold text-base mb-3">
+                                設定とキー類
+                            </h3>
+                            <ul class="text-sm text-gray-300 space-y-2">
+                                <li>Gemini API キー: <code class="font-mono text-white/80">secrets/gemini_api_key.txt</code></li>
+                                <li>ARAICHAT API キー: <code class="font-mono text-white/80">secrets/araichat_api_key.txt</code></li>
+                                <li>Google Sheets: <code class="font-mono text-white/80">secrets/google_service_account.json</code></li>
+                            </ul>
+                        </div>
+                        <div class="apple-card p-4 border border-white/10 bg-black/30">
+                            <h3 class="text-white font-semibold text-base mb-3">
+                                リリースノート（抜粋）
+                            </h3>
+                            <ul class="text-sm text-gray-300 space-y-2">
+                                <li>2026-01-05: when 条件に match（equals/contains）を追加</li>
+                                <li>2026-01-05: ai_generate の Web検索（google_search）対応を追加</li>
+                                <li>2026-01-05: AIフロー自動構築パネルと検索トグルを追加</li>
+                                <li>2026-01-05: Runs のフィルターUI、JSイベント集約を実施</li>
+                                <li>2026-01-04: when 条件による分岐実行を追加</li>
+                                <li>2026-01-03: Google Sheets 追記/上書きを追加</li>
+                                <li>2026-01-03: ローカル Excel 連携を追加</li>
+                                <li>2026-01-03: ARAICHAT 送信の files に単一パス対応</li>
+                            </ul>
+                            <p class="mt-3 text-xs text-gray-500">
+                                詳細は <code class="font-mono text-white/80">.docs/update.md</code> を参照してください。
+                            </p>
                         </div>
                         <div class="text-xs text-gray-500 leading-relaxed">
-                            テンプレート変数（<code class="font-mono text-white/80">{{ '{{ run_id }}' }}</code>
-                            など）は
-                            アクションのパラメータ欄で利用できます。拡張方法は
-                            <code class="font-mono text-white/80">src/app/actions/</code>
-                            を参照してください。
+                            テンプレート変数（<code class="font-mono text-white/80">{{ '{{ run_id }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ now }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ today }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ yesterday }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ tomorrow }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ today_ymd }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ now_ymd_hms }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ workflow }}' }}</code>,
+                            <code class="font-mono text-white/80">{{ '{{ base_dir }}' }}</code>）は
+                            アクションのパラメータ欄で利用できます。
                         </div>
                     </div>
                 </div>
@@ -296,7 +339,7 @@
     <footer class="border-t border-white/5 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <p class="text-center text-gray-600 text-xs tracking-widest uppercase">
-                ORBIT / Araiseimitsu / CREATED BY A・T
+                ORBIT / Araiseimitsu / CREATED BY DIP Department/A・T
             </p>
         </div>
     </footer>

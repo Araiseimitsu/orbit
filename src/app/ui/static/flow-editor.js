@@ -51,6 +51,12 @@
   const actionListEl = document.getElementById("action-list");
   const canvasEl = document.getElementById("flow-canvas");
   const inspectorEl = document.getElementById("inspector");
+  const aiPromptInput = document.getElementById("ai-flow-prompt");
+  const aiModeSelect = document.getElementById("ai-flow-mode");
+  const aiSearchToggle = document.getElementById("ai-flow-search");
+  const aiGenerateButton = document.getElementById("ai-flow-generate");
+  const aiClearButton = document.getElementById("ai-flow-clear");
+  const aiStatusEl = document.getElementById("ai-flow-status");
 
   const REQUIRED_PARAMS = {
     ai_generate: ["prompt"],
@@ -88,6 +94,19 @@
     }
     statusEl.textContent = message;
     statusEl.style.color = isError ? "#b91c1c" : "#475569";
+  };
+
+  const setAiStatus = (message, tone = null) => {
+    if (!aiStatusEl) {
+      return;
+    }
+    aiStatusEl.textContent = message || "";
+    aiStatusEl.classList.remove("error", "success");
+    if (tone === "error") {
+      aiStatusEl.classList.add("error");
+    } else if (tone === "success") {
+      aiStatusEl.classList.add("success");
+    }
   };
 
   const copyToClipboard = async (text) => {
@@ -145,6 +164,23 @@
     return candidate;
   };
 
+  const sanitizeStepId = (value) => {
+    const text = String(value || "step");
+    const sanitized = text.replace(/[^a-zA-Z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    return sanitized || "step";
+  };
+
+  const ensureUniqueId = (base, used) => {
+    let candidate = sanitizeStepId(base);
+    let index = 1;
+    while (used.has(candidate)) {
+      index += 1;
+      candidate = `${sanitizeStepId(base)}_${index}`;
+    }
+    used.add(candidate);
+    return candidate;
+  };
+
   const getSelectedStep = () =>
     state.workflow.steps.find((step) => step.id === state.selectedId);
 
@@ -165,7 +201,7 @@
       type: stepType,
       params: getDefaultParams(stepType),
       position: {
-        x: 80 + state.workflow.steps.length * 20,
+        x: 80,
         y: 80 + state.workflow.steps.length * 80,
       },
     };
@@ -533,7 +569,17 @@
       commonVars.appendChild(commonLabel);
       const commonLine = document.createElement("div");
       commonLine.className = "guide-item";
-      ["{{ run_id }}", "{{ now }}", "{{ workflow }}", "{{ base_dir }}"].forEach(
+      [
+        "{{ run_id }}",
+        "{{ now }}",
+        "{{ today }}",
+        "{{ yesterday }}",
+        "{{ tomorrow }}",
+        "{{ today_ymd }}",
+        "{{ now_ymd_hms }}",
+        "{{ workflow }}",
+        "{{ base_dir }}",
+      ].forEach(
         (value) => {
           commonLine.appendChild(buildExampleChip(value));
         },
@@ -638,6 +684,19 @@
     whenFieldInput.placeholder = "出力キー (例: text)";
     whenFieldInput.value = step.when?.field || "text";
 
+    const whenMatchSelect = document.createElement("select");
+    const matchOptions = [
+      { value: "equals", label: "一致" },
+      { value: "contains", label: "含む" },
+    ];
+    matchOptions.forEach((option) => {
+      const opt = document.createElement("option");
+      opt.value = option.value;
+      opt.textContent = option.label;
+      whenMatchSelect.appendChild(opt);
+    });
+    whenMatchSelect.value = step.when?.match || "equals";
+
     const whenEqualsInput = document.createElement("input");
     whenEqualsInput.type = "text";
     whenEqualsInput.placeholder = "一致値 (例: Yes)";
@@ -648,13 +707,14 @@
 
     whenFields.appendChild(whenStepInput);
     whenFields.appendChild(whenFieldInput);
+    whenFields.appendChild(whenMatchSelect);
     whenFields.appendChild(whenEqualsInput);
     whenRow.appendChild(whenFields);
 
     const whenHelp = document.createElement("div");
     whenHelp.className = "condition-help";
     whenHelp.textContent =
-      "指定ステップの出力が一致した時だけ実行されます（前後空白と大文字小文字は無視）。";
+      "一致/含む で判定します（前後空白と大文字小文字は無視）。";
     whenRow.appendChild(whenHelp);
 
     const whenOptions = {
@@ -675,6 +735,7 @@
         step: whenStepInput.value.trim(),
         field: (whenFieldInput.value || "text").trim() || "text",
         equals: whenEqualsInput.value,
+        match: whenMatchSelect.value,
       };
       if (whenOptions.trim === false) {
         nextWhen.trim = false;
@@ -688,6 +749,7 @@
     whenToggle.addEventListener("change", syncWhen);
     whenStepInput.addEventListener("input", syncWhen);
     whenFieldInput.addEventListener("input", syncWhen);
+    whenMatchSelect.addEventListener("change", syncWhen);
     whenEqualsInput.addEventListener("input", syncWhen);
     syncWhen();
 
@@ -848,6 +910,181 @@
     };
   };
 
+  const normalizeIncomingWhen = (raw) => {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const step = typeof raw.step === "string" ? raw.step.trim() : "";
+    const equals = raw.equals;
+    if (
+      !step ||
+      equals === undefined ||
+      equals === null ||
+      (typeof equals === "string" && equals.trim() === "")
+    ) {
+      return null;
+    }
+    const field =
+      typeof raw.field === "string" && raw.field.trim() ? raw.field.trim() : "text";
+    const matchRaw =
+      typeof raw.match === "string" ? raw.match.trim().toLowerCase() : "equals";
+    const matchValue =
+      matchRaw === "contains" || matchRaw === "equals" ? matchRaw : "equals";
+    const when = { step, field, equals, match: matchValue };
+    if (typeof raw.trim === "boolean") {
+      when.trim = raw.trim;
+    }
+    if (typeof raw.case_insensitive === "boolean") {
+      when.case_insensitive = raw.case_insensitive;
+    }
+    return when;
+  };
+
+  const normalizeIncomingSteps = (rawSteps, usedIds, offsetIndex = 0) => {
+    if (!Array.isArray(rawSteps)) {
+      return [];
+    }
+    const normalized = [];
+    rawSteps.forEach((raw, index) => {
+      if (!raw || typeof raw !== "object") {
+        return;
+      }
+      const type =
+        typeof raw.type === "string" && raw.type.trim()
+          ? raw.type.trim()
+          : state.actions[0] || "log";
+      const params = raw.params && typeof raw.params === "object" ? raw.params : {};
+      const when = normalizeIncomingWhen(raw.when);
+      const baseId = raw.id || type;
+      const id = ensureUniqueId(baseId, usedIds);
+      const baseIndex = offsetIndex + index;
+      const x = 80;
+      const y = 80 + baseIndex * 120;
+      const step = { id, type, params, position: { x, y } };
+      if (when) {
+        step.when = when;
+      }
+      normalized.push(step);
+    });
+    return normalized;
+  };
+
+  const buildAiContext = () => {
+    const payload = buildPayload();
+    const steps = (payload.steps || []).map((step) => ({
+      id: step.id,
+      type: step.type,
+      params: step.params || {},
+      when: step.when || null,
+    }));
+    return { ...payload, steps };
+  };
+
+  const applyAiWorkflow = (workflow, mode) => {
+    if (!workflow || !Array.isArray(workflow.steps)) {
+      setAiStatus("AI の応答形式が不正です", "error");
+      return false;
+    }
+    const usedIds =
+      mode === "append"
+        ? new Set(state.workflow.steps.map((step) => step.id))
+        : new Set();
+    const offsetIndex = mode === "append" ? state.workflow.steps.length : 0;
+    const normalizedSteps = normalizeIncomingSteps(
+      workflow.steps,
+      usedIds,
+      offsetIndex,
+    );
+    if (normalizedSteps.length === 0) {
+      setAiStatus("有効なステップがありませんでした", "error");
+      return false;
+    }
+
+    if (mode === "replace") {
+      state.workflow.steps = normalizedSteps;
+      if (workflow.name) {
+        state.workflow.name = workflow.name;
+      }
+      if (workflow.description !== undefined) {
+        state.workflow.description = workflow.description || "";
+      }
+      if (workflow.trigger) {
+        state.workflow.trigger = workflow.trigger;
+      }
+      if (typeof workflow.enabled === "boolean") {
+        state.workflow.enabled = workflow.enabled;
+      }
+    } else {
+      normalizedSteps.forEach((step) => state.workflow.steps.push(step));
+    }
+
+    nameInput.value = state.workflow.name || "";
+    triggerSelect.value = state.workflow.trigger?.type || "manual";
+    cronInput.value = state.workflow.trigger?.cron || "";
+    if (enabledInput) {
+      enabledInput.checked = state.workflow.enabled !== false;
+    }
+    updateTriggerVisibility();
+    scheduleCronPreview();
+    selectStep(normalizedSteps[0].id);
+    return true;
+  };
+
+  const requestAiFlow = async () => {
+    if (!aiPromptInput || !aiGenerateButton) {
+      return;
+    }
+    const prompt = aiPromptInput.value.trim();
+    if (!prompt) {
+      setAiStatus("指示を入力してください", "error");
+      return;
+    }
+    const mode = aiModeSelect ? aiModeSelect.value : "replace";
+    if (mode === "replace" && state.workflow.steps.length > 0) {
+      const ok = window.confirm("現在のフローを置き換えますか？");
+      if (!ok) {
+        return;
+      }
+    }
+
+    const originalLabel = aiGenerateButton.textContent;
+    aiGenerateButton.disabled = true;
+    aiGenerateButton.textContent = "生成中...";
+    setAiStatus("AI に問い合わせ中...");
+
+    try {
+      const response = await fetch(config.aiUrl || "/api/ai/flow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          mode,
+          current_workflow: buildAiContext(),
+          use_search: aiSearchToggle ? !!aiSearchToggle.checked : true,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "AI 生成に失敗しました");
+      }
+
+      const applied = applyAiWorkflow(data.workflow, mode);
+      if (!applied) {
+        return;
+      }
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        setAiStatus(`生成完了（注意: ${data.warnings.join(" / ")}）`, "success");
+      } else {
+        setAiStatus("生成完了", "success");
+      }
+    } catch (error) {
+      setAiStatus(error.message || "AI 生成に失敗しました", "error");
+    } finally {
+      aiGenerateButton.disabled = false;
+      aiGenerateButton.textContent = originalLabel || "AIで構築";
+    }
+  };
+
   const validateRequiredParams = (payload) => {
     for (const step of payload.steps) {
       const required = REQUIRED_PARAMS[step.type];
@@ -978,6 +1215,24 @@
   });
 
   saveButton.addEventListener("click", saveWorkflow);
+  if (aiGenerateButton) {
+    aiGenerateButton.addEventListener("click", requestAiFlow);
+  }
+  if (aiClearButton && aiPromptInput) {
+    aiClearButton.addEventListener("click", () => {
+      aiPromptInput.value = "";
+      setAiStatus("");
+      aiPromptInput.focus();
+    });
+  }
+  if (aiPromptInput) {
+    aiPromptInput.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        requestAiFlow();
+      }
+    });
+  }
   triggerSelect.addEventListener("change", updateTriggerVisibility);
   if (cronPreset) {
     cronPreset.addEventListener("change", () => {

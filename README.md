@@ -113,7 +113,12 @@ steps:
 
 - `{{ run_id }}`: 実行ID（YYYYMMDD_HHMMSS_xxxx）
 - `{{ workflow }}`: ワークフロー名
-- `{{ now }}`: ISO8601 タイムスタンプ
+- `{{ now }}`: ISO8601 タイムスタンプ（JST）
+- `{{ today }}`: 当日の日付（YYYY-MM-DD, JST）
+- `{{ yesterday }}`: 前日の日付（YYYY-MM-DD, JST）
+- `{{ tomorrow }}`: 翌日の日付（YYYY-MM-DD, JST）
+- `{{ today_ymd }}`: 当日の日付（YYYYMMDD, JST）
+- `{{ now_ymd_hms }}`: 実行時刻（YYYYMMDD_HHMMSS, JST）
 - `{{ step_id.key }}`: 前ステップの結果参照（例: `{{ step_1.values }}`）
 - `{{ base_dir }}`: プロジェクトルートパス
 

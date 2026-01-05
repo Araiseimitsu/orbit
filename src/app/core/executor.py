@@ -64,6 +64,8 @@ class Executor:
             right = self._normalize_string(
                 expected, condition.trim, condition.case_insensitive
             )
+            if condition.match == "contains":
+                return right in left, None
             return left == right, None
 
         return actual == expected, None
@@ -80,6 +82,7 @@ class Executor:
         """
         run_id = generate_run_id()
         started_at = datetime.now(JST)
+        today = started_at.date()
 
         # コンテキスト初期化
         context: dict[str, Any] = {
@@ -87,6 +90,11 @@ class Executor:
             "workflow": workflow.name,
             "now": started_at.isoformat(),
             "base_dir": self.base_dir,
+            "today": today.isoformat(),
+            "yesterday": (today - timedelta(days=1)).isoformat(),
+            "tomorrow": (today + timedelta(days=1)).isoformat(),
+            "today_ymd": started_at.strftime("%Y%m%d"),
+            "now_ymd_hms": started_at.strftime("%Y%m%d_%H%M%S"),
         }
 
         # 実行ログ初期化

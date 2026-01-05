@@ -25,6 +25,7 @@ from .core.models import Workflow
 from .core.registry import get_registry
 from .core.run_logger import RunLogger
 from .core.scheduler import WorkflowScheduler
+from .ai_flow import generate_ai_flow
 
 # ログ設定
 logging.basicConfig(
@@ -356,6 +357,7 @@ async def workflow_new_visual(request: Request):
             "actions": actions,
             "mode": "new",
             "saveUrl": "/api/workflows/save",
+            "aiUrl": "/api/ai/flow",
         },
         ensure_ascii=False,
     )
@@ -385,6 +387,7 @@ async def workflow_edit(request: Request, name: str):
             "actions": actions,
             "mode": "edit",
             "saveUrl": "/api/workflows/save",
+            "aiUrl": "/api/ai/flow",
         },
         ensure_ascii=False,
     )
@@ -415,6 +418,7 @@ async def workflow_from_template(request: Request, template_name: str):
             "actions": actions,
             "mode": "new",
             "saveUrl": "/api/workflows/save",
+            "aiUrl": "/api/ai/flow",
         },
         ensure_ascii=False,
     )
@@ -511,6 +515,43 @@ async def list_actions():
     return {"actions": actions, "metadata": metadata}
 
 
+@app.post("/api/ai/flow")
+async def build_flow_with_ai(request: Request):
+    """AI でワークフロー案を生成"""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="無効なリクエスト形式です")
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt が必要です")
+
+    current_workflow = payload.get("current_workflow")
+    if current_workflow is not None and not isinstance(current_workflow, dict):
+        current_workflow = None
+    use_search = payload.get("use_search")
+    if not isinstance(use_search, bool):
+        use_search = True
+
+    try:
+        result = generate_ai_flow(
+            prompt,
+            get_registry(),
+            BASE_DIR,
+            current_workflow,
+            use_search=use_search,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("AI flow generation failed")
+        raise HTTPException(status_code=500, detail="AI フロー生成に失敗しました") from exc
+
+    return result
+
+
 @app.post("/api/workflows/save")
 async def save_workflow(request: Request):
     """ビジュアルエディタからワークフローを保存"""
@@ -590,6 +631,18 @@ async def save_workflow(request: Request):
                 "field": field,
                 "equals": equals,
             }
+            match = when.get("match")
+            if match is not None:
+                if not isinstance(match, str):
+                    raise HTTPException(
+                        status_code=400, detail="条件の match は文字列で指定してください"
+                    )
+                match_value = match.strip().lower()
+                if match_value not in ("equals", "contains"):
+                    raise HTTPException(
+                        status_code=400, detail="条件の match は equals / contains のみ対応です"
+                    )
+                normalized_when["match"] = match_value
             if isinstance(when.get("trim"), bool):
                 normalized_when["trim"] = when["trim"]
             if isinstance(when.get("case_insensitive"), bool):

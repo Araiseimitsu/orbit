@@ -32,6 +32,9 @@ class StepCondition(BaseModel):
     step: str = Field(..., description="参照するステップID")
     field: str = Field(default="text", description="参照する出力キー")
     equals: Any = Field(..., description="一致判定値")
+    match: Literal["equals", "contains"] = Field(
+        default="equals", description="比較方法（equals/contains）"
+    )
     trim: bool = Field(default=True, description="文字列比較時の前後空白を除去")
     case_insensitive: bool = Field(default=True, description="文字列比較時の大文字小文字を無視")
 

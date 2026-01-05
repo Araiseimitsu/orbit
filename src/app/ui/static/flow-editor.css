@@ -172,6 +172,105 @@
     font-weight: 500;
 }
 
+.flow-ai-panel {
+    padding: 20px 24px;
+    border-radius: 20px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-thin);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.flow-ai-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.flow-ai-title {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-primary);
+}
+
+.flow-ai-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.flow-ai-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-search-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-thin);
+    border-radius: 999px;
+    padding: 6px 12px;
+}
+
+.ai-search-toggle input {
+    width: 14px;
+    height: 14px;
+}
+
+.flow-ai-controls select {
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-thin);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.flow-ai-body textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-thin);
+    border-radius: 16px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.flow-ai-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.flow-ai-status {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-height: 18px;
+}
+
+.flow-ai-status.error {
+    color: var(--accent-red);
+}
+
+.flow-ai-status.success {
+    color: var(--accent-green);
+}
+
 .flow-editor-layout {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr) 380px;
@@ -632,5 +731,15 @@
     .flow-panel,
     .flow-canvas-wrap {
         min-height: 320px;
+    }
+
+    .flow-ai-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .flow-ai-controls {
+        width: 100%;
+        flex-wrap: wrap;
     }
 }
