@@ -116,6 +116,56 @@ def _normalize_values(values: Any) -> list[list[Any]]:
     return values
 
 
+def _parse_sheet_and_range(sheet: str | None, range_param: str) -> str:
+    """
+    sheet パラメータと range パラメータから最終的な範囲文字列を返す
+
+    優先順位:
+    1. sheet パラメータが指定されていれば、それを使用
+    2. range に "!" が含まれていれば、分割して使用（後方互換）
+    3. どちらもなければ、range をそのまま使用（シート名なし）
+
+    Args:
+        sheet: シート名（オプショナル）
+        range_param: 範囲（例: "A1:D10" または "Sheet1!A1:D10"）
+
+    Returns:
+        最終的な範囲文字列（例: "Sheet1!A1:D10" または "A1:D10"）
+
+    Examples:
+        >>> _parse_sheet_and_range("Sheet1", "A1:D10")
+        "Sheet1!A1:D10"
+
+        >>> _parse_sheet_and_range(None, "Sheet2!B1:C10")
+        "Sheet2!B1:C10"
+
+        >>> _parse_sheet_and_range("Sheet1", "Sheet2!A1:D10")
+        "Sheet1!A1:D10"  # sheet パラメータを優先
+
+        >>> _parse_sheet_and_range(None, "A1:D10")
+        "A1:D10"
+    """
+    if "!" in range_param:
+        # 従来の "Sheet1!A1:D10" 形式
+        parts = range_param.split("!", 1)
+        extracted_sheet = parts[0]
+        extracted_range = parts[1] if len(parts) > 1 else ""
+
+        # sheet パラメータが指定されていればそちらを優先
+        final_sheet = sheet if sheet else extracted_sheet
+        final_range = extracted_range
+    else:
+        # range に "!" がない場合
+        final_sheet = sheet if sheet else ""
+        final_range = range_param
+
+    # 最終的な range 文字列を生成
+    if final_sheet:
+        return f"{final_sheet}!{final_range}"
+    else:
+        return final_range
+
+
 def _parse_values_with_header(
     values: list[list[Any]], header_row: bool
 ) -> dict[str, Any]:
@@ -180,10 +230,16 @@ def _parse_values_with_header(
                 "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
             },
             {
+                "key": "sheet",
+                "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
                 "key": "range",
-                "description": "読み取り範囲 (例: 'Sheet1!A1:D10', 'Sheet1' など)",
+                "description": "読み取り範囲。'Sheet1!A1:D10' 形式、または sheet パラメータと組み合わせて 'A1:D10' 形式で指定可能",
                 "required": True,
-                "example": "Sheet1!A1:D10"
+                "example": "A1:D10"
             },
             {
                 "key": "header_row",
@@ -219,7 +275,8 @@ async def action_sheets_read(
 
     params:
         spreadsheet_id: スプレッドシートID (URL から取得可能)
-        range: 読み取り範囲 (例: "Sheet1!A1:D10", "Sheet1" など)
+        sheet: シート名（オプショナル）。指定時は range のシート名より優先されます。
+        range: 読み取り範囲 (例: "Sheet1!A1:D10", "Sheet1", "A1:D10" など)
         header_row: 1行目をヘッダーとして扱う (デフォルト: true)
         credentials_file: 認証情報ファイルパス (デフォルト: secrets/google_service_account.json)
 
@@ -242,9 +299,10 @@ async def action_sheets_read(
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
 
+    sheet_param = params.get("sheet")
     range_notation = params.get("range")
     if not range_notation:
-        raise ValueError("range は必須です (例: 'Sheet1!A1:D10')")
+        raise ValueError("range は必須です (例: 'Sheet1!A1:D10' または 'A1:D10')")
 
     header_row = params.get("header_row", True)
     credentials_file = params.get("credentials_file", DEFAULT_CREDENTIALS_FILE)
@@ -255,7 +313,10 @@ async def action_sheets_read(
     if not credentials_path.is_absolute():
         credentials_path = base_dir / credentials_path
 
-    logger.info(f"Google Sheets 読み取り開始: {spreadsheet_id} / {range_notation}")
+    # シート名と範囲を解析
+    final_range = _parse_sheet_and_range(sheet_param, range_notation)
+
+    logger.info(f"Google Sheets 読み取り開始: {spreadsheet_id} / {final_range}")
 
     try:
         # API サービス取得
@@ -265,7 +326,7 @@ async def action_sheets_read(
         sheet = service.spreadsheets()
         result = (
             sheet.values()
-            .get(spreadsheetId=spreadsheet_id, range=range_notation)
+            .get(spreadsheetId=spreadsheet_id, range=final_range)
             .execute()
         )
 
@@ -276,7 +337,7 @@ async def action_sheets_read(
         # 結果を解析
         parsed = _parse_values_with_header(values, header_row)
 
-        return {**parsed, "spreadsheet_id": spreadsheet_id, "range": range_notation}
+        return {**parsed, "spreadsheet_id": spreadsheet_id, "range": final_range}
 
     except HttpError as e:
         error_msg = f"Google Sheets API エラー: {e.resp.status} - {e.reason}"
@@ -397,10 +458,16 @@ async def action_sheets_list(
                 "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
             },
             {
+                "key": "sheet",
+                "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
                 "key": "range",
-                "description": "追記先の範囲（例: 'Sheet1!A1' または 'Sheet1'）",
+                "description": "追記先の範囲。'Sheet1!A1' 形式、または sheet パラメータと組み合わせて 'A1' 形式で指定可能",
                 "required": True,
-                "example": "Sheet1!A1"
+                "example": "A1"
             },
             {
                 "key": "values",
@@ -448,7 +515,8 @@ async def action_sheets_append(
 
     params:
         spreadsheet_id: スプレッドシートID
-        range: 追記先の範囲（例: "Sheet1!A1" または "Sheet1"）
+        sheet: シート名（オプショナル）。指定時は range のシート名より優先されます。
+        range: 追記先の範囲（例: "Sheet1!A1", "Sheet1", "A1" など）
         values: 2次元配列 or JSON文字列
         value_input_option: RAW / USER_ENTERED (デフォルト: USER_ENTERED)
         insert_data_option: INSERT_ROWS / OVERWRITE (デフォルト: INSERT_ROWS)
@@ -468,9 +536,10 @@ async def action_sheets_append(
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
 
+    sheet_param = params.get("sheet")
     range_notation = params.get("range")
     if not range_notation:
-        raise ValueError("range は必須です (例: 'Sheet1!A1')")
+        raise ValueError("range は必須です (例: 'Sheet1!A1' または 'A1')")
 
     values = _normalize_values(params.get("values"))
     value_input_option = params.get("value_input_option", "USER_ENTERED")
@@ -482,7 +551,10 @@ async def action_sheets_append(
     if not credentials_path.is_absolute():
         credentials_path = base_dir / credentials_path
 
-    logger.info(f"Google Sheets 追記開始: {spreadsheet_id} / {range_notation}")
+    # シート名と範囲を解析
+    final_range = _parse_sheet_and_range(sheet_param, range_notation)
+
+    logger.info(f"Google Sheets 追記開始: {spreadsheet_id} / {final_range}")
 
     try:
         service = _get_sheets_service(credentials_path)
@@ -491,7 +563,7 @@ async def action_sheets_append(
             sheet.values()
             .append(
                 spreadsheetId=spreadsheet_id,
-                range=range_notation,
+                range=final_range,
                 valueInputOption=value_input_option,
                 insertDataOption=insert_data_option,
                 body={"values": values},
@@ -502,7 +574,7 @@ async def action_sheets_append(
         updates = result.get("updates", {})
         return {
             "spreadsheet_id": spreadsheet_id,
-            "range": range_notation,
+            "range": final_range,
             "updated_range": updates.get("updatedRange"),
             "updated_rows": updates.get("updatedRows"),
             "updated_columns": updates.get("updatedColumns"),
@@ -529,10 +601,16 @@ async def action_sheets_append(
                 "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
             },
             {
+                "key": "sheet",
+                "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
+                "required": False,
+                "example": "Sheet1"
+            },
+            {
                 "key": "range",
-                "description": "書き込み範囲（例: 'Sheet1!A1:C2'）",
+                "description": "書き込み範囲。'Sheet1!A1:C2' 形式、または sheet パラメータと組み合わせて 'A1:C2' 形式で指定可能",
                 "required": True,
-                "example": "Sheet1!A1:C2"
+                "example": "A1:C2"
             },
             {
                 "key": "values",
@@ -573,7 +651,8 @@ async def action_sheets_write(
 
     params:
         spreadsheet_id: スプレッドシートID
-        range: 書き込み範囲（例: "Sheet1!A1:C2"）
+        sheet: シート名（オプショナル）。指定時は range のシート名より優先されます。
+        range: 書き込み範囲（例: "Sheet1!A1:C2", "A1:C2" など）
         values: 2次元配列 or JSON文字列
         value_input_option: RAW / USER_ENTERED (デフォルト: USER_ENTERED)
         credentials_file: 認証情報ファイルパス (オプション)
@@ -592,9 +671,10 @@ async def action_sheets_write(
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
 
+    sheet_param = params.get("sheet")
     range_notation = params.get("range")
     if not range_notation:
-        raise ValueError("range は必須です (例: 'Sheet1!A1:C2')")
+        raise ValueError("range は必須です (例: 'Sheet1!A1:C2' または 'A1:C2')")
 
     values = _normalize_values(params.get("values"))
     value_input_option = params.get("value_input_option", "USER_ENTERED")
@@ -605,7 +685,10 @@ async def action_sheets_write(
     if not credentials_path.is_absolute():
         credentials_path = base_dir / credentials_path
 
-    logger.info(f"Google Sheets 書き込み開始: {spreadsheet_id} / {range_notation}")
+    # シート名と範囲を解析
+    final_range = _parse_sheet_and_range(sheet_param, range_notation)
+
+    logger.info(f"Google Sheets 書き込み開始: {spreadsheet_id} / {final_range}")
 
     try:
         service = _get_sheets_service(credentials_path)
@@ -614,7 +697,7 @@ async def action_sheets_write(
             sheet.values()
             .update(
                 spreadsheetId=spreadsheet_id,
-                range=range_notation,
+                range=final_range,
                 valueInputOption=value_input_option,
                 body={"values": values},
             )
@@ -623,7 +706,7 @@ async def action_sheets_write(
 
         return {
             "spreadsheet_id": spreadsheet_id,
-            "range": range_notation,
+            "range": final_range,
             "updated_range": result.get("updatedRange"),
             "updated_rows": result.get("updatedRows"),
             "updated_columns": result.get("updatedColumns"),
