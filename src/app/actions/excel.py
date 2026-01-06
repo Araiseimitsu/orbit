@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, date
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -24,6 +25,31 @@ def _resolve_path(path_str: str, base_dir: Path) -> Path:
     if not path.is_absolute():
         path = base_dir / path
     return path
+
+
+def _normalize_cell_value(value: Any) -> Any:
+    """
+    セルの値を正規化（datetime/date オブジェクトを文字列に変換）
+
+    Args:
+        value: セルの値（datetime, date, その他）
+
+    Returns:
+        正規化された値（datetime/date は YYYY/MM/DD 形式の文字列に変換）
+    """
+    if value is None:
+        return ""
+
+    if isinstance(value, datetime):
+        # datetime オブジェクトを YYYY/MM/DD 形式の文字列に変換
+        return value.strftime("%Y/%m/%d")
+
+    if isinstance(value, date):
+        # date オブジェクトを YYYY/MM/DD 形式の文字列に変換
+        return value.strftime("%Y/%m/%d")
+
+    # その他の型はそのまま返す
+    return value
 
 
 def _normalize_values(values: Any) -> list[list[Any]]:
@@ -52,29 +78,46 @@ def _parse_values_with_header(
         return {"headers": [], "rows": [], "raw": [], "row_count": 0, "col_count": 0}
 
     if header_row and len(values) >= 1:
-        headers = [str(h) if h else f"col_{i}" for i, h in enumerate(values[0])]
+        # ヘッダー行を正規化（datetime オブジェクトの可能性があるため）
+        normalized_headers = [_normalize_cell_value(h) for h in values[0]]
+        headers = [
+            str(h) if h else f"col_{i}" for i, h in enumerate(normalized_headers)
+        ]
         data_rows = values[1:]
 
         rows = []
         for row in data_rows:
             row_dict = {}
             for i, header in enumerate(headers):
-                row_dict[header] = row[i] if i < len(row) else ""
+                cell_value = row[i] if i < len(row) else ""
+                # セル値を正規化（datetime/date を文字列に変換）
+                normalized_value = _normalize_cell_value(cell_value)
+                row_dict[header] = normalized_value
             rows.append(row_dict)
+
+        # raw データも正規化
+        normalized_raw = []
+        for row in values:
+            normalized_raw.append([_normalize_cell_value(cell) for cell in row])
 
         return {
             "headers": headers,
             "rows": rows,
-            "raw": values,
+            "raw": normalized_raw,
             "row_count": len(data_rows),
             "col_count": len(headers),
         }
 
+    # ヘッダーなしの場合も正規化
     col_count = max(len(row) for row in values) if values else 0
+    normalized_raw = []
+    for row in values:
+        normalized_raw.append([_normalize_cell_value(cell) for cell in row])
+
     return {
         "headers": [],
         "rows": [],
-        "raw": values,
+        "raw": normalized_raw,
         "row_count": len(values),
         "col_count": col_count,
     }
@@ -156,43 +199,43 @@ def _calc_updated_range(
                 "key": "path",
                 "description": "Excelファイルパス",
                 "required": True,
-                "example": "data.xlsx"
+                "example": "data.xlsx",
             },
             {
                 "key": "sheet",
                 "description": "シート名（省略時はアクティブシート）",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "range",
                 "description": "取得範囲（例: 'A1:D10' または 'Sheet1!A1:D10'）",
                 "required": True,
-                "example": "A1:D10"
+                "example": "A1:D10",
             },
             {
                 "key": "header_row",
                 "description": "1行目をヘッダーとして扱う",
                 "required": False,
                 "default": True,
-                "example": "true"
+                "example": "true",
             },
             {
                 "key": "data_only",
                 "description": "数式の結果を返す",
                 "required": False,
                 "default": True,
-                "example": "true"
-            }
+                "example": "true",
+            },
         ],
         "outputs": [
             {"key": "headers", "description": "ヘッダー行"},
             {"key": "rows", "description": "データ行"},
             {"key": "raw", "description": "生データ"},
             {"key": "row_count", "description": "行数"},
-            {"key": "col_count", "description": "列数"}
-        ]
-    }
+            {"key": "col_count", "description": "列数"},
+        ],
+    },
 )
 async def action_excel_read(
     params: dict[str, Any], context: dict[str, Any]
@@ -254,14 +297,14 @@ async def action_excel_read(
                 "key": "path",
                 "description": "Excelファイルパス",
                 "required": True,
-                "example": "data.xlsx"
+                "example": "data.xlsx",
             }
         ],
         "outputs": [
             {"key": "sheets", "description": "シート名のリスト"},
-            {"key": "path", "description": "ファイルパス"}
-        ]
-    }
+            {"key": "path", "description": "ファイルパス"},
+        ],
+    },
 )
 async def action_excel_list_sheets(
     params: dict[str, Any], context: dict[str, Any]
@@ -289,26 +332,26 @@ async def action_excel_list_sheets(
                 "key": "path",
                 "description": "Excelファイルパス",
                 "required": True,
-                "example": "data.xlsx"
+                "example": "data.xlsx",
             },
             {
                 "key": "sheet",
                 "description": "シート名（省略時はアクティブシート）",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "range",
                 "description": "書き込み範囲（例: 'A1:C2' または 'Sheet1!A1:C2'）",
                 "required": True,
-                "example": "A1:C2"
+                "example": "A1:C2",
             },
             {
                 "key": "values",
                 "description": "2次元配列 or JSON文字列",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]'
-            }
+                "example": '[["A1", "B1"], ["A2", "B2"]]',
+            },
         ],
         "outputs": [
             {"key": "path", "description": "ファイルパス"},
@@ -316,9 +359,9 @@ async def action_excel_list_sheets(
             {"key": "range", "description": "範囲"},
             {"key": "updated_range", "description": "更新範囲"},
             {"key": "updated_rows", "description": "更新行数"},
-            {"key": "updated_columns", "description": "更新列数"}
-        ]
-    }
+            {"key": "updated_columns", "description": "更新列数"},
+        ],
+    },
 )
 async def action_excel_write(
     params: dict[str, Any], context: dict[str, Any]
@@ -388,36 +431,36 @@ async def action_excel_write(
                 "key": "path",
                 "description": "Excelファイルパス",
                 "required": True,
-                "example": "data.xlsx"
+                "example": "data.xlsx",
             },
             {
                 "key": "sheet",
                 "description": "シート名（省略時はアクティブシート）",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "values",
                 "description": "2次元配列 or JSON文字列",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]'
+                "example": '[["A1", "B1"], ["A2", "B2"]]',
             },
             {
                 "key": "start_cell",
                 "description": "追記開始列を指定（例: 'B1'。行番号は無視）",
                 "required": False,
                 "default": "A1",
-                "example": "A1"
-            }
+                "example": "A1",
+            },
         ],
         "outputs": [
             {"key": "path", "description": "ファイルパス"},
             {"key": "sheet", "description": "シート名"},
             {"key": "appended_range", "description": "追記範囲"},
             {"key": "appended_rows", "description": "追記行数"},
-            {"key": "appended_columns", "description": "追記列数"}
-        ]
-    }
+            {"key": "appended_columns", "description": "追記列数"},
+        ],
+    },
 )
 async def action_excel_append(
     params: dict[str, Any], context: dict[str, Any]
