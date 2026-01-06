@@ -26,36 +26,62 @@ if (document.readyState === "loading") {
 function initHtmxEvents() {
   // Show global loader on specific htmx requests
   document.body.addEventListener("htmx:beforeRequest", (evt) => {
-    const target = evt.target;
-    if (target.matches('button[hx-post*="/run"]')) {
-      const loader = document.getElementById("global-loader");
-      if (loader) {
-        loader.classList.remove("hidden");
-        loader.classList.add("flex");
-      }
+    const target = evt.detail?.elt || evt.target;
+    if (target instanceof Element && target.matches('button[data-workflow-run]')) {
       target.disabled = true;
+
+      const workflowName = target.getAttribute("data-workflow-run");
+      if (workflowName) {
+        updateDashboardBadge(workflowName, "running");
+        const stopButton = getStopButton(workflowName);
+        if (stopButton) {
+          stopButton.classList.remove("hidden");
+          stopButton.disabled = false;
+          stopButton.textContent = "Stop";
+        }
+      }
     }
   });
 
   document.body.addEventListener("htmx:afterRequest", (evt) => {
-    const loader = document.getElementById("global-loader");
-    if (loader) {
-      loader.classList.add("hidden");
-      loader.classList.remove("flex");
+    const target = evt.detail?.elt || evt.target;
+    if (!(target instanceof Element) || !target.matches('button[data-workflow-run]')) {
+      return;
     }
-    const buttons = document.querySelectorAll('button[hx-post*="/run"]');
-    buttons.forEach((btn) => (btn.disabled = false));
+
+    target.disabled = false;
+
+    const workflowName = target.getAttribute("data-workflow-run");
+    if (workflowName) {
+      const stopButton = getStopButton(workflowName);
+      if (stopButton) {
+        stopButton.classList.add("hidden");
+        stopButton.disabled = false;
+        stopButton.textContent = "Stop";
+      }
+    }
   });
 }
 
 /**
  * Toast Management
  */
-const BADGE_CLASSES = ["badge-success", "badge-error", "badge-neutral"];
+const BADGE_CLASSES = [
+  "badge-success",
+  "badge-error",
+  "badge-neutral",
+  "badge-pending",
+];
 
 function escapeSelector(value) {
   if (window.CSS && CSS.escape) return CSS.escape(value);
   return String(value).replace(/["\\]/g, "\\$&");
+}
+
+function getStopButton(workflowName) {
+  if (!workflowName) return null;
+  const selector = `[data-workflow-stop="${escapeSelector(workflowName)}"]`;
+  return document.querySelector(selector);
 }
 
 function updateDashboardBadge(workflowName, runStatus) {
@@ -68,6 +94,7 @@ function updateDashboardBadge(workflowName, runStatus) {
     success: { label: "成功", className: "badge-success" },
     failed: { label: "失敗", className: "badge-error" },
     running: { label: "実行中", className: "badge-neutral" },
+    stopped: { label: "停止", className: "badge-pending" },
   };
   const next = statusMap[runStatus] || {
     label: runStatus,
@@ -187,6 +214,38 @@ function initGlobalEventListeners() {
       window.location.reload();
     } catch (error) {
       window.alert(error.message || "更新に失敗しました");
+    }
+  });
+
+  // Stop workflow handler
+  document.addEventListener("click", async (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-workflow-stop]")
+        : null;
+    if (!target) return;
+
+    event.preventDefault();
+    const name = target.getAttribute("data-workflow-stop");
+    if (!name) return;
+
+    const originalLabel = target.textContent || "Stop";
+    target.disabled = true;
+    target.textContent = "Stopping...";
+
+    try {
+      const response = await fetch(
+        `/api/workflows/${encodeURIComponent(name)}/stop`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.detail || "停止に失敗しました");
+      }
+    } catch (error) {
+      window.alert(error.message || "停止に失敗しました");
+      target.disabled = false;
+      target.textContent = originalLabel;
     }
   });
 }

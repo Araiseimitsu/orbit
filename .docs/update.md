@@ -4,6 +4,8 @@
 - **Day 7-8 完了** - UI 仕上げ完了
 
 ## 更新履歴
+- 2026-01-06: ai_generate の同期処理をスレッド実行に切り替え、実行中の停止要求がブロックされないよう改善。
+- 2026-01-06: Dashboard の手動Runに停止ボタンを追加し、実行中キャンセル（stoppedステータス）に対応。
 - 2026-01-05: 共通テンプレート変数に today / yesterday / tomorrow / today_ymd / now_ymd_hms を追加。
 - 2026-01-05: when 条件に match（equals/contains）を追加し、含む判定での条件分岐を可能にした。
 - 2026-01-05: ai_generate に Web検索（google_search）対応を追加し、use_search パラメータで切り替え可能にした。

@@ -149,6 +149,11 @@ class Executor:
                 # 全ステップ成功
                 run_log.status = "success"
 
+        except asyncio.CancelledError:
+            run_log.status = "stopped"
+            run_log.error = "ユーザーにより停止されました"
+            logger.info(f"Workflow stopped by user: {workflow.name} (run_id: {run_id})")
+
         except Exception as e:
             logger.exception(f"Workflow execution error: {e}")
             run_log.status = "failed"

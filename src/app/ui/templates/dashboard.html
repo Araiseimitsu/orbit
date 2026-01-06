@@ -58,7 +58,7 @@
                 <p class="text-[11px] font-mono text-gray-500 mt-1 truncate">{{ workflow.filename }}</p>
             </div>
             <span
-                class="apple-badge {% if workflow.status == '成功' %}badge-success{% elif workflow.status in ['失敗', 'エラー'] %}badge-error{% else %}badge-neutral{% endif %}"
+                class="apple-badge {% if workflow.status == '成功' %}badge-success{% elif workflow.status in ['失敗', 'エラー'] %}badge-error{% elif workflow.status == '停止' %}badge-pending{% else %}badge-neutral{% endif %}"
                 data-workflow-status="{{ workflow.name }}">
                 {{ workflow.status }}
             </span>
@@ -105,6 +105,7 @@
 
             <button
                 class="apple-button apple-button-primary w-full py-2.5 text-sm run-button {% if not workflow.is_valid %}opacity-50 cursor-not-allowed{% endif %}"
+                data-workflow-run="{{ workflow.name }}"
                 hx-post="/api/workflows/{{ workflow.name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if
                 not workflow.is_valid %}disabled{% endif %}>
                 <div class="htmx-indicator flex items-center">
@@ -118,6 +119,11 @@
                     Executing...
                 </div>
                 <div class="htmx-content">Run Workflow</div>
+            </button>
+            <button type="button"
+                class="apple-button apple-button-danger w-full py-2.5 text-sm stop-button hidden"
+                data-workflow-stop="{{ workflow.name }}" {% if not workflow.is_valid %}disabled{% endif %}>
+                Stop
             </button>
 
             <button class="apple-button apple-button-danger w-full py-2 text-xs"

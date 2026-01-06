@@ -2,6 +2,7 @@
 ORBIT MVP - FastAPI Application Entry Point
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -29,9 +30,10 @@ from . import actions  # noqa: F401
 from .core.backup import BackupManager
 from .core.executor import Executor
 from .core.loader import WorkflowLoader
-from .core.models import Workflow
+from .core.models import RunLog, Workflow
 from .core.registry import get_registry
 from .core.run_logger import RunLogger
+from .core.run_manager import RunManager
 from .core.scheduler import WorkflowScheduler
 from .ai_flow import generate_ai_flow
 
@@ -75,6 +77,7 @@ templates.env.globals["static_mtime"] = static_mtime
 loader = WorkflowLoader(WORKFLOWS_DIR)
 executor = Executor(BASE_DIR)
 run_logger = RunLogger(RUNS_DIR)
+run_manager = RunManager()
 backup_manager = BackupManager(BACKUPS_DIR, max_backups=10)
 workflow_scheduler = WorkflowScheduler(loader, executor, run_logger)
 
@@ -162,6 +165,20 @@ def build_editor_data(workflow: Workflow | None) -> dict:
     }
 
 
+def build_error_run(workflow_name: str, message: str) -> RunLog:
+    """エラー用の簡易RunLogを生成"""
+    now = datetime.now().isoformat()
+    return RunLog(
+        workflow=workflow_name,
+        run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
+        status="failed",
+        started_at=now,
+        ended_at=now,
+        error=message,
+        steps=[],
+    )
+
+
 def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
     """ワークフローの最新ステータスと実行時刻を取得"""
     latest = run_logger.get_latest_run(workflow_name)
@@ -170,6 +187,7 @@ def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
             "success": "成功",
             "failed": "失敗",
             "running": "実行中",
+            "stopped": "停止",
         }
         return status_map.get(latest.status, latest.status), latest.started_at
     return "未実行", None
@@ -450,61 +468,98 @@ async def run_workflow(request: Request, name: str):
     成功時: トースト通知用のHTMLを返す
     失敗時: エラー表示用のHTMLを返す
     """
+    safe_name = (name or "").strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in safe_name for token in ["/", "\\", ".."]):
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
+
+    if await run_manager.is_running(safe_name):
+        error_run = build_error_run(
+            safe_name,
+            "すでに実行中です。停止ボタンで中断できます。",
+        )
+        return templates.TemplateResponse(
+            "partials/run_result.html",
+            {"request": request, "run": error_run, "workflow_name": safe_name},
+        )
+
     try:
-        workflow, error = loader.load_workflow(name)
+        workflow, error = loader.load_workflow(safe_name)
 
         if error or not workflow:
-            # エラートーストを返す
-            from datetime import datetime
-
-            from .core.models import RunLog
-
-            error_run = RunLog(
-                workflow=name,
-                run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
-                status="failed",
-                started_at=datetime.now().isoformat(),
-                ended_at=datetime.now().isoformat(),
-                error=error or "Workflow not found",
-                step_results={},
+            error_run = build_error_run(
+                safe_name,
+                error or "Workflow not found",
             )
             return templates.TemplateResponse(
                 "partials/run_result.html",
-                {"request": request, "run": error_run, "workflow_name": name},
+                {"request": request, "run": error_run, "workflow_name": safe_name},
             )
 
-        # ワークフロー実行
-        run_log = await executor.run(workflow)
+        task = asyncio.create_task(executor.run(workflow))
+        registered = await run_manager.register(safe_name, task)
+        if not registered:
+            task.cancel()
+            error_run = build_error_run(
+                safe_name,
+                "すでに実行中です。停止ボタンで中断できます。",
+            )
+            return templates.TemplateResponse(
+                "partials/run_result.html",
+                {"request": request, "run": error_run, "workflow_name": safe_name},
+            )
 
-        # ログ保存
+        try:
+            run_log = await task
+        finally:
+            await run_manager.unregister(safe_name)
+
         run_logger.save(run_log)
 
-        # レスポンス（トースト通知）
         return templates.TemplateResponse(
             "partials/run_result.html",
-            {"request": request, "run": run_log, "workflow_name": name},
+            {"request": request, "run": run_log, "workflow_name": safe_name},
         )
 
     except Exception as e:
-        # 予期しないエラーをキャッチ
-        logger.exception(f"Unexpected error running workflow {name}")
-        from datetime import datetime
-
-        from .core.models import RunLog
-
-        error_run = RunLog(
-            workflow=name,
-            run_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')[-4:]}",
-            status="failed",
-            started_at=datetime.now().isoformat(),
-            ended_at=datetime.now().isoformat(),
-            error=f"{type(e).__name__}: {str(e)}",
-            step_results={},
+        logger.exception(f"Unexpected error running workflow {safe_name}")
+        error_run = build_error_run(
+            safe_name,
+            f"{type(e).__name__}: {str(e)}",
         )
         return templates.TemplateResponse(
             "partials/run_result.html",
-            {"request": request, "run": error_run, "workflow_name": name},
+            {"request": request, "run": error_run, "workflow_name": safe_name},
         )
+
+
+@app.post("/api/workflows/{name}/stop")
+async def stop_workflow(name: str):
+    """実行中ワークフローを停止"""
+    safe_name = (name or "").strip()
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ワークフロー名が必要です")
+    if any(token in safe_name for token in ["/", "\\", ".."]):
+        raise HTTPException(
+            status_code=400, detail="ワークフロー名に使用できない文字があります"
+        )
+
+    cancelled = await run_manager.cancel(safe_name)
+    if not cancelled:
+        # run直後にstopした場合の競合を避けるため、短時間だけ再試行
+        for _ in range(10):
+            await asyncio.sleep(0.1)
+            cancelled = await run_manager.cancel(safe_name)
+            if cancelled:
+                break
+    if not cancelled:
+        raise HTTPException(status_code=404, detail="実行中のワークフローがありません")
+
+    logger.info(f"Stop requested for workflow: {safe_name}")
+    return {"ok": True, "name": safe_name, "status": "stopping"}
 
 
 @app.get("/api/actions")

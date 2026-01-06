@@ -77,7 +77,7 @@ class RunLog(BaseModel):
     """実行ログ（JSONL用）"""
     run_id: str
     workflow: str
-    status: Literal["running", "success", "failed"]
+    status: Literal["running", "success", "failed", "stopped"]
     started_at: str
     ended_at: str | None = None
     steps: list[dict[str, Any]] = Field(default_factory=list)

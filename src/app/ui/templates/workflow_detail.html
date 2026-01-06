@@ -86,6 +86,7 @@
             </button>
             <button
                 class="apple-button apple-button-primary px-8 py-2.5 text-sm run-button {% if error %}opacity-50 cursor-not-allowed{% endif %}"
+                data-workflow-run="{{ name }}"
                 hx-post="/api/workflows/{{ name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if error
                 %}disabled{% endif %}>
                 <div class="htmx-indicator flex items-center">

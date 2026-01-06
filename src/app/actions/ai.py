@@ -16,6 +16,7 @@ API キー設定:
         max_tokens: 1000
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -390,7 +391,7 @@ async def action_ai_generate(
     api_key = _load_api_key(api_key_file, base_dir, "GEMINI_API_KEY")
 
     if use_search:
-        return _call_gemini_rest(
+        return await _call_gemini_rest(
             prompt=prompt,
             model=model,
             api_key=api_key,
@@ -400,11 +401,14 @@ async def action_ai_generate(
             use_search=True,
         )
 
-    return _call_gemini(
-        prompt=prompt,
-        model=model,
-        api_key=api_key,
-        system=system,
-        max_tokens=max_tokens,
-        temperature=temperature,
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        _call_gemini,
+        prompt,
+        model,
+        api_key,
+        system,
+        max_tokens,
+        temperature,
     )

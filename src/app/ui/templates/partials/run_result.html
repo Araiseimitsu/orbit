@@ -3,7 +3,7 @@
      data-toast-id="{{ run.run_id }}"
      data-workflow-name="{{ workflow_name }}"
      data-run-status="{{ run.status }}"
-     data-toast-duration="{{ '10000' if run.status == 'failed' else '5000' }}"
+     data-toast-duration="{{ '10000' if run.status in ['failed', 'stopped'] else '5000' }}"
      x-data="{ show: true, expanded: false }"
      x-show="show"
      x-transition:enter="translate-x-0 opacity-100"
@@ -39,6 +39,29 @@
                             </span>
                         </div>
                         {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif run.status == 'stopped' %}
+                <div class="flex-shrink-0">
+                    <svg class="h-7 w-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5h4v14H6zM14 5h4v14h-4z" />
+                    </svg>
+                </div>
+                <div class="ml-3 w-0 flex-1">
+                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-amber-500">実行停止</p>
+                    <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
+                    {% if run.error %}
+                    <button
+                        x-on:click="expanded = !expanded"
+                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                        <span x-show="!expanded">詳細を表示</span>
+                        <span x-show="expanded">詳細を非表示</span>
+                    </button>
+                    <div x-show="expanded" class="mt-2">
+                        <p class="text-sm text-amber-700 bg-amber-50 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
                     </div>
                     {% endif %}
                 </div>
