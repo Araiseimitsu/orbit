@@ -2,6 +2,7 @@
 ORBIT MVP - Workflow Executor
 ワークフローを直列実行するエンジン
 """
+import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Any
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 # 日本時間
 JST = timezone(timedelta(hours=9))
+
+# デフォルトのステップ実行タイムアウト（秒）
+DEFAULT_STEP_TIMEOUT = 300  # 5分
 
 
 def generate_run_id() -> str:
@@ -166,10 +170,18 @@ class Executor:
         step_id: str,
         step_type: str,
         params: dict[str, Any],
-        context: dict[str, Any]
+        context: dict[str, Any],
+        timeout: int | None = None,
     ) -> dict[str, Any]:
         """
         単一ステップを実行
+
+        Args:
+            step_id: ステップID
+            step_type: アクションタイプ
+            params: パラメータ
+            context: コンテキスト
+            timeout: タイムアウト秒数（Noneでデフォルト値使用）
 
         Returns:
             {
@@ -194,12 +206,18 @@ class Executor:
                 "error": error_msg,
             }
 
+        # タイムアウト設定
+        step_timeout = timeout if timeout is not None else DEFAULT_STEP_TIMEOUT
+
         try:
             # パラメータをテンプレートレンダリング
             rendered_params = render_params(params, context)
 
-            # アクション実行
-            result = await action(rendered_params, context)
+            # アクション実行（タイムアウト付き）
+            result = await asyncio.wait_for(
+                action(rendered_params, context),
+                timeout=step_timeout
+            )
 
             logger.debug(f"Step completed: {step_id}")
             return {
@@ -207,6 +225,16 @@ class Executor:
                 "type": step_type,
                 "status": "success",
                 "result": result,
+            }
+
+        except asyncio.TimeoutError:
+            error_msg = f"Step execution timed out after {step_timeout} seconds"
+            logger.error(f"Step timed out: {step_id} - {error_msg}")
+            return {
+                "id": step_id,
+                "type": step_type,
+                "status": "failed",
+                "error": error_msg,
             }
 
         except Exception as e:

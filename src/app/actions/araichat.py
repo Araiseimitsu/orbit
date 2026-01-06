@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 import mimetypes
 from pathlib import Path
@@ -166,8 +165,8 @@ def _extract_error_detail(response: requests.Response | None) -> str:
             },
             {
                 "key": "room_id",
-                "description": "送信先ルームID（未指定時は環境変数 ARAICHAT_ROOM_ID）",
-                "required": False,
+                "description": "送信先ルームID",
+                "required": True,
                 "example": "your-room-id"
             },
             {
@@ -215,7 +214,7 @@ async def action_araichat_send_message(
     params:
         text: 送信するテキスト（text または files のいずれか必須）
         files: 添付ファイル（文字列/配列/JSON文字列も可）。Windowsパスは \\ または / で指定
-        room_id: 送信先ルームID（未指定時は環境変数 ARAICHAT_ROOM_ID）
+        room_id: 送信先ルームID（必須）
         api_key: 統合APIキー（直接指定）
         api_key_file: APIキーのファイルパス（未指定時は ARAICHAT_API_KEY または既定ファイル）
         timeout: タイムアウト秒（デフォルト: 30）
@@ -249,8 +248,10 @@ async def action_araichat_send_message(
 
     base_url = DEFAULT_BASE_URL.rstrip("/")
 
-    room_id = params.get("room_id") or os.getenv("ARAICHAT_ROOM_ID")
-    room_id = str(room_id).strip() if room_id is not None else ""
+    room_id = params.get("room_id")
+    if room_id is None:
+        raise ValueError("room_id は必須です")
+    room_id = str(room_id).strip()
     if not room_id:
         raise ValueError("room_id は必須です")
 

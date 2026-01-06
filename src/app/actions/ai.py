@@ -24,6 +24,7 @@ import google.generativeai as genai
 import requests
 
 from ..core.registry import register_action
+from ..core.retry import retry_async
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,13 @@ def _call_gemini(
     }
 
 
-def _call_gemini_rest(
+@retry_async(
+    max_attempts=3,
+    delay=1.0,
+    backoff=2.0,
+    exceptions=(requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ConnectionError),
+)
+async def _call_gemini_rest(
     prompt: str,
     model: str,
     api_key: str,
@@ -191,31 +198,45 @@ def _call_gemini_rest(
     temperature: float | None = None,
     use_search: bool = False,
 ) -> dict[str, Any]:
-    url = f"{GEMINI_API_BASE}/{model}:generateContent"
-    payload: dict[str, Any] = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-    }
-    if system:
-        payload["systemInstruction"] = {"parts": [{"text": system}]}
+    """
+    Gemini REST API を呼び出す（リトライ付き）
 
-    generation_config: dict[str, Any] = {}
-    if max_tokens:
-        generation_config["maxOutputTokens"] = max_tokens
-    if temperature is not None:
-        generation_config["temperature"] = temperature
-    if generation_config:
-        payload["generationConfig"] = generation_config
-    if use_search:
-        payload["tools"] = [{"google_search": {}}]
+    ネットワークエラー時に自動リトライを行う
+    """
+    import asyncio
 
-    response = requests.post(
-        url,
-        params={"key": api_key},
-        json=payload,
-        timeout=DEFAULT_TIMEOUT,
-    )
-    response.raise_for_status()
-    data = response.json()
+    # syncのrequestsをasyncioで実行
+    loop = asyncio.get_event_loop()
+
+    def _do_request():
+        url = f"{GEMINI_API_BASE}/{model}:generateContent"
+        payload: dict[str, Any] = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        }
+        if system:
+            payload["systemInstruction"] = {"parts": [{"text": system}]}
+
+        generation_config: dict[str, Any] = {}
+        if max_tokens:
+            generation_config["maxOutputTokens"] = max_tokens
+        if temperature is not None:
+            generation_config["temperature"] = temperature
+        if generation_config:
+            payload["generationConfig"] = generation_config
+        if use_search:
+            payload["tools"] = [{"google_search": {}}]
+
+        response = requests.post(
+            url,
+            params={"key": api_key},
+            json=payload,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    data = await loop.run_in_executor(None, _do_request)
+
     candidates = data.get("candidates") if isinstance(data, dict) else None
     if not candidates:
         raise ValueError("Gemini の応答に candidates がありません")
