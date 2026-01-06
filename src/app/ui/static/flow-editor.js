@@ -390,15 +390,153 @@
     valueInput.placeholder = "例: {{ step_1.text }}";
     valueInput.className = "param-value";
 
+    const valueWrap = document.createElement("div");
+    valueWrap.className = "param-value-wrap";
+    valueWrap.appendChild(valueInput);
+
+    const aiButton = document.createElement("button");
+    aiButton.type = "button";
+    aiButton.className = "ai-expression-button";
+    aiButton.textContent = "🤖 AI";
+    aiButton.title = "AIで式を構築";
+    valueWrap.appendChild(aiButton);
+
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.textContent = "削除";
 
     row.appendChild(keyWrap);
-    row.appendChild(valueInput);
+    row.appendChild(valueWrap);
     row.appendChild(removeButton);
 
-    return { row, keyInput, keySelect, valueInput, removeButton };
+    return { row, keyInput, keySelect, valueInput, removeButton, aiButton };
+  };
+
+  const openExpressionBuilder = (targetInput, step) => {
+    const paramRow = targetInput.closest(".param-row");
+    const keyInput = paramRow.querySelector(".param-key input");
+    const keySelect = paramRow.querySelector(".param-key select");
+    const paramKey = keyInput?.value || keySelect?.value || "";
+
+    const modal = document.createElement("div");
+    modal.className = "expression-builder-modal";
+    modal.innerHTML = `
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>AIで式を構築</h3>
+          <button class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="expression-context">
+            <p><strong>パラメータ:</strong> ${paramKey || "カスタム"}</p>
+            <p><strong>ステップタイプ:</strong> ${step.type}</p>
+          </div>
+          <div class="expression-chat">
+            <div class="messages" id="expression-messages"></div>
+            <div class="input-area">
+              <textarea id="expression-prompt" placeholder="例: 今日の日付の日部分だけ（先頭0なし）を取得したい"></textarea>
+              <button id="expression-send">送信</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const messagesEl = modal.querySelector("#expression-messages");
+    const promptInput = modal.querySelector("#expression-prompt");
+    const sendButton = modal.querySelector("#expression-send");
+    const closeButton = modal.querySelector(".modal-close");
+    const overlay = modal.querySelector(".modal-overlay");
+
+    const closeModal = () => {
+      modal.remove();
+    };
+
+    closeButton.addEventListener("click", closeModal);
+    overlay.addEventListener("click", closeModal);
+
+    const addMessage = (container, type, text) => {
+      const msg = document.createElement("div");
+      msg.className = `message message-${type}`;
+      msg.textContent = text;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    };
+
+    const sendMessage = async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      addMessage(messagesEl, "user", prompt);
+      promptInput.value = "";
+      sendButton.disabled = true;
+      sendButton.textContent = "送信中...";
+
+      try {
+        const response = await fetch("/api/ai/expression", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            param_key: paramKey,
+            step_type: step.type,
+            context: {
+              available_vars: [
+                "run_id",
+                "now",
+                "today",
+                "yesterday",
+                "tomorrow",
+                "today_ymd",
+                "now_ymd_hms",
+                "workflow",
+                "base_dir",
+              ],
+              step_outputs: Object.keys(step.params || {}),
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("API エラー");
+        }
+
+        const data = await response.json();
+        const expression = data.expression || "";
+
+        if (expression) {
+          addMessage(messagesEl, "assistant", `生成された式: ${expression}`);
+
+          const applyButton = document.createElement("button");
+          applyButton.textContent = "この式を適用";
+          applyButton.className = "apply-expression-button";
+          applyButton.addEventListener("click", () => {
+            targetInput.value = expression;
+            targetInput.dispatchEvent(new Event("input"));
+            closeModal();
+          });
+          messagesEl.appendChild(applyButton);
+        } else {
+          addMessage(messagesEl, "error", "式を生成できませんでした");
+        }
+      } catch (error) {
+        console.error("Expression generation error:", error);
+        addMessage(messagesEl, "error", "エラーが発生しました");
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = "送信";
+      }
+    };
+
+    sendButton.addEventListener("click", sendMessage);
+    promptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        sendMessage();
+      }
+    });
   };
 
   const renderInspector = () => {
@@ -621,7 +759,7 @@
     };
 
     const appendParamRow = (key, value) => {
-      const { row, keyInput, keySelect, valueInput, removeButton } =
+      const { row, keyInput, keySelect, valueInput, removeButton, aiButton } =
         buildParamRow(key, value, availableKeys);
       paramsList.appendChild(row);
       removeButton.addEventListener("click", () => {
@@ -631,6 +769,9 @@
       keyInput.addEventListener("input", updateParamsFromUI);
       keySelect.addEventListener("change", updateParamsFromUI);
       valueInput.addEventListener("input", updateParamsFromUI);
+      aiButton.addEventListener("click", () => {
+        openExpressionBuilder(valueInput, step);
+      });
       return { row, keyInput, valueInput };
     };
 

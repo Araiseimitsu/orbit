@@ -615,6 +615,98 @@ async def build_flow_with_ai(request: Request):
     return result
 
 
+@app.post("/api/ai/expression")
+async def build_expression_with_ai(request: Request):
+    """AIでJinja2テンプレート式を生成"""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="無効なリクエスト形式です")
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt が必要です")
+
+    param_key = payload.get("param_key", "")
+    step_type = payload.get("step_type", "")
+    context = payload.get("context", {})
+
+    # AIに式生成を依頼
+    system_prompt = """あなたはJinja2テンプレート式の生成アシスタントです。
+ユーザーの要望に基づいて、適切なJinja2テンプレート式を生成してください。
+
+利用可能な変数:
+- {{ run_id }}: 実行ID
+- {{ now }}: 現在時刻（ISO8601）
+- {{ today }}: 今日の日付（YYYY-MM-DD）
+- {{ yesterday }}: 昨日の日付
+- {{ tomorrow }}: 明日の日付
+- {{ today_ymd }}: 今日の日付（YYYYMMDD）
+- {{ now_ymd_hms }}: 現在時刻（YYYYMMDD_HHMMSS）
+- {{ workflow }}: ワークフロー名
+- {{ base_dir }}: ベースディレクトリ
+- {{ step_id.key }}: 前ステップの出力参照
+
+Jinja2フィルター例:
+- {{ today_ymd[-2:] }}: 日部分のみ（例: "06"）
+- {{ today_ymd[-2:] | int }}: 日部分を整数に（例: 6）
+- {{ name | upper }}: 大文字に変換
+
+ユーザーの要望に応じて、適切なJinja2式を生成してください。
+式のみを返してください（説明は不要）。"""
+
+    try:
+        from .actions.ai import (
+            DEFAULT_GEMINI_KEY_FILE,
+            DEFAULT_GEMINI_KEY_ENV,
+            _load_api_key,
+        )
+        from .ai_flow import (
+            DEFAULT_MODEL,
+            DEFAULT_MAX_TOKENS,
+            DEFAULT_TEMPERATURE,
+            _call_gemini_rest,
+        )
+
+        api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, BASE_DIR, DEFAULT_GEMINI_KEY_ENV)
+        result = _call_gemini_rest(
+            prompt=prompt,
+            model=DEFAULT_MODEL,
+            api_key=api_key,
+            system=system_prompt,
+            max_tokens=200,
+            temperature=0.3,
+            use_search=False,
+        )
+
+        expression = result.get("text", "").strip()
+        # 式のみを抽出（説明文を除去）
+        if "{{" in expression:
+            import re
+
+            matches = re.findall(r"\{\{[^}]+\}\}", expression)
+            if matches:
+                expression = matches[0]
+            else:
+                # 複数行の場合は最初の式を取得
+                lines = expression.split("\n")
+                for line in lines:
+                    if "{{" in line:
+                        matches = re.findall(r"\{\{[^}]+\}\}", line)
+                        if matches:
+                            expression = matches[0]
+                            break
+
+        return {"expression": expression}
+
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("AI expression generation failed")
+        raise HTTPException(status_code=500, detail="式の生成に失敗しました") from exc
+
+
 @app.post("/api/workflows/save")
 async def save_workflow(request: Request):
     """ビジュアルエディタからワークフローを保存"""
