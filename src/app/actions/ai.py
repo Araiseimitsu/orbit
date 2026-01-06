@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 # デフォルトの API キーファイルパス
 DEFAULT_GEMINI_KEY_FILE = "secrets/gemini_api_key.txt"
+DEFAULT_GEMINI_KEY_ENV = "GEMINI_API_KEY"
 DEFAULT_TIMEOUT = 30
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
@@ -388,7 +389,7 @@ async def action_ai_generate(
         raise ValueError(f"未対応の provider です: {provider}")
 
     api_key_file = params.get("api_key_file", DEFAULT_GEMINI_KEY_FILE)
-    api_key = _load_api_key(api_key_file, base_dir, "GEMINI_API_KEY")
+    api_key = _load_api_key(api_key_file, base_dir, DEFAULT_GEMINI_KEY_ENV)
 
     if use_search:
         return await _call_gemini_rest(

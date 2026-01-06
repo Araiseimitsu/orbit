@@ -13,7 +13,12 @@ import requests
 from apscheduler.triggers.cron import CronTrigger
 from zoneinfo import ZoneInfo
 
-from .actions.ai import DEFAULT_GEMINI_KEY_FILE, _call_gemini, _load_api_key
+from .actions.ai import (
+    DEFAULT_GEMINI_KEY_FILE,
+    DEFAULT_GEMINI_KEY_ENV,
+    _call_gemini,
+    _load_api_key,
+)
 from .core.registry import ActionRegistry
 
 logger = logging.getLogger(__name__)
@@ -292,7 +297,7 @@ def generate_ai_flow(
     model: str = DEFAULT_MODEL,
     use_search: bool = True,
 ) -> dict[str, Any]:
-    api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, base_dir)
+    api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, base_dir, DEFAULT_GEMINI_KEY_ENV)
     actions_meta = registry.list_all_metadata()
 
     system = _build_system_prompt()
