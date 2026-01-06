@@ -21,6 +21,7 @@ load_dotenv(BASE_DIR_ENV / ".env")
 
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -98,7 +99,9 @@ async def lifespan(app: FastAPI):
     try:
         workflow_scheduler.scheduler.add_job(
             run_logger.cleanup,
-            trigger=CronTrigger.from_crontab("0 3 * * *", timezone=ZoneInfo("Asia/Tokyo")),
+            trigger=CronTrigger.from_crontab(
+                "0 3 * * *", timezone=ZoneInfo("Asia/Tokyo")
+            ),
             kwargs={"retention_days": 30},
             id="log_cleanup",
             name="Log Cleanup",
@@ -122,6 +125,15 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -144,7 +156,9 @@ def build_editor_data(workflow: Workflow | None) -> dict:
                 "id": step.id,
                 "type": step.type,
                 "params": step.params,
-                "when": step.when.model_dump(exclude_defaults=True) if step.when else None,
+                "when": step.when.model_dump(exclude_defaults=True)
+                if step.when
+                else None,
                 "position": {
                     "x": int(meta.get("x", 80)),
                     "y": int(meta.get("y", 80 + index * 120)),
@@ -323,7 +337,9 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
     workflow_options = sorted({wf.name for wf in loader.list_workflows() if wf.name})
     if workflow and workflow not in workflow_options:
         workflow_options = [workflow, *workflow_options]
-    runs = run_logger.get_all_runs(limit=per_page, offset=offset, workflow_filter=workflow)
+    runs = run_logger.get_all_runs(
+        limit=per_page, offset=offset, workflow_filter=workflow
+    )
     total_runs = run_logger.count_all_runs(workflow_filter=workflow)
     total_pages = (total_runs + per_page - 1) // per_page  # 切り上げ
 
@@ -356,19 +372,18 @@ async def workflow_new(request: Request):
         for yaml_file in templates_dir.glob("*.yaml"):
             workflow, error = loader.load_workflow(yaml_file.stem, templates_dir=True)
             if workflow:
-                templates.append({
-                    "name": yaml_file.stem,
-                    "title": workflow.name,
-                    "description": workflow.description or "",
-                    "filename": yaml_file.name
-                })
+                templates.append(
+                    {
+                        "name": yaml_file.stem,
+                        "title": workflow.name,
+                        "description": workflow.description or "",
+                        "filename": yaml_file.name,
+                    }
+                )
 
     return templates.TemplateResponse(
         "new_workflow.html",
-        {
-            "request": request,
-            "templates": templates
-        },
+        {"request": request, "templates": templates},
     )
 
 
@@ -434,7 +449,9 @@ async def workflow_from_template(request: Request, template_name: str):
     """テンプレートからワークフローを作成"""
     workflow, error = loader.load_workflow(template_name, templates_dir=True)
     if error or not workflow:
-        raise HTTPException(status_code=400, detail=f"テンプレートの読み込みに失敗: {error}")
+        raise HTTPException(
+            status_code=400, detail=f"テンプレートの読み込みに失敗: {error}"
+        )
 
     actions = sorted(get_registry().list_actions())
     editor_data = build_editor_data(workflow)
@@ -610,7 +627,9 @@ async def build_flow_with_ai(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("AI flow generation failed")
-        raise HTTPException(status_code=500, detail="AI フロー生成に失敗しました") from exc
+        raise HTTPException(
+            status_code=500, detail="AI フロー生成に失敗しました"
+        ) from exc
 
     return result
 
@@ -667,7 +686,9 @@ Jinja2フィルター例:
             _call_gemini_rest,
         )
 
-        api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, BASE_DIR, DEFAULT_GEMINI_KEY_ENV)
+        api_key = _load_api_key(
+            DEFAULT_GEMINI_KEY_FILE, BASE_DIR, DEFAULT_GEMINI_KEY_ENV
+        )
         result = _call_gemini_rest(
             prompt=prompt,
             model=DEFAULT_MODEL,
@@ -769,7 +790,9 @@ async def save_workflow(request: Request):
         normalized_when = None
         if when is not None:
             if not isinstance(when, dict):
-                raise HTTPException(status_code=400, detail="条件の形式が正しくありません")
+                raise HTTPException(
+                    status_code=400, detail="条件の形式が正しくありません"
+                )
             when_step = (when.get("step") or "").strip()
             if not when_step:
                 raise HTTPException(status_code=400, detail="条件の step が必要です")
@@ -790,12 +813,14 @@ async def save_workflow(request: Request):
             if match is not None:
                 if not isinstance(match, str):
                     raise HTTPException(
-                        status_code=400, detail="条件の match は文字列で指定してください"
+                        status_code=400,
+                        detail="条件の match は文字列で指定してください",
                     )
                 match_value = match.strip().lower()
                 if match_value not in ("equals", "contains"):
                     raise HTTPException(
-                        status_code=400, detail="条件の match は equals / contains のみ対応です"
+                        status_code=400,
+                        detail="条件の match は equals / contains のみ対応です",
                     )
                 normalized_when["match"] = match_value
             if isinstance(when.get("trim"), bool):
