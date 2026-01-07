@@ -77,28 +77,25 @@
             z-index: 50;
         }
     </style>
-    <script>
-        (() => {
-            if (!("serviceWorker" in navigator)) return;
-            navigator.serviceWorker
-                .getRegistrations()
-                .then((regs) => regs.forEach((reg) => reg.unregister()))
-                .catch(() => { });
-            if ("caches" in window) {
-                caches
-                    .keys()
-                    .then((keys) =>
-                        keys.forEach((key) => caches.delete(key)),
-                    )
-                    .catch(() => { });
-            }
-        })();
-    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link rel="icon" type="image/png" href="{{ url_for('static', path='splash-dark.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', path='splash-dark.png') }}" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', path='manifest.json') }}" />
+
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ORBIT" />
+
+    <!-- PWA Theme Color -->
+    <meta name="theme-color" content="#000000" />
+
+    <!-- iOS Splash Screen -->
+    <link rel="apple-touch-startup-image" href="{{ url_for('static', path='splash-dark.png') }}" />
     <link rel="stylesheet" href="{{ url_for('static', path='index.css') }}?v={{ static_mtime('index.css') }}" />
     {% block head %}{% endblock %}
 </head>
