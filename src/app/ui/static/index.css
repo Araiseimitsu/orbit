@@ -25,6 +25,15 @@ body {
     display: none !important;
 }
 
+/* Prevent FOUC for dynamic content */
+[x-data]:not([x-cloak]) {
+    display: none;
+}
+
+[x-data].x-loaded {
+    display: inherit;
+}
+
 /* Navigation */
 .nav-glass {
     background: var(--glass-bg);

@@ -5,6 +5,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}ORBIT{% endblock %}</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        body.page-loaded {
+            opacity: 1;
+        }
+        .page-transition-loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
     <script>
         // Splash screen session check
         if (sessionStorage.getItem('orbit_splash_seen')) {
@@ -50,6 +65,17 @@
         }
 
         /* Custom animation for pulse effect if needed, though Tailwind has animate-pulse */
+
+        /* Initial layout styles to prevent layout shifts */
+        .nav-glass {
+            background: rgba(28, 28, 30, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
     </style>
     <script>
         (() => {
@@ -69,8 +95,8 @@
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link rel="icon" type="image/png" href="{{ url_for('static', path='splash-dark.png') }}" />
     <link rel="apple-touch-icon" href="{{ url_for('static', path='splash-dark.png') }}" />
     <link rel="stylesheet" href="{{ url_for('static', path='index.css') }}?v={{ static_mtime('index.css') }}" />
@@ -338,13 +364,13 @@
 
     <footer class="border-t border-white/5 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <p class="text-center text-gray-600 text-xs tracking-widest uppercase">
+        <p class="text-center text-gray-600 text-xs tracking-widest uppercase">
                 ORBIT / Araiseimitsu / CREATED BY DIP Department/A・T
             </p>
         </div>
     </footer>
 
-    <script src="{{ url_for('static', path='main.js') }}?v={{ static_mtime('main.js') }}"></script>
+    <script src="{{ url_for('static', path='main.js') }}?v={{ static_mtime('main.js') }}" defer></script>
     <script>
         if (!window.__orbitMainLoaded) {
             const initHelpFallback = () => {

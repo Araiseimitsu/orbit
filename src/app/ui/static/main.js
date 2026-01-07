@@ -5,6 +5,7 @@
 window.__orbitMainLoaded = true;
 
 const initApp = () => {
+  initPageLoad();
   initHtmxEvents();
   initToastAutoScroll();
   initGlobalEventListeners();
@@ -18,6 +19,34 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
   initApp();
+}
+
+/**
+ * Page Load Animation
+ */
+function initPageLoad() {
+  document.body.classList.add("page-loaded");
+
+  // Mark Alpine.js elements as loaded
+  document.querySelectorAll("[x-data]:not([x-cloak])").forEach((el) => {
+    el.classList.add("x-loaded");
+  });
+
+  // Smooth transition for navigation links
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]:not([target='_blank']):not([download])");
+    if (!link || link.getAttribute("href").startsWith("#")) return;
+
+    const url = new URL(link.href);
+    if (url.origin !== window.location.origin) return;
+
+    event.preventDefault();
+    document.body.classList.add("page-transition-loading");
+
+    setTimeout(() => {
+      window.location.href = link.href;
+    }, 150);
+  });
 }
 
 /**
@@ -60,6 +89,17 @@ function initHtmxEvents() {
         stopButton.textContent = "Stop";
       }
     }
+  });
+
+  // Smooth page transitions for htmx navigation
+  document.body.addEventListener("htmx:beforeSwap", (evt) => {
+    document.body.classList.remove("page-loaded");
+  });
+
+  document.body.addEventListener("htmx:afterSwap", () => {
+    setTimeout(() => {
+      document.body.classList.add("page-loaded");
+    }, 50);
   });
 }
 
@@ -383,6 +423,9 @@ function initRunDetailsToggle() {
     if (!target) return;
 
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
     const runId = target.getAttribute("data-run-details-toggle");
     if (!runId) return;
 
@@ -390,16 +433,11 @@ function initRunDetailsToggle() {
     if (!detailsRow) return;
 
     const isHidden = detailsRow.classList.contains("hidden");
+
     if (isHidden) {
-      detailsRow.classList.remove("hidden");
-      detailsRow.classList.add(
-        "animate-in",
-        "fade-in",
-        "slide-in-from-top-2",
-        "duration-300",
-      );
+      detailsRow.style.display = "block";
     } else {
-      detailsRow.classList.add("hidden");
+      detailsRow.style.display = "none";
     }
 
     target.setAttribute("aria-expanded", isHidden ? "true" : "false");
