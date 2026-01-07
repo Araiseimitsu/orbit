@@ -598,6 +598,230 @@
     });
   };
 
+  const openParamsBuilder = (step) => {
+    const modal = document.createElement("div");
+    modal.className = "params-builder-modal";
+    modal.innerHTML = `
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🤖 AIでパラメータを設定</h3>
+          <button class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="params-context">
+            <p><strong>ステップタイプ:</strong> ${step.type}</p>
+            <p><strong>ステップID:</strong> ${step.id}</p>
+          </div>
+          <div class="params-chat">
+            <div class="messages" id="params-messages"></div>
+            <div class="input-area">
+              <textarea id="params-prompt" placeholder="例: 前のステップで読み取ったExcelデータを、このパスのExcelのSheet1のA1セルから書き込んで"></textarea>
+              <button id="params-send">送信</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const messagesEl = modal.querySelector("#params-messages");
+    const promptInput = modal.querySelector("#params-prompt");
+    const sendButton = modal.querySelector("#params-send");
+    const closeButton = modal.querySelector(".modal-close");
+    const overlay = modal.querySelector(".modal-overlay");
+
+    const closeModal = () => {
+      modal.remove();
+    };
+
+    closeButton.addEventListener("click", closeModal);
+    overlay.addEventListener("click", closeModal);
+
+    const addMessage = (container, type, text) => {
+      const msg = document.createElement("div");
+      msg.className = `message message-${type}`;
+      msg.textContent = text;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    };
+
+    // 前のステップの情報を収集
+    const getPreviousSteps = () => {
+      const orderedSteps = [...state.workflow.steps].sort(
+        (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
+      );
+      const currentIndex = orderedSteps.findIndex((s) => s.id === step.id);
+      const previousSteps = [];
+
+      for (let i = 0; i < currentIndex; i++) {
+        const prevStep = orderedSteps[i];
+        const meta = state.ACTION_GUIDES[prevStep.type];
+        const outputs = meta?.outputs || [];
+        previousSteps.push({
+          id: prevStep.id,
+          type: prevStep.type,
+          outputs: outputs.map((o) => o.key),
+        });
+      }
+      return previousSteps;
+    };
+
+    const applyParams = (params) => {
+      // 既存のパラメータ行をクリア
+      const paramsList = inspectorEl.querySelector(".inspector-row:nth-child(5) > div");
+      if (!paramsList) return;
+
+      // 既存のparam-rowを削除
+      const existingRows = paramsList.querySelectorAll(".param-row");
+      existingRows.forEach((row) => row.remove());
+
+      // 新しいパラメータ行を追加
+      const availableKeys = (state.ACTION_GUIDES[step.type]?.params || []).map(
+        (item) => item.key,
+      );
+
+      Object.entries(params).forEach(([key, value]) => {
+        const { row, keyInput, keySelect, valueInput, removeButton } = buildParamRow(
+          key,
+          value,
+          availableKeys,
+        );
+        paramsList.appendChild(row);
+
+        // イベントリスナーを再登録
+        removeButton.addEventListener("click", () => {
+          row.remove();
+          // ステップのparamsを更新
+          const updatedParams = {};
+          paramsList.querySelectorAll(".param-row").forEach((r) => {
+            const k = r.querySelector(".param-key input")?.value || "";
+            const v = r.querySelector(".param-value")?.value || "";
+            if (k) updatedParams[k] = v;
+          });
+          step.params = updatedParams;
+        });
+
+        keyInput.addEventListener("input", () => {
+          const updatedParams = {};
+          paramsList.querySelectorAll(".param-row").forEach((r) => {
+            const k = r.querySelector(".param-key input")?.value || "";
+            const v = r.querySelector(".param-value")?.value || "";
+            if (k) updatedParams[k] = v;
+          });
+          step.params = updatedParams;
+        });
+
+        keySelect.addEventListener("change", () => {
+          const updatedParams = {};
+          paramsList.querySelectorAll(".param-row").forEach((r) => {
+            const k = r.querySelector(".param-key input")?.value || "";
+            const v = r.querySelector(".param-value")?.value || "";
+            if (k) updatedParams[k] = v;
+          });
+          step.params = updatedParams;
+        });
+
+        valueInput.addEventListener("input", () => {
+          const updatedParams = {};
+          paramsList.querySelectorAll(".param-row").forEach((r) => {
+            const k = r.querySelector(".param-key input")?.value || "";
+            const v = r.querySelector(".param-value")?.value || "";
+            if (k) updatedParams[k] = v;
+          });
+          step.params = updatedParams;
+        });
+
+        // AIボタンも再登録
+        const aiButton = row.querySelector(".ai-expression-button");
+        if (aiButton) {
+          aiButton.addEventListener("click", () => {
+            openExpressionBuilder(valueInput, step);
+          });
+        }
+      });
+
+      // ステップのparamsを更新
+      step.params = params;
+    };
+
+    const sendMessage = async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      addMessage(messagesEl, "user", prompt);
+      promptInput.value = "";
+      sendButton.disabled = true;
+      sendButton.textContent = "送信中...";
+
+      try {
+        const response = await fetch("/api/ai/params", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            step_type: step.type,
+            previous_steps: getPreviousSteps(),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("API エラー");
+        }
+
+        const data = await response.json();
+        const params = data.params || {};
+        const explanation = data.explanation || "";
+
+        if (Object.keys(params).length > 0) {
+          addMessage(messagesEl, "assistant", explanation || "パラメータを生成しました");
+
+          const applyButton = document.createElement("button");
+          applyButton.textContent = "適用して閉じる";
+          applyButton.className = "apply-params-button";
+          applyButton.addEventListener("click", () => {
+            applyParams(params);
+            closeModal();
+          });
+          messagesEl.appendChild(applyButton);
+        } else {
+          addMessage(messagesEl, "error", "パラメータを生成できませんでした");
+        }
+      } catch (error) {
+        console.error("Params generation error:", error);
+        addMessage(messagesEl, "error", "エラーが発生しました");
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = "送信";
+      }
+    };
+
+    sendButton.addEventListener("click", sendMessage);
+    promptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        sendMessage();
+      }
+    });
+
+    // 前のステップ情報を表示
+    const previousSteps = getPreviousSteps();
+    if (previousSteps.length > 0) {
+      const contextDiv = modal.querySelector(".params-context");
+      const prevInfo = document.createElement("div");
+      prevInfo.className = "prev-steps-info";
+      prevInfo.innerHTML = "<p><strong>前のステップ:</strong></p>";
+      const ul = document.createElement("ul");
+      previousSteps.forEach((prev) => {
+        const li = document.createElement("li");
+        li.textContent = `${prev.id} (${prev.type})`;
+        ul.appendChild(li);
+      });
+      prevInfo.appendChild(ul);
+      contextDiv.appendChild(prevInfo);
+    }
+  };
+
   const renderInspector = () => {
     inspectorEl.innerHTML = "";
     const step = getSelectedStep();
@@ -853,6 +1077,17 @@
       appendParamRow("", "");
     });
     paramsRow.appendChild(addParamButton);
+
+    // AIパラメータ設定ボタン
+    const aiParamsButton = document.createElement("button");
+    aiParamsButton.type = "button";
+    aiParamsButton.className = "ai-params-button";
+    aiParamsButton.textContent = "🤖 AIでパラメータ設定";
+    aiParamsButton.title = "AIに自然言語でパラメータを設定させます";
+    aiParamsButton.addEventListener("click", () => {
+      openParamsBuilder(step);
+    });
+    paramsRow.appendChild(aiParamsButton);
 
     const guide = buildGuide(step.type, step.id);
 

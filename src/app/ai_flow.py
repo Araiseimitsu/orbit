@@ -334,3 +334,142 @@ def generate_ai_flow(
     )
 
     return {"workflow": workflow, "warnings": warnings}
+
+
+def _build_params_system_prompt() -> str:
+    return (
+        "あなたは ORBIT のステップパラメータ設定AIです。\n"
+        "ユーザーの自然言語指示から、適切なパラメータを生成してください。\n\n"
+        "## 出力形式\n"
+        "必ず JSON だけを返し、説明文やコードフェンスは出力しないでください。\n"
+        '{\n'
+        '  "params": {\n'
+        '    "パラメータ名": "値",\n'
+        '    ...\n'
+        '  },\n'
+        '  "explanation": "設定内容の簡潔な説明"\n'
+        '}\n\n'
+        "## テンプレート変数\n"
+        "- {{ run_id }}: 実行ID\n"
+        "- {{ now }}: 現在時刻（ISO8601）\n"
+        "- {{ today }}: 今日の日付（YYYY-MM-DD）\n"
+        "- {{ yesterday }}: 昨日の日付\n"
+        "- {{ tomorrow }}: 明日の日付\n"
+        "- {{ today_ymd }}: 今日の日付（YYYYMMDD）\n"
+        "- {{ now_ymd_hms }}: 現在時刻（YYYYMMDD_HHMMSS）\n"
+        "- {{ workflow }}: ワークフロー名\n"
+        "- {{ base_dir }}: ベースディレクトリパス\n"
+        "- {{ step_id.key }}: 前のステップの出力参照\n\n"
+        "## 注意事項\n"
+        "- 前のステップの出力を参照する場合は {{ step_id.key }} の形式を使用\n"
+        "- パスを指定する場合は {{ base_dir }} を基準とした相対パスまたは絶対パス\n"
+        "- 日時を扱う場合は {{ today }} や {{ now }} を使用\n"
+    )
+
+
+def generate_ai_params(
+    user_prompt: str,
+    step_type: str,
+    registry: ActionRegistry,
+    base_dir: Path,
+    previous_steps: list[dict[str, Any]] | None = None,
+    model: str = DEFAULT_MODEL,
+) -> dict[str, Any]:
+    """AIでステップのパラメータを生成
+
+    Args:
+        user_prompt: ユーザーの自然言語指示
+        step_type: アクションタイプ
+        registry: アクションレジストリ
+        base_dir: ベースディレクトリ
+        previous_steps: 前のステップの情報（id, type, outputsを含む）
+        model: 使用するAIモデル
+
+    Returns:
+        {"params": dict, "explanation": str}
+    """
+    api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, base_dir, DEFAULT_GEMINI_KEY_ENV)
+
+    # アクションのメタデータを取得
+    action_meta = registry.get_metadata(step_type)
+    if not action_meta:
+        raise ValueError(f"未登録のアクションです: {step_type}")
+
+    # 前のステップ情報を構築
+    prev_steps_info = ""
+    if previous_steps:
+        prev_steps_info = "\n## 前のステップ（出力を参照可能）\n"
+        for prev in previous_steps:
+            prev_id = prev.get("id", "")
+            prev_type = prev.get("type", "")
+            prev_outputs = prev.get("outputs", [])
+            outputs_str = ", ".join(prev_outputs) if prev_outputs else "(出力不明)"
+
+            prev_steps_info += f"- {prev_id} ({prev_type}): 出力キー = {outputs_str}\n"
+            prev_steps_info += f"  参照例: {{{{ {prev_id}.キー名 }}}}\n"
+
+    # 利用可能なパラメータ情報
+    params_info = ""
+    if action_meta.params:
+        params_info = "\n## 利用可能なパラメータ\n"
+        for p in action_meta.params:
+            # params は list[dict] 形式
+            key = p.get("key") if isinstance(p, dict) else p.key
+            desc = p.get("description") if isinstance(p, dict) else p.description
+            example = p.get("example") if isinstance(p, dict) else p.example
+            params_info += f"- {key}: {desc}"
+            if example:
+                params_info += f" (例: {example})"
+            params_info += "\n"
+
+    user_prompt_text = (
+        f"## アクションタイプ\n{step_type}\n\n"
+        f"## 説明\n{action_meta.description or ''}\n"
+        f"{params_info}"
+        f"{prev_steps_info}\n\n"
+        f"## ユーザー指示\n{user_prompt}\n\n"
+        f"上記を踏まえて、パラメータ JSON を生成してください。"
+    )
+
+    system = _build_params_system_prompt()
+
+    result = _call_gemini_rest(
+        prompt=user_prompt_text,
+        model=model,
+        api_key=api_key,
+        system=system,
+        max_tokens=800,
+        temperature=0.2,
+        use_search=False,
+    )
+
+    raw_text = result.get("text", "").strip()
+
+    # JSONを抽出
+    cleaned = raw_text
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"```$", "", cleaned).strip()
+
+    import json as json_lib
+
+    try:
+        data = json_lib.loads(cleaned)
+    except json_lib.JSONDecodeError:
+        # JSON抽出を試みる
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            data = json_lib.loads(match.group(0))
+        else:
+            raise ValueError("AI の応答から JSON を抽出できませんでした")
+
+    params = data.get("params") if isinstance(data.get("params"), dict) else {}
+    explanation = data.get("explanation", "")
+
+    logger.info(
+        "AI params generated: step_type=%s params_count=%d",
+        step_type,
+        len(params),
+    )
+
+    return {"params": params, "explanation": explanation}

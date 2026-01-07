@@ -728,6 +728,44 @@ Jinja2フィルター例:
         raise HTTPException(status_code=500, detail="式の生成に失敗しました") from exc
 
 
+@app.post("/api/ai/params")
+async def build_params_with_ai(request: Request):
+    """AIでステップパラメータ全体を生成"""
+    payload = await request.json()
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="無効なリクエスト形式です")
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt が必要です")
+
+    step_type = (payload.get("step_type") or "").strip()
+    if not step_type:
+        raise HTTPException(status_code=400, detail="step_type が必要です")
+
+    previous_steps = payload.get("previous_steps")
+
+    try:
+        from .ai_flow import generate_ai_params
+
+        result = generate_ai_params(
+            prompt,
+            step_type,
+            get_registry(),
+            BASE_DIR,
+            previous_steps,
+        )
+        return result
+
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("AI params generation failed")
+        raise HTTPException(status_code=500, detail="パラメータの生成に失敗しました") from exc
+
+
 @app.post("/api/workflows/save")
 async def save_workflow(request: Request):
     """ビジュアルエディタからワークフローを保存"""
