@@ -16,6 +16,7 @@
     metadata: {},
     ACTION_GUIDES: {},
     selectedId: null,
+    zoomLevel: 1.0,
   };
 
   const buildActionGuides = (metadata) => {
@@ -66,6 +67,10 @@
     ai_generate: { prompt: "" },
   };
 
+  const ZOOM_MIN = 0.25;
+  const ZOOM_MAX = 2.0;
+  const ZOOM_STEP = 0.1;
+
   const buildActionGroups = (actions) => {
     const categoryMap = new Map();
 
@@ -108,6 +113,19 @@
       aiStatusEl.classList.add("success");
     }
   };
+
+  const setZoom = (level) => {
+    state.zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level));
+    canvasEl.style.transform = `scale(${state.zoomLevel})`;
+    const zoomLevelEl = document.getElementById("zoom-level");
+    if (zoomLevelEl) {
+      zoomLevelEl.textContent = `${Math.round(state.zoomLevel * 100)}%`;
+    }
+  };
+
+  const zoomIn = () => setZoom(state.zoomLevel + ZOOM_STEP);
+  const zoomOut = () => setZoom(state.zoomLevel - ZOOM_STEP);
+  const zoomReset = () => setZoom(1.0);
 
   const copyToClipboard = async (text) => {
     if (!text) {
@@ -1355,7 +1373,31 @@
     window.addEventListener("pointerup", onPointerUp);
   });
 
+  canvasEl.addEventListener("wheel", (event) => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const delta = event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      canvasEl.classList.add("zooming");
+      setZoom(state.zoomLevel + delta);
+      setTimeout(() => canvasEl.classList.remove("zooming"), 150);
+    }
+  }, { passive: false });
+
   saveButton.addEventListener("click", saveWorkflow);
+
+  const zoomInButton = document.getElementById("zoom-in");
+  const zoomOutButton = document.getElementById("zoom-out");
+  const zoomResetButton = document.getElementById("zoom-reset");
+  if (zoomInButton) {
+    zoomInButton.addEventListener("click", zoomIn);
+  }
+  if (zoomOutButton) {
+    zoomOutButton.addEventListener("click", zoomOut);
+  }
+  if (zoomResetButton) {
+    zoomResetButton.addEventListener("click", zoomReset);
+  }
+
   if (aiGenerateButton) {
     aiGenerateButton.addEventListener("click", requestAiFlow);
   }

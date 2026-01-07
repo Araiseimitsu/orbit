@@ -408,6 +408,41 @@
     background: var(--surface-dark);
 }
 
+.canvas-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zoom-button {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-thin);
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-button:hover {
+    background: #3a3a3c;
+    border-color: var(--accent-blue);
+}
+
+.zoom-level {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 45px;
+    text-align: center;
+}
+
 .ghost-button {
     background: var(--surface-elevated);
     border: 1px solid var(--border-thin);
@@ -441,6 +476,13 @@
     background-size: 32px 32px;
     min-height: 500px;
     touch-action: none;
+    transform-origin: top left;
+    transition: transform 0.15s ease-out;
+    will-change: transform;
+}
+
+.flow-canvas.zooming {
+    transition: none;
 }
 
 .flow-node {

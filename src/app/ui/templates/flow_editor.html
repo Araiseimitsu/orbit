@@ -104,6 +104,12 @@
         <section class="flow-canvas-wrap">
             <div class="canvas-toolbar">
                 <span class="hint">左のアクションから追加 / ドラッグで移動 / クリックで編集（実行順は上から下）</span>
+                <div class="canvas-zoom-controls">
+                    <button class="zoom-button" id="zoom-out" title="縮小">−</button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="zoom-button" id="zoom-in" title="拡大">+</button>
+                    <button class="zoom-button" id="zoom-reset" title="リセット">⟲</button>
+                </div>
             </div>
             <div id="flow-canvas" class="flow-canvas"></div>
         </section>
