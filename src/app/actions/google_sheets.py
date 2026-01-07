@@ -608,13 +608,13 @@ async def action_sheets_append(
             },
             {
                 "key": "range",
-                "description": "書き込み範囲。'Sheet1!A1:C2' 形式、または sheet パラメータと組み合わせて 'A1:C2' 形式で指定可能",
+                "description": "書き込み範囲。開始セルのみ（例: 'A1'）指定でデータサイズに合わせて自動拡張、範囲指定（例: 'A1:C2'）で指定範囲内のみ書き込み。'Sheet1!A1:C2' 形式、または sheet パラメータと組み合わせて 'A1:C2' 形式でも指定可能",
                 "required": True,
-                "example": "A1:C2"
+                "example": "A1"
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列",
+                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} で前ステップの読み取りデータを指定可能）",
                 "required": True,
                 "example": '[["A1", "B1"], ["A2", "B2"]]'
             },

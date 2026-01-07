@@ -342,13 +342,13 @@ async def action_excel_list_sheets(
             },
             {
                 "key": "range",
-                "description": "書き込み範囲（例: 'A1:C2' または 'Sheet1!A1:C2'）",
+                "description": "書き込み範囲。開始セルのみ（例: 'A1'）指定でデータサイズに合わせて自動拡張、範囲指定（例: 'A1:C2'）で指定範囲内のみ書き込み",
                 "required": True,
-                "example": "A1:C2",
+                "example": "A1",
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列",
+                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} で前ステップの読み取りデータを指定可能）",
                 "required": True,
                 "example": '[["A1", "B1"], ["A2", "B2"]]',
             },
@@ -397,10 +397,14 @@ async def action_excel_write(
     if row_count == 0 or col_count == 0:
         raise ValueError("values は空でない2次元配列が必要です")
 
-    range_rows = max_row - min_row + 1
-    range_cols = max_col - min_col + 1
-    if row_count > range_rows or col_count > range_cols:
-        raise ValueError("values のサイズが range を超えています")
+    # 開始セルのみ指定の場合（例: G1）、データサイズに合わせて書き込み
+    # 範囲指定の場合（例: A1:C2）、指定範囲内のみ書き込み
+    is_single_cell = (min_col == max_col and min_row == max_row)
+    if not is_single_cell:
+        range_rows = max_row - min_row + 1
+        range_cols = max_col - min_col + 1
+        if row_count > range_rows or col_count > range_cols:
+            raise ValueError("values のサイズが range を超えています")
 
     for r_idx, row in enumerate(values):
         for c_idx, value in enumerate(row):
