@@ -5,6 +5,7 @@
 window.__orbitMainLoaded = true;
 
 const initApp = () => {
+  console.log("[ORBIT] Initializing app...");
   initPageLoad();
   initHtmxEvents();
   initToastAutoScroll();
@@ -13,6 +14,7 @@ const initApp = () => {
   initRunDetailsToggle();
   initDeleteModal();
   initImportWorkflow();
+  console.log("[ORBIT] App initialized");
 };
 
 if (document.readyState === "loading") {
@@ -432,12 +434,21 @@ function initRunDetailsToggle() {
     const detailsRow = document.getElementById(`details-${runId}`);
     if (!detailsRow) return;
 
-    const isHidden = detailsRow.classList.contains("hidden");
+    const computedStyle = window.getComputedStyle(detailsRow);
+    const isHidden = computedStyle.display === "none";
+
+    console.log("[ORBIT] Toggle clicked - computed display:", computedStyle.display);
+    console.log("[ORBIT] Toggle clicked - hidden class:", detailsRow.classList.contains("hidden"));
+    console.log("[ORBIT] Toggle clicked - isHidden:", isHidden);
 
     if (isHidden) {
       detailsRow.style.display = "block";
+      detailsRow.classList.remove("hidden");
+      console.log("[ORBIT] Opening - display set to block, hidden class removed");
     } else {
       detailsRow.style.display = "none";
+      detailsRow.classList.add("hidden");
+      console.log("[ORBIT] Closing - display set to none, hidden class added");
     }
 
     target.setAttribute("aria-expanded", isHidden ? "true" : "false");
