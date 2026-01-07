@@ -283,11 +283,11 @@
     background: var(--surface-dark);
     border: 1px solid var(--border-thin);
     border-radius: 20px;
-    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
     max-height: calc(100vh - 300px);
+    overflow: hidden;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -299,12 +299,20 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--text-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--surface-dark);
+    padding: 20px 20px 12px;
+    border-radius: 20px 20px 0 0;
+    border-bottom: 1px solid var(--border-thin);
 }
 
 .action-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 12px 20px 20px;
 }
 
 .action-group {
@@ -406,6 +414,10 @@
     padding: 12px 20px;
     border-bottom: 1px solid var(--border-thin);
     background: var(--surface-dark);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    box-shadow: 0 10px 12px rgba(0, 0, 0, 0.35);
 }
 
 .canvas-zoom-controls {
@@ -540,6 +552,7 @@
     flex-direction: column;
     gap: 16px;
     font-size: 13px;
+    padding: 12px 20px 20px;
 }
 
 .inspector input,
