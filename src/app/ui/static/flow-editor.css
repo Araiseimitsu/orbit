@@ -276,7 +276,6 @@
     grid-template-columns: 240px minmax(0, 1fr) 380px;
     gap: 20px;
     align-items: stretch;
-    min-height: 600px;
 }
 
 .flow-panel {
