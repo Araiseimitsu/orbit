@@ -28,7 +28,7 @@
 
 ## 1. 技術スタック（指定）
 
-- Python 3.12+
+- Python 3.13+
 - FastAPI
 - Uvicorn
 - HTMX

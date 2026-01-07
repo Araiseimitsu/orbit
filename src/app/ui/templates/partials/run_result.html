@@ -1,11 +1,10 @@
-<!-- Run Result Toast Notification -->
+ <!-- Run Result Toast Notification -->
 <div class="toast-item transform transition-all duration-300 ease-out"
      data-toast-id="{{ run.run_id }}"
      data-workflow-name="{{ workflow_name }}"
      data-run-status="{{ run.status }}"
      data-toast-duration="{{ '10000' if run.status in ['failed', 'stopped'] else '5000' }}"
      x-data="{ show: true, expanded: false }"
-     x-show="show"
      x-transition:enter="translate-x-0 opacity-100"
      x-transition:leave="translate-x-full opacity-0">
     <div class="w-full min-w-[320px] sm:min-w-[420px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">

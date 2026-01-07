@@ -536,6 +536,10 @@ async def run_workflow(request: Request, name: str):
 
         run_logger.save(run_log)
 
+        logger.info(
+            f"Returning run_log: run_id={run_log.run_id}, status={run_log.status}, workflow={run_log.workflow}"
+        )
+
         return templates.TemplateResponse(
             "partials/run_result.html",
             {"request": request, "run": run_log, "workflow_name": safe_name},
@@ -763,7 +767,9 @@ async def build_params_with_ai(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("AI params generation failed")
-        raise HTTPException(status_code=500, detail="パラメータの生成に失敗しました") from exc
+        raise HTTPException(
+            status_code=500, detail="パラメータの生成に失敗しました"
+        ) from exc
 
 
 @app.post("/api/workflows/save")

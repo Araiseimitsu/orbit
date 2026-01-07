@@ -100,6 +100,11 @@ function initHtmxEvents() {
     setTimeout(() => {
       document.body.classList.add("page-loaded");
     }, 50);
+
+    // Mark Alpine.js elements as loaded (for HTMX-inserted content)
+    document.querySelectorAll("[x-data]:not([x-cloak])").forEach((el) => {
+      el.classList.add("x-loaded");
+    });
   });
 }
 
