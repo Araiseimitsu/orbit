@@ -58,6 +58,11 @@
   const aiGenerateButton = document.getElementById("ai-flow-generate");
   const aiClearButton = document.getElementById("ai-flow-clear");
   const aiStatusEl = document.getElementById("ai-flow-status");
+  const aiToggle = document.getElementById("flow-ai-toggle");
+  const aiPanel = document.getElementById("flow-ai-panel");
+  const aiBody = document.getElementById("flow-ai-body");
+  const aiControls = document.getElementById("flow-ai-controls");
+  const aiFooter = document.getElementById("flow-ai-footer");
 
   const REQUIRED_PARAMS = {
     ai_generate: ["prompt"],
@@ -112,6 +117,42 @@
     } else if (tone === "success") {
       aiStatusEl.classList.add("success");
     }
+  };
+
+  const toggleAiPanel = () => {
+    if (!aiPanel || !aiToggle) {
+      return;
+    }
+    const isExpanded = aiPanel.classList.toggle("collapsed");
+    aiToggle.setAttribute("aria-expanded", !isExpanded);
+    if (aiBody) {
+      aiBody.style.display = isExpanded ? "none" : "";
+    }
+    if (aiControls) {
+      aiControls.style.display = isExpanded ? "none" : "";
+    }
+    if (aiFooter) {
+      aiFooter.style.display = isExpanded ? "none" : "";
+    }
+  };
+
+  const showAiCompleteNotification = () => {
+    const notification = document.createElement("div");
+    notification.className = "ai-complete-notification";
+    notification.innerHTML = `
+      <div class="ai-complete-icon">✓</div>
+      <div class="ai-complete-message">AI フロー構築が完了しました</div>
+    `;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add("show");
+    }, 10);
+
+    setTimeout(() => {
+      notification.classList.remove("show");
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   };
 
   const setZoom = (level) => {
@@ -1231,6 +1272,7 @@
       if (!applied) {
         return;
       }
+      showAiCompleteNotification();
       if (Array.isArray(data.warnings) && data.warnings.length > 0) {
         setAiStatus(`生成完了（注意: ${data.warnings.join(" / ")}）`, "success");
       } else {
@@ -1442,4 +1484,9 @@
   refreshActions();
   renderCanvas();
   renderInspector();
+
+  // AIパネルのトグル
+  if (aiToggle) {
+    aiToggle.addEventListener("click", toggleAiPanel);
+  }
 })();

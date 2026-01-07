@@ -61,13 +61,16 @@
         </div>
     </div>
 
-    <section class="flow-ai-panel">
+    <section class="flow-ai-panel" id="flow-ai-panel">
         <div class="flow-ai-head">
-            <div>
-                <div class="flow-ai-title">AI フロー自動構築</div>
-                <div class="flow-ai-sub">やりたいことを文章で入力すると、AI がステップ構成を提案します。</div>
-            </div>
-            <div class="flow-ai-controls">
+            <button type="button" class="flow-ai-toggle" id="flow-ai-toggle" aria-expanded="true">
+                <span class="flow-ai-toggle-icon"></span>
+                <div>
+                    <div class="flow-ai-title">AI フロー自動構築</div>
+                    <div class="flow-ai-sub">やりたいことを文章で入力すると、AI がステップ構成を提案します。</div>
+                </div>
+            </button>
+            <div class="flow-ai-controls" id="flow-ai-controls">
                 <select id="ai-flow-mode">
                     <option value="replace">現在のフローを置き換え</option>
                     <option value="append">末尾に追加</option>
@@ -79,10 +82,10 @@
                 <button class="primary-button" id="ai-flow-generate" type="button">AIで構築</button>
             </div>
         </div>
-        <div class="flow-ai-body">
+        <div class="flow-ai-body" id="flow-ai-body">
             <textarea id="ai-flow-prompt" placeholder="例: 毎朝9時に実行。Excel: C:\\data\\sales.xlsx の sheet=売上 を A1:D200 で読み取り、合計/平均との差分を要約して ARAICHAT ルーム番号 12345 に送信。メッセージタイトルは『日次レポート』。条件: 合計が100000以上の時のみ送信。出力キーは text を使用。できるだけ詳しく書くと、その内容に沿って作成されます（ファイルパス、ルーム番号、シート名、範囲、条件など）。"></textarea>
         </div>
-        <div class="flow-ai-footer">
+        <div class="flow-ai-footer" id="flow-ai-footer">
             <div id="ai-flow-status" class="flow-ai-status"></div>
             <button class="ghost-button" id="ai-flow-clear" type="button">クリア</button>
         </div>
