@@ -354,6 +354,7 @@
       node.className =
         "flow-node" + (step.id === state.selectedId ? " selected" : "");
       node.dataset.id = step.id;
+      node.dataset.type = step.type;
       node.style.left = `${step.position.x}px`;
       node.style.top = `${step.position.y}px`;
       node.addEventListener("click", (event) => {
@@ -1132,18 +1133,42 @@
     });
     whenMatchSelect.value = step.when?.match || "equals";
 
+    // yes/no クイックボタン付き入力エリア
+    const whenEqualsWrap = document.createElement("div");
+    whenEqualsWrap.className = "when-equals-wrap";
+
     const whenEqualsInput = document.createElement("input");
     whenEqualsInput.type = "text";
-    whenEqualsInput.placeholder = "一致値 (例: Yes)";
+    whenEqualsInput.placeholder = "一致値 (例: yes)";
+    whenEqualsInput.className = "when-equals-input";
     whenEqualsInput.value =
       step.when && step.when.equals !== undefined && step.when.equals !== null
         ? step.when.equals
         : "";
 
+    const yesNoGroup = document.createElement("div");
+    yesNoGroup.className = "yes-no-quick-buttons";
+
+    ["yes", "no"].forEach((value) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "yes-no-quick-btn";
+      btn.textContent = value;
+      btn.setAttribute("data-value", value);
+      btn.addEventListener("click", () => {
+        whenEqualsInput.value = value;
+        whenEqualsInput.dispatchEvent(new Event("input"));
+      });
+      yesNoGroup.appendChild(btn);
+    });
+
+    whenEqualsWrap.appendChild(whenEqualsInput);
+    whenEqualsWrap.appendChild(yesNoGroup);
+
     whenFields.appendChild(whenStepInput);
     whenFields.appendChild(whenFieldInput);
     whenFields.appendChild(whenMatchSelect);
-    whenFields.appendChild(whenEqualsInput);
+    whenFields.appendChild(whenEqualsWrap);
     whenRow.appendChild(whenFields);
 
     const whenHelp = document.createElement("div");

@@ -1436,3 +1436,56 @@
     background: #22c55e;
     transform: scale(1.02);
 }
+
+/* when条件 yes/noクイックボタン */
+.when-equals-wrap {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.when-equals-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.yes-no-quick-buttons {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.yes-no-quick-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid var(--border-thin);
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+.yes-no-quick-btn:hover {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+    transform: translateY(-1px);
+}
+
+.yes-no-quick-btn:active {
+    transform: translateY(0);
+}
+
+/* judgeステップの視覚的区別 */
+.flow-node[data-type="judge"] {
+    border-radius: 24px;
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, var(--surface-dark) 100%);
+}
+
+.flow-node[data-type="judge"] .flow-node-order {
+    background: #8b5cf6;
+}
