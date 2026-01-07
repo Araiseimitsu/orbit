@@ -287,6 +287,10 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 .panel-title {
@@ -367,7 +371,32 @@
     border-radius: 20px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Webkitブラウザ用スクロールバースタイル */
+.flow-panel::-webkit-scrollbar,
+.flow-canvas-wrap::-webkit-scrollbar {
+    width: 6px;
+}
+
+.flow-panel::-webkit-scrollbar-track,
+.flow-canvas-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.flow-panel::-webkit-scrollbar-thumb,
+.flow-canvas-wrap::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.flow-panel::-webkit-scrollbar-thumb:hover,
+.flow-canvas-wrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .canvas-toolbar {
