@@ -286,13 +286,27 @@
       const groupWrap = document.createElement("div");
       groupWrap.className = "action-group";
 
-      const groupTitle = document.createElement("div");
-      groupTitle.className = "action-group-title";
-      groupTitle.textContent = group.label;
-      groupWrap.appendChild(groupTitle);
+      // カテゴリトグルボタン
+      const categoryToggle = document.createElement("button");
+      categoryToggle.type = "button";
+      categoryToggle.className = "action-category-toggle";
+      categoryToggle.setAttribute("aria-expanded", "false");
 
+      const categoryTitle = document.createElement("span");
+      categoryTitle.className = "action-category-title";
+      categoryTitle.textContent = group.label;
+
+      const toggleIcon = document.createElement("span");
+      toggleIcon.className = "action-category-toggle-icon";
+
+      categoryToggle.appendChild(categoryTitle);
+      categoryToggle.appendChild(toggleIcon);
+      groupWrap.appendChild(categoryToggle);
+
+      // アクションアイテムコンテナ（デフォルトは閉じる）
       const groupItems = document.createElement("div");
-      groupItems.className = "action-group-items";
+      groupItems.className = "action-category-items";
+      groupItems.setAttribute("aria-hidden", "true");
 
       group.actions.forEach((action) => {
         const item = document.createElement("button");
@@ -312,6 +326,13 @@
 
         item.addEventListener("click", () => addStep(action));
         groupItems.appendChild(item);
+      });
+
+      // トグルクリックイベント
+      categoryToggle.addEventListener("click", () => {
+        const isExpanded = categoryToggle.getAttribute("aria-expanded") === "true";
+        categoryToggle.setAttribute("aria-expanded", !isExpanded);
+        groupItems.setAttribute("aria-hidden", isExpanded);
       });
 
       groupWrap.appendChild(groupItems);
@@ -338,6 +359,7 @@
     }
     renderActionList();
     renderInspector();
+    renderCanvas(); // メタデータ読み込み後にキャンバスを再描画して色を適用
   };
 
   const renderCanvas = () => {
@@ -355,10 +377,11 @@
         "flow-node" + (step.id === state.selectedId ? " selected" : "");
       node.dataset.id = step.id;
       node.dataset.type = step.type;
-      // メタデータから色を取得して設定
+      // メタデータから色を取得して設定（data-color属性とカスタムプロパティの両方を設定）
       const metadata = state.metadata[step.type];
       const color = metadata?.color || "#64748b";
       node.dataset.color = color;
+      node.style.setProperty("--node-color", color);
       node.style.left = `${step.position.x}px`;
       node.style.top = `${step.position.y}px`;
       node.addEventListener("click", (event) => {

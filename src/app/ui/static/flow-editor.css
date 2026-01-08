@@ -399,6 +399,78 @@
     gap: 8px;
 }
 
+/* カテゴリトグル */
+.action-category-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.action-category-toggle:hover .action-category-title {
+    color: var(--text-primary);
+}
+
+.action-category-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s ease;
+}
+
+.action-category-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.action-category-toggle[aria-expanded="true"] .action-category-toggle-icon {
+    transform: rotate(90deg);
+}
+
+.action-category-toggle-icon::before {
+    content: "";
+    width: 0;
+    height: 0;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-left: 4px solid var(--text-secondary);
+}
+
+.action-category-toggle[aria-expanded="true"] .action-category-toggle-icon::before,
+.action-category-toggle:hover .action-category-toggle-icon::before {
+    border-left-color: var(--text-primary);
+}
+
+.action-category-items {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 0;
+}
+
+.action-category-items[aria-hidden="false"] {
+    display: flex;
+}
+
 .action-item {
     display: flex;
     flex-direction: column;
@@ -1479,73 +1551,12 @@
     transform: translateY(0);
 }
 
-/* カテゴリ別色分け */
-/* パープル（AI） */
-.flow-node[data-color="#8b5cf6"] {
+/* カテゴリ別色分け - 動的カラーカスタムプロパティを使用 */
+.flow-node[style*="--node-color"] {
     border-radius: 24px;
-    border-color: #8b5cf6;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, var(--surface-dark) 100%);
+    border-color: var(--node-color);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--node-color) 10%, transparent) 0%, var(--surface-dark) 100%);
 }
-.flow-node[data-color="#8b5cf6"] .flow-node-order {
-    background: #8b5cf6;
-}
-
-/* オレンジ（判定） */
-.flow-node[data-color="#f97316"] {
-    border-radius: 24px;
-    border-color: #f97316;
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#f97316"] .flow-node-order {
-    background: #f97316;
-}
-
-/* 緑（Excel） */
-.flow-node[data-color="#22c55e"] {
-    border-radius: 24px;
-    border-color: #22c55e;
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#22c55e"] .flow-node-order {
-    background: #22c55e;
-}
-
-/* ブルー（ファイル） */
-.flow-node[data-color="#3b82f6"] {
-    border-radius: 24px;
-    border-color: #3b82f6;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#3b82f6"] .flow-node-order {
-    background: #3b82f6;
-}
-
-/* 黄緑（Google Sheets） */
-.flow-node[data-color="#84cc16"] {
-    border-radius: 24px;
-    border-color: #84cc16;
-    background: linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#84cc16"] .flow-node-order {
-    background: #84cc16;
-}
-
-/* ピンク（外部連携） */
-.flow-node[data-color="#ec4899"] {
-    border-radius: 24px;
-    border-color: #ec4899;
-    background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#ec4899"] .flow-node-order {
-    background: #ec4899;
-}
-
-/* グレー（ログ） */
-.flow-node[data-color="#64748b"] {
-    border-radius: 24px;
-    border-color: #64748b;
-    background: linear-gradient(135deg, rgba(100, 116, 139, 0.1) 0%, var(--surface-dark) 100%);
-}
-.flow-node[data-color="#64748b"] .flow-node-order {
-    background: #64748b;
+.flow-node[style*="--node-color"] .flow-node-order {
+    background: var(--node-color);
 }
