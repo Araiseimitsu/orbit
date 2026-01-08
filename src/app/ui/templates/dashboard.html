@@ -13,7 +13,7 @@
             <form method="get" class="flex items-center gap-2">
                 <div class="relative">
                     <input id="search-query" type="search" name="q" value="{{ search_query }}"
-                        placeholder="Search workflows..." class="w-64" />
+                        placeholder="Search workflows..." class="w-64" autocomplete="off" />
                 </div>
                 {% if search_query %}
                 <a href="/" class="apple-button apple-button-secondary px-4 py-2 text-xs">

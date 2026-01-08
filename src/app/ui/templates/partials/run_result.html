@@ -7,7 +7,7 @@
      x-data="{ show: true, expanded: false }"
      x-transition:enter="translate-x-0 opacity-100"
      x-transition:leave="translate-x-full opacity-0">
-    <div class="w-full min-w-[320px] sm:min-w-[420px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+    <div class="w-full min-w-[320px] sm:min-w-[420px] rounded-xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-xl shadow-xl pointer-events-auto overflow-hidden">
         <div class="p-5">
             <div class="flex items-start">
                 {% if run.status == 'success' %}
@@ -17,23 +17,23 @@
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1">
-                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
-                    <p class="mt-1 text-base text-green-600">実行成功</p>
+                    <p class="text-base font-semibold text-white">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-green-400">実行成功</p>
                     <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
                     {% if run.steps %}
                     <button
                         x-on:click="expanded = !expanded"
-                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                        class="mt-2 text-sm text-blue-400 hover:text-blue-300 underline"
                     >
                         <span x-show="!expanded">詳細を表示</span>
                         <span x-show="expanded">詳細を非表示</span>
                     </button>
-                    <div x-show="expanded" class="mt-2 text-sm bg-gray-50 rounded p-3 max-h-32 overflow-auto">
-                        <p class="font-medium text-gray-700 mb-1">ステップ結果:</p>
+                    <div x-show="expanded" class="mt-2 text-sm bg-white/5 border border-white/10 rounded p-3 max-h-32 overflow-auto">
+                        <p class="font-medium text-gray-300 mb-1">ステップ結果:</p>
                         {% for step_result in run.steps %}
                         <div class="mb-1">
-                            <span class="text-gray-600">{{ step_result.id }}:</span>
-                            <span class="{% if step_result.status == 'success' %}text-green-600{% elif step_result.status == 'skipped' %}text-gray-500{% else %}text-red-600{% endif %}">
+                            <span class="text-gray-400">{{ step_result.id }}:</span>
+                            <span class="{% if step_result.status == 'success' %}text-green-400{% elif step_result.status == 'skipped' %}text-gray-400{% else %}text-red-400{% endif %}">
                                 {% if step_result.status == 'success' %}OK{% elif step_result.status == 'skipped' %}SKIP{% else %}NG{% endif %}
                             </span>
                         </div>
@@ -48,19 +48,19 @@
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1">
-                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
-                    <p class="mt-1 text-base text-amber-500">実行停止</p>
+                    <p class="text-base font-semibold text-white">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-amber-400">実行停止</p>
                     <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
                     {% if run.error %}
                     <button
                         x-on:click="expanded = !expanded"
-                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                        class="mt-2 text-sm text-blue-400 hover:text-blue-300 underline"
                     >
                         <span x-show="!expanded">詳細を表示</span>
                         <span x-show="expanded">詳細を非表示</span>
                     </button>
                     <div x-show="expanded" class="mt-2">
-                        <p class="text-sm text-amber-700 bg-amber-50 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
+                        <p class="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -71,24 +71,24 @@
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1">
-                    <p class="text-base font-semibold text-gray-900">{{ workflow_name }}</p>
-                    <p class="mt-1 text-base text-red-600">実行失敗</p>
+                    <p class="text-base font-semibold text-white">{{ workflow_name }}</p>
+                    <p class="mt-1 text-base text-red-400">実行失敗</p>
                     <p class="mt-1 text-sm text-gray-500 font-mono">{{ run.run_id }}</p>
                     {% if run.error %}
                     <button
                         x-on:click="expanded = !expanded"
-                        class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                        class="mt-2 text-sm text-blue-400 hover:text-blue-300 underline"
                     >
                         <span x-show="!expanded">エラー詳細を表示</span>
                         <span x-show="expanded">エラー詳細を非表示</span>
                     </button>
                     <div x-show="expanded" class="mt-2">
-                        <p class="text-sm text-red-700 bg-red-50 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
+                        <p class="text-sm text-red-300 bg-red-500/10 border border-red-500/20 p-3 rounded break-words max-h-40 overflow-auto">{{ run.error }}</p>
                         {% if run.steps %}
-                        <p class="mt-2 text-sm font-medium text-gray-700">失敗したステップ:</p>
+                        <p class="mt-2 text-sm font-medium text-gray-300">失敗したステップ:</p>
                         {% for step_result in run.steps %}
                             {% if step_result.status == 'failed' %}
-                            <p class="text-sm text-red-600">{{ step_result.id }}</p>
+                            <p class="text-sm text-red-400">{{ step_result.id }}</p>
                             {% endif %}
                         {% endfor %}
                         {% endif %}
@@ -98,7 +98,7 @@
                 {% endif %}
                 <div class="ml-4 flex-shrink-0 flex">
                     <button type="button" data-toast-close
-                            class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                            class="bg-white/5 border border-white/10 rounded-md inline-flex text-gray-400 hover:text-white hover:bg-white/10 focus:outline-none">
                         <span class="sr-only">Close</span>
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />

@@ -194,13 +194,29 @@ input[type="text"] {
     color: white;
     border-radius: 8px;
     padding: 8px 12px;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 input[type="search"]:focus,
 input[type="text"]:focus {
     outline: none;
     border-color: var(--accent-blue);
+    background-color: var(--surface-dark);
+}
+
+/* ブラウザの自動補完スタイルを上書き */
+input[type="search"]:-webkit-autofill,
+input[type="search"]:-webkit-autofill:hover,
+input[type="search"]:-webkit-autofill:focus,
+input[type="search"]:-webkit-autofill:active,
+input[type="text"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill:hover,
+input[type="text"]:-webkit-autofill:focus,
+input[type="text"]:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--surface-dark) inset !important;
+    -webkit-text-fill-color: white !important;
+    background-color: var(--surface-dark) !important;
+    color: white !important;
 }
 
 select {
