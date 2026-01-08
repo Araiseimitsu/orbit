@@ -351,9 +351,9 @@ async def action_excel_list_sheets(
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} で前ステップの読み取りデータを指定可能）",
+                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} / AIの出力 text は {{ ai_generate_1.text | fromjson }}）",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]',
+                "example": "{{ ai_generate_1.text | fromjson }}",
             },
         ],
         "outputs": [
@@ -402,7 +402,7 @@ async def action_excel_write(
 
     # 開始セルのみ指定の場合（例: G1）、データサイズに合わせて書き込み
     # 範囲指定の場合（例: A1:C2）、指定範囲内のみ書き込み
-    is_single_cell = (min_col == max_col and min_row == max_row)
+    is_single_cell = min_col == max_col and min_row == max_row
     if not is_single_cell:
         range_rows = max_row - min_row + 1
         range_cols = max_col - min_col + 1
@@ -449,9 +449,9 @@ async def action_excel_write(
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列",
+                "description": "2次元配列 or JSON文字列（AIの出力 text を使う場合は {{ ai_generate_1.text | fromjson }} のように変換）",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]',
+                "example": "{{ ai_generate_1.text | fromjson }}",
             },
             {
                 "key": "start_cell",

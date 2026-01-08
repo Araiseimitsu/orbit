@@ -1,6 +1,7 @@
 """
 ORBIT Test Suite - Template Rendering
 """
+
 import pytest
 
 from src.app.core.templating import (
@@ -21,8 +22,7 @@ class TestRenderString:
     def test_render_string_multiple_variables(self):
         """複数の変数展開"""
         result = render_string(
-            "{{ greeting }} {{ name }}!",
-            {"greeting": "Hello", "name": "World"}
+            "{{ greeting }} {{ name }}!", {"greeting": "Hello", "name": "World"}
         )
         assert result == "Hello World!"
 
@@ -39,43 +39,58 @@ class TestRenderString:
 
     def test_render_string_nested_variable(self):
         """ネストした変数展開"""
-        result = render_string(
-            "{{ user.name }}",
-            {"user": {"name": "Alice"}}
-        )
+        result = render_string("{{ user.name }}", {"user": {"name": "Alice"}})
         assert result == "Alice"
 
     def test_render_string_with_filter(self):
         """Jinja2フィルターを使用"""
-        result = render_string(
-            "{{ name | upper }}",
-            {"name": "alice"}
-        )
+        result = render_string("{{ name | upper }}", {"name": "alice"})
         assert result == "ALICE"
 
     def test_render_string_expression(self):
         """式を含むテンプレート"""
         result = render_string(
-            "Count: {{ items | length }}",
-            {"items": [1, 2, 3, 4, 5]}
+            "Count: {{ items | length }}", {"items": [1, 2, 3, 4, 5]}
         )
         assert result == "Count: 5"
 
     def test_render_string_condition(self):
         """条件式を含むテンプレート"""
         result = render_string(
-            "{% if show %}Visible{% else %}Hidden{% endif %}",
-            {"show": True}
+            "{% if show %}Visible{% else %}Hidden{% endif %}", {"show": True}
         )
         assert result == "Visible"
 
     def test_render_string_special_characters(self):
         """特殊文字を含む文字列"""
-        result = render_string(
-            "Path: {{ path }}",
-            {"path": "C:\\Users\\test"}
-        )
+        result = render_string("Path: {{ path }}", {"path": "C:\\Users\\test"})
         assert result == "Path: C:\\Users\\test"
+
+    def test_render_string_single_expression_preserves_list(self):
+        """単一式は型を保持して返す"""
+        result = render_string("{{ data }}", {"data": [1, 2, 3]})
+        assert result == [1, 2, 3]
+
+    def test_render_string_fromjson_returns_list(self):
+        """fromjson フィルターで JSON をオブジェクト化"""
+        result = render_string(
+            "{{ text | fromjson }}", {"text": '[["A", "B"], ["1", "2"]]'}
+        )
+        assert result == [["A", "B"], ["1", "2"]]
+
+    def test_render_string_fromjson_accepts_python_literal(self):
+        """fromjson は Python リテラルもフォールバックで解釈"""
+        result = render_string(
+            "{{ text | fromjson }}", {"text": "[['A', 'B'], ['1', '2']]"}
+        )
+        assert result == [["A", "B"], ["1", "2"]]
+
+    def test_render_string_tojson_utf8_outputs_json(self):
+        """tojson_utf8 フィルターで JSON 文字列化"""
+        result = render_string(
+            "{{ data | tojson_utf8 }}", {"data": [["A", "B"], ["1", "2"]]}
+        )
+        assert result == '[["A", "B"], ["1", "2"]]'
 
 
 class TestRenderValue:
@@ -112,33 +127,25 @@ class TestRenderValue:
             {
                 "greeting": "Hello {{ name }}",
                 "count": "{{ count }}",
-                "nested": {
-                    "message": "{{ outer }} {{ inner }}"
-                }
+                "nested": {"message": "{{ outer }} {{ inner }}"},
             },
-            {"name": "World", "count": "42", "outer": "A", "inner": "B"}
+            {"name": "World", "count": "42", "outer": "A", "inner": "B"},
         )
         assert result == {
             "greeting": "Hello World",
             "count": "42",
-            "nested": {
-                "message": "A B"
-            }
+            "nested": {"message": "A B"},
         }
 
     def test_render_value_list(self):
         """リストの再帰的レンダリング"""
-        result = render_value(
-            ["{{ a }}", "{{ b }}", "static"],
-            {"a": "1", "b": "2"}
-        )
+        result = render_value(["{{ a }}", "{{ b }}", "static"], {"a": "1", "b": "2"})
         assert result == ["1", "2", "static"]
 
     def test_render_value_nested_list(self):
         """ネストしたリストのレンダリング"""
         result = render_value(
-            [["{{ a }}", "{{ b }}"], ["{{ c }}"]],
-            {"a": "1", "b": "2", "c": "3"}
+            [["{{ a }}", "{{ b }}"], ["{{ c }}"]], {"a": "1", "b": "2", "c": "3"}
         )
         assert result == [["1", "2"], ["3"]]
 
@@ -149,7 +156,7 @@ class TestRenderValue:
                 {"name": "{{ name1 }}", "value": "{{ val1 }}"},
                 {"name": "{{ name2 }}", "value": "{{ val2 }}"},
             ],
-            {"name1": "A", "val1": "1", "name2": "B", "val2": "2"}
+            {"name1": "A", "val1": "1", "name2": "B", "val2": "2"},
         )
         assert result == [
             {"name": "A", "value": "1"},
@@ -192,16 +199,11 @@ class TestRenderParams:
 
     def test_render_params_with_workflow_context(self):
         """ワークフロー変数を含むレンダリング"""
-        params = {
-            "message": "Workflow: {{ workflow }}, Run: {{ run_id }}"
-        }
+        params = {"message": "Workflow: {{ workflow }}, Run: {{ run_id }}"}
         result = render_params(
-            params,
-            {"workflow": "test_wf", "run_id": "20250115_103000_abcd"}
+            params, {"workflow": "test_wf", "run_id": "20250115_103000_abcd"}
         )
-        assert result == {
-            "message": "Workflow: test_wf, Run: 20250115_103000_abcd"
-        }
+        assert result == {"message": "Workflow: test_wf, Run: 20250115_103000_abcd"}
 
     def test_render_params_with_base_dir(self):
         """base_dir変数を含むレンダリング"""
@@ -212,10 +214,7 @@ class TestRenderParams:
     def test_render_params_with_step_reference(self):
         """ステップ結果を参照するレンダリング"""
         params = {"content": "Previous: {{ step1.result }}"}
-        result = render_params(
-            params,
-            {"step1": {"result": "Success"}}
-        )
+        result = render_params(params, {"step1": {"result": "Success"}})
         assert result == {"content": "Previous: Success"}
 
     def test_render_params_complex_structure(self):
@@ -230,10 +229,7 @@ class TestRenderParams:
                 "verbose": True,
             },
         }
-        result = render_params(
-            params,
-            {"base_dir": "/tmp", "run_id": "test_run"}
-        )
+        result = render_params(params, {"base_dir": "/tmp", "run_id": "test_run"})
         assert result == {
             "files": ["/tmp/file1.txt", "/tmp/file2.txt"],
             "options": {"output": "test_run.txt", "verbose": True},
@@ -260,3 +256,9 @@ class TestRenderParams:
         params = {"value": None}
         result = render_params(params, {})
         assert result == {"value": None}
+
+    def test_render_params_preserves_expression_type(self):
+        """単一式（fromjson等）の結果型を保持する"""
+        params = {"values": "{{ text | fromjson }}"}
+        result = render_params(params, {"text": '[["A"], ["B"]]'})
+        assert result == {"values": [["A"], ["B"]]}

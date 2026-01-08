@@ -228,34 +228,34 @@ def _parse_values_with_header(
                 "key": "spreadsheet_id",
                 "description": "スプレッドシートID (URL から取得可能)",
                 "required": True,
-                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
             },
             {
                 "key": "sheet",
                 "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "range",
                 "description": "読み取り範囲。'Sheet1!A1:D10' 形式、または sheet パラメータと組み合わせて 'A1:D10' 形式で指定可能",
                 "required": True,
-                "example": "A1:D10"
+                "example": "A1:D10",
             },
             {
                 "key": "header_row",
                 "description": "1行目をヘッダーとして扱う",
                 "required": False,
                 "default": True,
-                "example": "true"
+                "example": "true",
             },
             {
                 "key": "credentials_file",
                 "description": "認証情報ファイルパス",
                 "required": False,
                 "default": "secrets/google_service_account.json",
-                "example": "secrets/google_service_account.json"
-            }
+                "example": "secrets/google_service_account.json",
+            },
         ],
         "outputs": [
             {"key": "headers", "description": "ヘッダー行"},
@@ -264,9 +264,9 @@ def _parse_values_with_header(
             {"key": "row_count", "description": "行数"},
             {"key": "col_count", "description": "列数"},
             {"key": "spreadsheet_id", "description": "スプレッドシートID"},
-            {"key": "range", "description": "範囲"}
-        ]
-    }
+            {"key": "range", "description": "範囲"},
+        ],
+    },
 )
 async def action_sheets_read(
     params: dict[str, Any], context: dict[str, Any]
@@ -363,22 +363,22 @@ async def action_sheets_read(
                 "key": "spreadsheet_id",
                 "description": "スプレッドシートID",
                 "required": True,
-                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
             },
             {
                 "key": "credentials_file",
                 "description": "認証情報ファイルパス",
                 "required": False,
                 "default": "secrets/google_service_account.json",
-                "example": "secrets/google_service_account.json"
-            }
+                "example": "secrets/google_service_account.json",
+            },
         ],
         "outputs": [
             {"key": "sheets", "description": "シート情報のリスト"},
             {"key": "title", "description": "スプレッドシートのタイトル"},
-            {"key": "spreadsheet_id", "description": "スプレッドシートID"}
-        ]
-    }
+            {"key": "spreadsheet_id", "description": "スプレッドシートID"},
+        ],
+    },
 )
 async def action_sheets_list(
     params: dict[str, Any], context: dict[str, Any]
@@ -458,47 +458,47 @@ async def action_sheets_list(
                 "key": "spreadsheet_id",
                 "description": "スプレッドシートID",
                 "required": True,
-                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
             },
             {
                 "key": "sheet",
                 "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "range",
                 "description": "追記先の範囲。'Sheet1!A1' 形式、または sheet パラメータと組み合わせて 'A1' 形式で指定可能",
                 "required": True,
-                "example": "A1"
+                "example": "A1",
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列",
+                "description": "2次元配列 or JSON文字列（AIの出力 text を使う場合は {{ ai_generate_1.text | fromjson }} のように変換）",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]'
+                "example": "{{ ai_generate_1.text | fromjson }}",
             },
             {
                 "key": "value_input_option",
                 "description": "RAW / USER_ENTERED",
                 "required": False,
                 "default": "USER_ENTERED",
-                "example": "USER_ENTERED"
+                "example": "USER_ENTERED",
             },
             {
                 "key": "insert_data_option",
                 "description": "INSERT_ROWS / OVERWRITE",
                 "required": False,
                 "default": "INSERT_ROWS",
-                "example": "INSERT_ROWS"
+                "example": "INSERT_ROWS",
             },
             {
                 "key": "credentials_file",
                 "description": "認証情報ファイルパス",
                 "required": False,
                 "default": "secrets/google_service_account.json",
-                "example": "secrets/google_service_account.json"
-            }
+                "example": "secrets/google_service_account.json",
+            },
         ],
         "outputs": [
             {"key": "spreadsheet_id", "description": "スプレッドシートID"},
@@ -506,9 +506,9 @@ async def action_sheets_list(
             {"key": "updated_range", "description": "更新範囲"},
             {"key": "updated_rows", "description": "更新行数"},
             {"key": "updated_columns", "description": "更新列数"},
-            {"key": "updated_cells", "description": "更新セル数"}
-        ]
-    }
+            {"key": "updated_cells", "description": "更新セル数"},
+        ],
+    },
 )
 async def action_sheets_append(
     params: dict[str, Any], context: dict[str, Any]
@@ -602,40 +602,40 @@ async def action_sheets_append(
                 "key": "spreadsheet_id",
                 "description": "スプレッドシートID",
                 "required": True,
-                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
             },
             {
                 "key": "sheet",
                 "description": "シート名（オプショナル）。指定時は range のシート名より優先されます。",
                 "required": False,
-                "example": "Sheet1"
+                "example": "Sheet1",
             },
             {
                 "key": "range",
                 "description": "書き込み範囲。開始セルのみ（例: 'A1'）指定でデータサイズに合わせて自動拡張、範囲指定（例: 'A1:C2'）で指定範囲内のみ書き込み。'Sheet1!A1:C2' 形式、または sheet パラメータと組み合わせて 'A1:C2' 形式でも指定可能",
                 "required": True,
-                "example": "A1"
+                "example": "A1",
             },
             {
                 "key": "values",
-                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} で前ステップの読み取りデータを指定可能）",
+                "description": "2次元配列 or JSON文字列（例: {{ step_id.raw }} / AIの出力 text は {{ ai_generate_1.text | fromjson }}）",
                 "required": True,
-                "example": '[["A1", "B1"], ["A2", "B2"]]'
+                "example": "{{ ai_generate_1.text | fromjson }}",
             },
             {
                 "key": "value_input_option",
                 "description": "RAW / USER_ENTERED",
                 "required": False,
                 "default": "USER_ENTERED",
-                "example": "USER_ENTERED"
+                "example": "USER_ENTERED",
             },
             {
                 "key": "credentials_file",
                 "description": "認証情報ファイルパス",
                 "required": False,
                 "default": "secrets/google_service_account.json",
-                "example": "secrets/google_service_account.json"
-            }
+                "example": "secrets/google_service_account.json",
+            },
         ],
         "outputs": [
             {"key": "spreadsheet_id", "description": "スプレッドシートID"},
@@ -643,9 +643,9 @@ async def action_sheets_append(
             {"key": "updated_range", "description": "更新範囲"},
             {"key": "updated_rows", "description": "更新行数"},
             {"key": "updated_columns", "description": "更新列数"},
-            {"key": "updated_cells", "description": "更新セル数"}
-        ]
-    }
+            {"key": "updated_cells", "description": "更新セル数"},
+        ],
+    },
 )
 async def action_sheets_write(
     params: dict[str, Any], context: dict[str, Any]
