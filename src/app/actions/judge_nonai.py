@@ -109,6 +109,7 @@ def _to_number(value: Any, param_name: str = "target") -> float:
         "title": "完全一致判定",
         "description": "値が指定値と完全一致するか判定します。大文字小文字は区別しません。",
         "category": "判定",
+        "color": "#f97316",
         "params": [
             {
                 "key": "target",
@@ -204,6 +205,7 @@ async def action_judge_equals(
         "title": "部分一致判定",
         "description": "文字列に指定文字列が含まれるか判定します。大文字小文字は区別しません。",
         "category": "判定",
+        "color": "#f97316",
         "params": [
             {
                 "key": "target",
@@ -295,6 +297,7 @@ async def action_judge_contains(
         "title": "正規表現判定",
         "description": "正規表現パターンにマッチするか判定します。プリセットまたはカスタムパターンが使用可能です。",
         "category": "判定",
+        "color": "#f97316",
         "params": [
             {
                 "key": "target",
@@ -416,6 +419,7 @@ async def action_judge_regex(
         "title": "数値比較判定",
         "description": "数値を比較して条件を満たすか判定します。min/maxで範囲指定、equalで等値判定が可能です。",
         "category": "判定",
+        "color": "#f97316",
         "params": [
             {
                 "key": "target",

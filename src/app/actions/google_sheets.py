@@ -222,6 +222,7 @@ def _parse_values_with_header(
         "title": "Google Sheets 読み込み",
         "description": "Google Sheetsからデータを読み取ります。",
         "category": "Google Sheets",
+        "color": "#84cc16",
         "params": [
             {
                 "key": "spreadsheet_id",
@@ -356,6 +357,7 @@ async def action_sheets_read(
         "title": "Google Sheets シート一覧",
         "description": "スプレッドシート内のシート一覧を取得します。",
         "category": "Google Sheets",
+        "color": "#84cc16",
         "params": [
             {
                 "key": "spreadsheet_id",
@@ -450,6 +452,7 @@ async def action_sheets_list(
         "title": "Google Sheets 追記",
         "description": "Google Sheetsの最後に行を追加（追記）します。",
         "category": "Google Sheets",
+        "color": "#84cc16",
         "params": [
             {
                 "key": "spreadsheet_id",
@@ -593,6 +596,7 @@ async def action_sheets_append(
         "title": "Google Sheets 書き込み",
         "description": "Google Sheetsの指定範囲にデータを書き込みます（上書き）。",
         "category": "Google Sheets",
+        "color": "#84cc16",
         "params": [
             {
                 "key": "spreadsheet_id",

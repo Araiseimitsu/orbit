@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
         "title": "ファイル書き込み",
         "description": "指定パスへ内容を書き込みます（相対パスはプロジェクトルート基準）。",
         "category": "ファイル",
+        "color": "#3b82f6",
         "params": [
             {
                 "key": "path",
@@ -95,6 +96,7 @@ async def action_file_write(params: dict[str, Any], context: dict[str, Any]) -> 
         "title": "ファイル読み込み",
         "description": "指定パスの内容を読み込みます（相対パスはプロジェクトルート基準）。",
         "category": "ファイル",
+        "color": "#3b82f6",
         "params": [
             {
                 "key": "path",

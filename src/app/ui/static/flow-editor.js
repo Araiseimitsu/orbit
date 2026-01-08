@@ -355,6 +355,10 @@
         "flow-node" + (step.id === state.selectedId ? " selected" : "");
       node.dataset.id = step.id;
       node.dataset.type = step.type;
+      // メタデータから色を取得して設定
+      const metadata = state.metadata[step.type];
+      const color = metadata?.color || "#64748b";
+      node.dataset.color = color;
       node.style.left = `${step.position.x}px`;
       node.style.top = `${step.position.y}px`;
       node.addEventListener("click", (event) => {

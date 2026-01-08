@@ -150,6 +150,7 @@ def _extract_error_detail(response: requests.Response | None) -> str:
         "title": "ARAICHAT 送信",
         "description": "ARAICHAT の統合APIに対してメッセージを送信します。",
         "category": "外部連携",
+        "color": "#ec4899",
         "params": [
             {
                 "key": "text",

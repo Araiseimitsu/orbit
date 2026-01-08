@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
         "title": "ログ出力",
         "description": "指定メッセージをログに出力します。テンプレートで前のステップ結果を参照できます。",
         "category": "ログ",
+        "color": "#64748b",
         "params": [
             {
                 "key": "message",

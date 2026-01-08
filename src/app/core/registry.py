@@ -28,6 +28,7 @@ class ActionMetadata(BaseModel):
     title: str  # 表示名（日本語）
     description: str  # アクションの説明
     category: str  # カテゴリ
+    color: str = "#64748b"  # フローノードの色（デフォルトグレー）
     params: list[dict] = []  # パラメータ定義
     outputs: list[dict] = []  # 出力定義
     example: str | None = None  # YAML使用例

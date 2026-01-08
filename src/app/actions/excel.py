@@ -194,6 +194,7 @@ def _calc_updated_range(
         "title": "Excel 読み込み",
         "description": "Excelファイルからデータを読み取ります。",
         "category": "Excel",
+        "color": "#22c55e",
         "params": [
             {
                 "key": "path",
@@ -292,6 +293,7 @@ async def action_excel_read(
         "title": "Excel シート一覧",
         "description": "Excelファイルのシート一覧を取得します。",
         "category": "Excel",
+        "color": "#22c55e",
         "params": [
             {
                 "key": "path",
@@ -327,6 +329,7 @@ async def action_excel_list_sheets(
         "title": "Excel 書き込み",
         "description": "Excelファイルの指定範囲にデータを書き込みます（上書き）。",
         "category": "Excel",
+        "color": "#22c55e",
         "params": [
             {
                 "key": "path",
@@ -430,6 +433,7 @@ async def action_excel_write(
         "title": "Excel 追記",
         "description": "Excelファイルの最後に行を追加（追記）します。",
         "category": "Excel",
+        "color": "#22c55e",
         "params": [
             {
                 "key": "path",

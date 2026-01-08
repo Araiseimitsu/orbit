@@ -1479,13 +1479,73 @@
     transform: translateY(0);
 }
 
-/* judgeステップの視覚的区別 */
-.flow-node[data-type="judge"] {
+/* カテゴリ別色分け */
+/* パープル（AI） */
+.flow-node[data-color="#8b5cf6"] {
     border-radius: 24px;
     border-color: #8b5cf6;
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, var(--surface-dark) 100%);
 }
-
-.flow-node[data-type="judge"] .flow-node-order {
+.flow-node[data-color="#8b5cf6"] .flow-node-order {
     background: #8b5cf6;
+}
+
+/* オレンジ（判定） */
+.flow-node[data-color="#f97316"] {
+    border-radius: 24px;
+    border-color: #f97316;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#f97316"] .flow-node-order {
+    background: #f97316;
+}
+
+/* 緑（Excel） */
+.flow-node[data-color="#22c55e"] {
+    border-radius: 24px;
+    border-color: #22c55e;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#22c55e"] .flow-node-order {
+    background: #22c55e;
+}
+
+/* ブルー（ファイル） */
+.flow-node[data-color="#3b82f6"] {
+    border-radius: 24px;
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#3b82f6"] .flow-node-order {
+    background: #3b82f6;
+}
+
+/* 黄緑（Google Sheets） */
+.flow-node[data-color="#84cc16"] {
+    border-radius: 24px;
+    border-color: #84cc16;
+    background: linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#84cc16"] .flow-node-order {
+    background: #84cc16;
+}
+
+/* ピンク（外部連携） */
+.flow-node[data-color="#ec4899"] {
+    border-radius: 24px;
+    border-color: #ec4899;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#ec4899"] .flow-node-order {
+    background: #ec4899;
+}
+
+/* グレー（ログ） */
+.flow-node[data-color="#64748b"] {
+    border-radius: 24px;
+    border-color: #64748b;
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.1) 0%, var(--surface-dark) 100%);
+}
+.flow-node[data-color="#64748b"] .flow-node-order {
+    background: #64748b;
 }

@@ -224,6 +224,7 @@ async def _call_judge_gemini(
         "title": "AI判定",
         "description": "テキストに対してAIでyes/no判定を行います。条件分岐に使用できます。",
         "category": "AI",
+        "color": "#8b5cf6",
         "params": [
             {
                 "key": "target",

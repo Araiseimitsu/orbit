@@ -274,6 +274,7 @@ async def _call_gemini_rest(
         "title": "AI 生成",
         "description": "プロンプトをAIに渡してテキストを生成します。",
         "category": "AI",
+        "color": "#8b5cf6",
         "params": [
             {
                 "key": "prompt",
