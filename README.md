@@ -10,6 +10,10 @@ n8n ライクなワークフロー実行エンジン（MVP）。YAML でワー�
 - APScheduler による cron スケジュール実行
 - 実行ログを JSONL に記録・UI で参照
 - UI からワークフローの参照・編集・実行
+- AI（Gemini）によるテキスト生成・判定
+- Excel/Google Sheets の読み書き
+- ファイル操作（読み書き、コピー、移動、削除、リネーム）
+- AIを使わない判定アクション（完全一致、部分一致、正規表現、数値比較）
 
 ## 動作環境
 
@@ -78,33 +82,25 @@ steps:
 
 ### 条件付きステップ（when）
 
-`when` を指定すると、条件に一致した場合だけステップを実行します。  
+`when` を指定すると、条件に一致した場合だけステップを実行します。
 （一致しない場合はスキップ）
 
 ```yaml
 steps:
-  - id: judge
-    type: ai_generate
+  - id: judge_error
+    type: ai_judge
     params:
-      prompt: "次の質問に Yes/No だけで答えてください: ... "
+      target: "{{ step_1.text }}"
+      question: "このテキストにエラーが含まれているか"
 
-  - id: do_yes
+  - id: on_error
     type: log
     when:
-      step: judge
-      field: text
-      equals: "Yes"
+      step: judge_error
+      field: result
+      equals: "yes"
     params:
-      message: "Yes のときだけ実行"
-
-  - id: do_no
-    type: log
-    when:
-      step: judge
-      field: text
-      equals: "No"
-    params:
-      message: "No のときだけ実行"
+      message: "エラーが検出されました"
 ```
 
 ※ 文字列比較はデフォルトで **前後空白の除去 + 大文字小文字を無視** します。
@@ -121,6 +117,73 @@ steps:
 - `{{ now_ymd_hms }}`: 実行時刻（YYYYMMDD_HHMMSS, JST）
 - `{{ step_id.key }}`: 前ステップの結果参照（例: `{{ step_1.values }}`）
 - `{{ base_dir }}`: プロジェクトルートパス
+
+## 利用可能なアクション
+
+### ログ
+
+| アクション名 | 説明 |
+|------------|------|
+| `log` | ログ出力 |
+
+### ファイル
+
+| アクション名 | 説明 |
+|------------|------|
+| `file_read` | ファイル読み込み |
+| `file_write` | ファイル書き込み |
+| `file_copy` | ファイルコピー |
+| `file_move` | ファイル移動 |
+| `file_delete` | ファイル削除 |
+| `file_rename` | ファイル名変更 |
+
+### Excel
+
+| アクション名 | 説明 |
+|------------|------|
+| `excel_read` | Excel ファイル読み込み |
+| `excel_write` | Excel ファイル書き込み |
+| `excel_append` | Excel ファイル追記 |
+| `excel_create` | 新規 Excel ファイル作成 |
+
+### Google Sheets
+
+| アクション名 | 説明 |
+|------------|------|
+| `sheets_read` | スプレッドシート読み込み |
+| `sheets_write` | スプレッドシート書き込み |
+| `sheets_append` | スプレッドシート追記 |
+| `sheets_create` | 新規スプレッドシート作成 |
+
+### AI
+
+| アクション名 | 説明 |
+|------------|------|
+| `ai_generate` | AI によるテキスト生成（Gemini） |
+| `ai_judge` | AI による yes/no 判定（Gemini） |
+
+### 判定（非AI）
+
+| アクション名 | 説明 |
+|------------|------|
+| `judge_equals` | 完全一致判定 |
+| `judge_contains` | 部分一致判定 |
+| `judge_regex` | 正規表現判定（プリセット対応） |
+| `judge_numeric` | 数値範囲判定 |
+
+### その他
+
+| アクション名 | 説明 |
+|------------|------|
+| `araichat_send_message` | ARAICHAT へメッセージ送信 |
+
+## 環境変数
+
+| 環境変数 | 説明 | 必須 |
+|---------|------|------|
+| `GEMINI_API_KEY` | Gemini API キー | ai_generate / ai_judge 使用時 |
+| `ARAICHAT_API_KEY` | ARAICHAT API キー | araichat_send_message 使用時 |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google サービスアカウントJSONパス | sheets_* 使用時 |
 
 ## アクション拡張
 
@@ -153,4 +216,3 @@ async def your_action_handler(params: dict, context: dict) -> dict:
 
 - 重要な変更は `.docs/update.md` に追記
 - 追加ドキュメントは `.docs/` 配下で管理
-

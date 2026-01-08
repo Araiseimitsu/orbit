@@ -1148,7 +1148,7 @@
       const refStep = state.workflow.steps.find(s => s.id === stepId);
       if (!refStep) return false;
       const actionType = refStep.type;
-      return actionType && (actionType.startsWith('judge_') || actionType === 'judge');
+      return actionType && (actionType.startsWith('judge_') || actionType === 'ai_judge');
     };
 
     const whenFieldInput = document.createElement("input");

@@ -1,5 +1,5 @@
 """
-ORBIT MVP - Judge Action
+ORBIT MVP - AI Judge Action
 AIによるyes/no判定アクション
 
 API キー設定:
@@ -7,7 +7,7 @@ API キー設定:
 
 使用例 (YAML):
     - id: judge_error
-      type: judge
+      type: ai_judge
       params:
         target: "{{ step_1.text }}"
         question: "このテキストにエラーが含まれているか"
@@ -219,7 +219,7 @@ async def _call_judge_gemini(
 
 
 @register_action(
-    "judge",
+    "ai_judge",
     metadata={
         "title": "AI判定",
         "description": "テキストに対してAIでyes/no判定を行います。条件分岐に使用できます。",
@@ -259,7 +259,7 @@ async def _call_judge_gemini(
         ],
         "example": """steps:
   - id: judge_error
-    type: judge
+    type: ai_judge
     params:
       target: "{{ step_1.text }}"
       question: "このテキストにエラーが含まれているか"
