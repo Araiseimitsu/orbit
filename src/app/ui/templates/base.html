@@ -183,7 +183,7 @@
              x-transition:leave-end="opacity-0 -translate-y-2"
              @click.outside="mobileMenuOpen = false"
              x-cloak
-             class="sm:hidden border-t border-white/10 bg-[#1C1C1E]/95 backdrop-blur-xl">
+             class="sm:hidden absolute right-4 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-xl shadow-xl">
             <div class="px-4 py-3 space-y-1">
                 <a href="/"
                    @click="mobileMenuOpen = false"
