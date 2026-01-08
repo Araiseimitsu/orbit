@@ -1142,10 +1142,21 @@
     whenStepInput.placeholder = "判定ステップID (例: judge)";
     whenStepInput.value = step.when?.step || "";
 
+    // judge系アクションの場合はデフォルトfieldを"result"にする
+    const isJudgeActionType = (stepId) => {
+      if (!stepId) return false;
+      const refStep = state.workflow.steps.find(s => s.id === stepId);
+      if (!refStep) return false;
+      const actionType = refStep.type;
+      return actionType && (actionType.startsWith('judge_') || actionType === 'judge');
+    };
+
     const whenFieldInput = document.createElement("input");
     whenFieldInput.type = "text";
     whenFieldInput.placeholder = "出力キー (例: text)";
-    whenFieldInput.value = step.when?.field || "text";
+    // 既存のfield値があればそれを使い、なければjudge系なら"result"、それ以外は"text"
+    const defaultField = step.when?.field || (isJudgeActionType(step.when?.step) ? "result" : "text");
+    whenFieldInput.value = defaultField;
 
     const whenMatchSelect = document.createElement("select");
     const matchOptions = [
@@ -1233,8 +1244,26 @@
       step.when = nextWhen;
     };
 
-    whenToggle.addEventListener("change", syncWhen);
-    whenStepInput.addEventListener("input", syncWhen);
+    // 条件を使うをオンにしたとき、judge系ならfieldを自動設定
+    const autoUpdateField = () => {
+      if (isJudgeActionType(whenStepInput.value)) {
+        whenFieldInput.value = "result";
+      }
+    };
+
+    whenToggle.addEventListener("change", () => {
+      if (whenToggle.checked) {
+        autoUpdateField();
+      }
+      syncWhen();
+    });
+    whenStepInput.addEventListener("input", () => {
+      // ステップIDが変更された場合、judge系アクションならfieldを"result"に自動設定
+      if (isJudgeActionType(whenStepInput.value)) {
+        whenFieldInput.value = "result";
+      }
+      syncWhen();
+    });
     whenFieldInput.addEventListener("input", syncWhen);
     whenMatchSelect.addEventListener("change", syncWhen);
     whenEqualsInput.addEventListener("input", syncWhen);
