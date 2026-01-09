@@ -950,6 +950,35 @@
         return chip;
       };
 
+      // description内の {{ ... }} を抽出してチップとして表示
+      const buildDescWithExamples = (desc) => {
+        const fragment = document.createDocumentFragment();
+        const regex = /\{\{[^}]+\}\}/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(desc)) !== null) {
+          // マッチ前のテキストを追加
+          if (match.index > lastIndex) {
+            const textNode = document.createTextNode(desc.slice(lastIndex, match.index));
+            fragment.appendChild(textNode);
+          }
+
+          // {{ ... }} をチップとして追加
+          const example = match[0];
+          fragment.appendChild(buildExampleChip(example));
+          lastIndex = regex.lastIndex;
+        }
+
+        // 残りのテキストを追加
+        if (lastIndex < desc.length) {
+          const textNode = document.createTextNode(desc.slice(lastIndex));
+          fragment.appendChild(textNode);
+        }
+
+        return fragment;
+      };
+
       const buildSection = (label, items, withExamples, sectionClass) => {
         if (!items || items.length === 0) {
           return null;
@@ -967,12 +996,21 @@
         items.forEach((item) => {
           const line = document.createElement("div");
           line.className = "guide-item";
-          const text = document.createElement("span");
-          text.className = "guide-text";
-          text.textContent = `${item.key}: ${item.desc}`;
-          line.appendChild(text);
 
-          if (withExamples && item.example) {
+          // キー名
+          const keySpan = document.createElement("span");
+          keySpan.className = "guide-text";
+          keySpan.textContent = `${item.key}: `;
+          line.appendChild(keySpan);
+
+          // description内の {{ ... }} をチップ化
+          const descSpan = document.createElement("span");
+          descSpan.className = "guide-text";
+          descSpan.appendChild(buildDescWithExamples(item.desc));
+          line.appendChild(descSpan);
+
+          // 別途 example がある場合は追加
+          if (withExamples && item.example && !item.desc.includes(item.example)) {
             const exampleLabel = document.createElement("span");
             exampleLabel.className = "guide-example-label";
             exampleLabel.textContent = "例:";
@@ -995,10 +1033,15 @@
         guideWrap.appendChild(paramsSection);
       }
 
-      const outputs = (guide.outputs || []).map((item) => ({
-        ...item,
-        example: item.example || `{{ ${exampleStepId}.${item.key} }}`,
-      }));
+      const outputs = (guide.outputs || []).map((item) => {
+        // description内の step_id を実際のステップIDに置換
+        const desc = item.desc.replace(/step_id/g, exampleStepId);
+        return {
+          ...item,
+          desc: desc,
+          example: item.example || `{{ ${exampleStepId}.${item.key} }}`,
+        };
+      });
       const outputsSection = buildSection(
         "出力の参照例（次のステップで使う）",
         outputs,

@@ -327,7 +327,8 @@ async def _call_gemini_rest(
             }
         ],
         "outputs": [
-            {"key": "text", "description": "生成テキスト"},
+            {"key": "text", "description": "生成テキスト（JSON形式で出力させた場合は {{ step_id.text | fromjson }} でパース可能）"},
+            {"key": "raw", "description": "生のAPIレスポンス（JSON形式）"},
             {"key": "model", "description": "使用モデル"},
             {"key": "provider", "description": "プロバイダー"},
             {"key": "finish_reason", "description": "完了理由"},
@@ -356,6 +357,7 @@ async def action_ai_generate(
     Returns:
         {
             "text": "生成されたテキスト",
+            "raw": "生のAPIレスポンス（JSON形式）",
             "model": "使用したモデル名",
             "provider": "gemini",
             "finish_reason": "完了理由",
@@ -363,6 +365,19 @@ async def action_ai_generate(
             "grounding": dict | None,
             ...
         }
+
+    使用例:
+        # AI に JSON 形式で出力させ、sheets_write/excel_write で使う
+        - id: ai_1
+          type: ai_generate
+          params:
+            prompt: "タスク一覧を2次元配列のJSONで出力してください"
+            # AI出力例: '[["タスク1", "完了"], ["タスク2", "未完了"]]'
+
+        - id: sheet_1
+          type: sheets_write
+          params:
+            values: "{{ ai_1.text | fromjson }}"  # JSON文字列 → 配列に変換
     """
     provider = params.get("provider", "gemini").lower()
     model = params.get("model")
