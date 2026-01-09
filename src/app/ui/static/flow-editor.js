@@ -17,6 +17,7 @@
     ACTION_GUIDES: {},
     selectedId: null,
     zoomLevel: 1.0,
+    workflowsCache: [],
   };
 
   const buildActionGuides = (metadata) => {
@@ -97,6 +98,24 @@
   };
 
   const getDefaultParams = (type) => ({ ...(DEFAULT_PARAMS[type] || {}) });
+
+  const fetchWorkflows = async () => {
+    if (state.workflowsCache.length > 0) {
+      return state.workflowsCache;
+    }
+    try {
+      const response = await fetch('/api/workflows');
+      if (response.ok) {
+        const data = await response.json();
+        state.workflowsCache = data.workflows || [];
+        return state.workflowsCache;
+      }
+    } catch (error) {
+      console.error('Failed to fetch workflows:', error);
+    }
+    return [];
+  };
+
 
   const setStatus = (message, isError = false) => {
     if (!statusEl) {
@@ -467,26 +486,198 @@
 
     keySelect.addEventListener("change", () => {
       setKeyMode(keySelect.value);
+      
+      // workflow_nameパラメータが選択された場合、ドロップダウンを表示
+      if (keySelect.value === "workflow_name") {
+        // valueWrapの中身をクリア
+        while (valueWrap.firstChild) {
+          valueWrap.removeChild(valueWrap.firstChild);
+        }
+        
+        // ドロップダウンを作成
+        const dropdown = document.createElement("select");
+        dropdown.className = "param-value";
+        
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "ワークフローを選択";
+        dropdown.appendChild(defaultOption);
+        
+        // ワークフロー一覧を取得
+        fetchWorkflows().then((workflows) => {
+          workflows.forEach((workflowName) => {
+            const opt = document.createElement("option");
+            opt.value = workflowName;
+            opt.textContent = workflowName;
+            dropdown.appendChild(opt);
+          });
+        });
+        
+        // カスタム入力オプション
+        const customOption = document.createElement("option");
+        customOption.value = "__custom_input__";
+        customOption.textContent = "カスタム入力...";
+        dropdown.appendChild(customOption);
+        
+        // カスタム入力用テキストボックス
+        const customInput = document.createElement("input");
+        customInput.type = "text";
+        customInput.placeholder = "ワークフロー名を入力";
+        customInput.style.display = "none";
+        customInput.className = "param-custom-input";
+        
+        // ドロップダウン変更時の処理
+        dropdown.addEventListener("change", () => {
+          if (dropdown.value === "__custom_input__") {
+            customInput.style.display = "block";
+            customInput.focus();
+          } else {
+            customInput.style.display = "none";
+          }
+          // inputイベントを発火
+          dropdown.dispatchEvent(new Event("input"));
+        });
+        
+        // カスタム入力の変更イベント
+        customInput.addEventListener("input", () => {
+          dropdown.dispatchEvent(new Event("input"));
+        });
+        
+        valueWrap.appendChild(dropdown);
+        valueWrap.appendChild(customInput);
+        
+        // valueInputを更新（既存のイベントリスナーが正しく動作するように）
+        if (valueInput && valueInput.parentNode) {
+          valueInput.remove();
+        }
+        valueInput = dropdown;
+      } else if (valueInput && valueInput.tagName === "SELECT") {
+        // workflow_name以外が選択された場合、テキストエリアに戻す
+        while (valueWrap.firstChild) {
+          valueWrap.removeChild(valueWrap.firstChild);
+        }
+        
+        const textarea = document.createElement("textarea");
+        textarea.value = "";
+        textarea.placeholder = "例: {{ step_1.text }}";
+        textarea.className = "param-value";
+        
+        valueWrap.appendChild(textarea);
+        
+        // AIボタンを追加
+        const aiButton = document.createElement("button");
+        aiButton.type = "button";
+        aiButton.className = "ai-expression-button";
+        aiButton.textContent = "🤖 AI";
+        aiButton.title = "AIで式を構築";
+        valueWrap.appendChild(aiButton);
+        
+        // valueInputを更新
+        if (valueInput && valueInput.parentNode) {
+          valueInput.remove();
+        }
+        valueInput = textarea;
+      }
     });
 
     keyWrap.appendChild(keySelect);
     keyWrap.appendChild(keyInput);
 
-    const valueInput = document.createElement("textarea");
-    valueInput.value = value || "";
-    valueInput.placeholder = "例: {{ step_1.text }}";
-    valueInput.className = "param-value";
-
     const valueWrap = document.createElement("div");
     valueWrap.className = "param-value-wrap";
-    valueWrap.appendChild(valueInput);
 
-    const aiButton = document.createElement("button");
-    aiButton.type = "button";
-    aiButton.className = "ai-expression-button";
-    aiButton.textContent = "🤖 AI";
-    aiButton.title = "AIで式を構築";
-    valueWrap.appendChild(aiButton);
+    let valueInput;
+    let aiButton = null;
+
+    // workflow_nameパラメータの場合はドロップダウンを表示
+    const isWorkflowNameParam = (keyInput?.value || keySelect?.value) === "workflow_name";
+
+    if (isWorkflowNameParam) {
+      // ドロップダウン表示
+      valueInput = document.createElement("select");
+      valueInput.className = "param-value";
+
+      // デフォルトオプション
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "ワークフローを選択";
+      valueInput.appendChild(defaultOption);
+
+      // ワークフロー一覧を非同期で取得
+      fetchWorkflows().then((workflows) => {
+        workflows.forEach((workflowName) => {
+          const opt = document.createElement("option");
+          opt.value = workflowName;
+          opt.textContent = workflowName;
+          valueInput.appendChild(opt);
+        });
+        // 既存の値を設定（存在するワークフローと一致する場合）
+        if (value && workflows.includes(value)) {
+          valueInput.value = value;
+        } else if (value) {
+          // 値が既存のワークフローと一致しない場合、カスタム値として扱う
+          const customOption = document.createElement("option");
+          customOption.value = value;
+          customOption.textContent = value + " (カスタム)";
+          valueInput.appendChild(customOption);
+          valueInput.value = value;
+        }
+      });
+
+      // カスタム入力オプション
+      const customOption = document.createElement("option");
+      customOption.value = "__custom_input__";
+      customOption.textContent = "カスタム入力...";
+      valueInput.appendChild(customOption);
+
+      // カスタム入力用テキストボックス（初期は非表示）
+      const customInput = document.createElement("input");
+      customInput.type = "text";
+      customInput.value = value || "";
+      customInput.placeholder = "ワークフロー名を入力";
+      customInput.style.display = "none";
+      customInput.className = "param-custom-input";
+
+      // ドロップダウン変更時の処理
+      valueInput.addEventListener("change", () => {
+        if (valueInput.value === "__custom_input__") {
+          customInput.style.display = "block";
+          customInput.focus();
+        } else {
+          customInput.style.display = "none";
+          customInput.value = valueInput.value;
+        }
+        // inputイベントを発火してパラメータを更新
+        customInput.dispatchEvent(new Event("input"));
+      });
+
+      // カスタム入力の変更イベント
+      customInput.addEventListener("input", () => {
+        // 親のinputイベントを発火
+        customInput.dispatchEvent(new CustomEvent("param-change", { bubbles: true, detail: customInput.value }));
+      });
+
+      valueWrap.appendChild(valueInput);
+      valueWrap.appendChild(customInput);
+
+      // カスタム入力の値を取得するためのプロパティ
+      valueInput.getCustomValue = () => customInput.value;
+    } else {
+      // 通常のテキストエリア
+      valueInput = document.createElement("textarea");
+      valueInput.value = value || "";
+      valueInput.placeholder = "例: {{ step_1.text }}";
+      valueInput.className = "param-value";
+
+      valueWrap.appendChild(valueInput);
+
+      aiButton = document.createElement("button");
+      aiButton.type = "button";
+      aiButton.className = "ai-expression-button";
+      aiButton.textContent = "🤖 AI";
+      aiButton.title = "AIで式を構築";
+      valueWrap.appendChild(aiButton);
+    }
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -696,6 +887,25 @@
       return previousSteps;
     };
 
+    const getParamValue = (row) => {
+      const keyInputEl = row.querySelector(".param-key input");
+      const keySelectEl = row.querySelector(".param-key select");
+      const valueInputEl = row.querySelector(".param-value");
+      const customInputEl = row.querySelector(".param-custom-input");
+      
+      const key = (keyInputEl?.value || keySelectEl?.value || "").trim();
+      
+      // workflow_nameパラメータの場合、カスタム入力の値を優先
+      let value;
+      if (key === "workflow_name" && customInputEl && customInputEl.style.display !== "none") {
+        value = customInputEl.value || "";
+      } else {
+        value = valueInputEl?.value || "";
+      }
+      
+      return { key, value };
+    };
+
     const applyParams = (params) => {
       // 既存のパラメータ行をクリア
       const paramsList = inspectorEl.querySelector(".inspector-row:nth-child(5) > div");
@@ -718,48 +928,31 @@
         );
         paramsList.appendChild(row);
 
+        // パラメータ更新用共通関数
+        const updateParams = () => {
+          const updatedParams = {};
+          paramsList.querySelectorAll(".param-row").forEach((r) => {
+            const { key: k, value: v } = getParamValue(r);
+            if (k) updatedParams[k] = v;
+          });
+          step.params = updatedParams;
+        };
+
         // イベントリスナーを再登録
         removeButton.addEventListener("click", () => {
           row.remove();
-          // ステップのparamsを更新
-          const updatedParams = {};
-          paramsList.querySelectorAll(".param-row").forEach((r) => {
-            const k = r.querySelector(".param-key input")?.value || "";
-            const v = r.querySelector(".param-value")?.value || "";
-            if (k) updatedParams[k] = v;
-          });
-          step.params = updatedParams;
+          updateParams();
         });
 
-        keyInput.addEventListener("input", () => {
-          const updatedParams = {};
-          paramsList.querySelectorAll(".param-row").forEach((r) => {
-            const k = r.querySelector(".param-key input")?.value || "";
-            const v = r.querySelector(".param-value")?.value || "";
-            if (k) updatedParams[k] = v;
-          });
-          step.params = updatedParams;
-        });
-
-        keySelect.addEventListener("change", () => {
-          const updatedParams = {};
-          paramsList.querySelectorAll(".param-row").forEach((r) => {
-            const k = r.querySelector(".param-key input")?.value || "";
-            const v = r.querySelector(".param-value")?.value || "";
-            if (k) updatedParams[k] = v;
-          });
-          step.params = updatedParams;
-        });
-
-        valueInput.addEventListener("input", () => {
-          const updatedParams = {};
-          paramsList.querySelectorAll(".param-row").forEach((r) => {
-            const k = r.querySelector(".param-key input")?.value || "";
-            const v = r.querySelector(".param-value")?.value || "";
-            if (k) updatedParams[k] = v;
-          });
-          step.params = updatedParams;
-        });
+        keyInput.addEventListener("input", updateParams);
+        keySelect.addEventListener("change", updateParams);
+        
+        // valueInputがselect（ドロップダウン）の場合はchangeイベントを監視
+        if (valueInput.tagName === "SELECT") {
+          valueInput.addEventListener("change", updateParams);
+        } else {
+          valueInput.addEventListener("input", updateParams);
+        }
 
         // AIボタンも再登録
         const aiButton = row.querySelector(".ai-expression-button");
@@ -1102,9 +1295,20 @@
       const nextParams = {};
       rows.forEach((row) => {
         const keyInputEl = row.querySelector(".param-key input");
+        const keySelectEl = row.querySelector(".param-key select");
         const valueInputEl = row.querySelector(".param-value");
-        const key = (keyInputEl?.value || "").trim();
-        const value = valueInputEl?.value || "";
+        const customInputEl = row.querySelector(".param-custom-input");
+        
+        const key = (keyInputEl?.value || keySelectEl?.value || "").trim();
+        
+        // workflow_nameパラメータの場合、カスタム入力の値を優先
+        let value;
+        if (key === "workflow_name" && customInputEl && customInputEl.style.display !== "none") {
+          value = customInputEl.value || "";
+        } else {
+          value = valueInputEl?.value || "";
+        }
+        
         if (key) {
           nextParams[key] = value;
         }
@@ -1122,10 +1326,19 @@
       });
       keyInput.addEventListener("input", updateParamsFromUI);
       keySelect.addEventListener("change", updateParamsFromUI);
-      valueInput.addEventListener("input", updateParamsFromUI);
-      aiButton.addEventListener("click", () => {
-        openExpressionBuilder(valueInput, step);
-      });
+      
+      // valueInputがselect（ドロップダウン）の場合はchangeイベントを監視
+      if (valueInput.tagName === "SELECT") {
+        valueInput.addEventListener("change", updateParamsFromUI);
+      } else {
+        valueInput.addEventListener("input", updateParamsFromUI);
+      }
+      
+      if (aiButton) {
+        aiButton.addEventListener("click", () => {
+          openExpressionBuilder(valueInput, step);
+        });
+      }
       return { row, keyInput, valueInput };
     };
 
@@ -1841,6 +2054,7 @@
   scheduleCronPreview();
 
   refreshActions();
+  fetchWorkflows();
   renderCanvas();
   renderInspector();
 

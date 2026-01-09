@@ -599,6 +599,15 @@ async def list_actions():
     return {"actions": actions, "metadata": metadata}
 
 
+@app.get("/api/workflows")
+async def list_workflows_api():
+    """ワークフロー一覧取得（UI用、subworkflowドロップダウン用）"""
+    workflows = loader.list_workflows()
+    # 有効なワークフローのみ返す
+    workflow_names = [wf.name for wf in workflows if wf.is_valid]
+    return {"workflows": workflow_names}
+
+
 @app.post("/api/ai/flow")
 async def build_flow_with_ai(request: Request):
     """AI でワークフロー案を生成"""
