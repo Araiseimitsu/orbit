@@ -74,12 +74,17 @@ class Executor:
 
         return actual == expected, None
 
-    async def run(self, workflow: Workflow) -> RunLog:
+    async def run(
+        self, 
+        workflow: Workflow, 
+        context: dict[str, Any] | None = None
+    ) -> RunLog:
         """
         ワークフローを実行
 
         Args:
             workflow: 実行するワークフロー
+            context: 外部から渡されるコンテキスト（オプション、サブワークフロー用）
 
         Returns:
             RunLog: 実行結果
@@ -89,7 +94,12 @@ class Executor:
         today = started_at.date()
 
         # コンテキスト初期化
-        context: dict[str, Any] = {
+        # 外部 context が渡された場合は基本変数のみで初期化して後で統合
+        if context is None:
+            context = {}
+        
+        # 基本変数を設定（外部 context がある場合は更新）
+        base_context: dict[str, Any] = {
             "run_id": run_id,
             "workflow": workflow.name,
             "now": started_at.isoformat(),
@@ -100,6 +110,9 @@ class Executor:
             "today_ymd": started_at.strftime("%Y%m%d"),
             "now_ymd_hms": started_at.strftime("%Y%m%d_%H%M%S"),
         }
+        
+        # 外部 context で基本変数を上書き（サブワークフローの場合）
+        context.update(base_context)
 
         # 実行ログ初期化
         run_log = RunLog(
@@ -248,5 +261,5 @@ class Executor:
                 "id": step_id,
                 "type": step_type,
                 "status": "failed",
-                "error": str(e),
+                "error": str(e)
             }

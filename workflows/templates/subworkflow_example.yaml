@@ -1,0 +1,30 @@
+name: subworkflow_example
+description: サブワークフローの使用例
+enabled: false
+trigger:
+  type: manual
+steps:
+  - id: prepare_input
+    type: log
+    params:
+      message: "Preparing input data"
+    meta:
+      x: 80
+      y: 80
+
+  - id: call_subworkflow
+    type: subworkflow
+    params:
+      workflow_name: hello_world
+      custom_param: "{{ prepare_input.logged }}"
+    meta:
+      x: 80
+      y: 200
+
+  - id: finalize
+    type: log
+    params:
+      message: "Subworkflow result: {{ call_subworkflow.results.greet.logged }}"
+    meta:
+      x: 80
+      y: 320

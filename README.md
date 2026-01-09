@@ -14,6 +14,7 @@ n8n ライクなワークフロー実行エンジン（MVP）。YAML でワー�
 - Excel/Google Sheets の読み書き
 - ファイル操作（読み書き、コピー、移動、削除、リネーム）
 - AIを使わない判定アクション（完全一致、部分一致、正規表現、数値比較）
+- サブワークフローによるワークフローの再利用
 
 ## 動作環境
 
@@ -170,6 +171,57 @@ steps:
 | `judge_contains` | 部分一致判定 |
 | `judge_regex` | 正規表現判定（プリセット対応） |
 | `judge_numeric` | 数値範囲判定 |
+
+### 制御フロー
+
+| アクション名 | 説明 |
+|------------|------|
+| `subworkflow` | 他のワークフローを呼び出して実行 |
+
+#### サブワークフロー
+
+他のワークフローを呼び出して実行します。再利用可能なワークフローモジュールを作成できます。
+
+```yaml
+steps:
+  - id: prepare_data
+    type: log
+    params:
+      message: "Preparing data"
+  
+  - id: call_subworkflow
+    type: subworkflow
+    params:
+      workflow_name: data_processing
+      input_data: "{{ prepare_data.result }}"
+  
+  - id: use_result
+    type: log
+    params:
+      message: "Result: {{ call_subworkflow.results.step_1.output }}"
+```
+
+**パラメータ:**
+
+- `workflow_name` (必須): 呼び出すワークフロー名（YAMLファイル名）
+- `max_depth` (オプション): 最大呼び出し深度（デフォルト: 5）
+- `continue_on_error` (オプション): エラー時も続行するか（デフォルト: false）
+- その他の任意のパラメータ: サブワークフローのcontextに渡されます
+
+**出力:**
+
+- `success`: 成功フラグ
+- `status`: 実行ステータス (success/failed/skipped)
+- `run_id`: サブワークフローの実行ID
+- `results`: 各ステップの実行結果 `{step_id: {...}}`
+- `error`: エラーメッセージ（失敗時）
+
+**注意点:**
+
+- 循環参照（ワークフローがお互いを呼び出す）は自動的に検出され、エラーになります
+- 最大呼び出し深度を超えるとエラーになります
+- 親ワークフローのステップ結果はサブワークフローに渡されません（カオスを防ぐため）
+- 基本変数（`run_id`, `now`, `today` など）は自動的に引き継がれます
 
 ### その他
 
