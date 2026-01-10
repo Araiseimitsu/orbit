@@ -30,6 +30,16 @@ API キー設定:
           }
         content: "これはページの本文です"
         icon: "📝"
+
+    - id: update_page
+      type: notion_update_page
+      params:
+        page_id: "{{ create_page.page_id }}"
+        properties: |
+          {
+            "Status": {"select": {"name": "Done"}}
+          }
+        icon: "✅"
 """
 
 import asyncio
@@ -368,6 +378,76 @@ async def _create_page(
     return await loop.run_in_executor(None, _do_request)
 
 
+@retry_async(
+    max_attempts=3,
+    delay=1.0,
+    backoff=2.0,
+    exceptions=(
+        requests.exceptions.RequestException,
+        requests.exceptions.Timeout,
+        requests.exceptions.ConnectionError,
+    ),
+)
+async def _update_page(
+    page_id: str,
+    properties: dict | None,
+    api_key: str,
+    archived: bool | None = None,
+    icon: str | None = None,
+    cover: str | None = None,
+) -> dict[str, Any]:
+    """
+    Notion ページを更新（リトライ付き）
+
+    Args:
+        page_id: ページID
+        properties: 更新するプロパティ（None の場合更新しない）
+        api_key: Notion API キー
+        archived: アーカイブ（削除）フラグ
+        icon: アイコン（emoji または URL）
+        cover: カバー画像URL
+
+    Returns:
+        Notion API レスポンス
+
+    Raises:
+        requests.HTTPError: API エラー
+    """
+    loop = asyncio.get_event_loop()
+
+    def _do_request():
+        url = f"{NOTION_API_BASE}/pages/{page_id}"
+        headers = _build_headers(api_key)
+        payload: dict[str, Any] = {}
+
+        if properties is not None:
+            payload["properties"] = properties
+
+        if archived is not None:
+            payload["archived"] = archived
+
+        if icon:
+            # emoji または URL
+            if len(icon) <= 2:  # emoji
+                payload["icon"] = {"type": "emoji", "emoji": icon}
+            else:  # URL
+                payload["icon"] = {"type": "external", "external": {"url": icon}}
+
+        if cover:
+            payload["cover"] = {"type": "external", "external": {"url": cover}}
+
+        response = requests.patch(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    return await loop.run_in_executor(None, _do_request)
+
+
 @register_action(
     "notion_query_database",
     metadata={
@@ -644,6 +724,154 @@ async def action_notion_create_page(
             "properties": result.get("properties"),
             "created_time": result.get("created_time"),
             "database_id": database_id,
+        }
+
+    except requests.HTTPError as exc:
+        detail = _extract_error_detail(exc.response)
+        logger.error(f"Notion API エラー: {exc} {f'detail={detail}' if detail else ''}")
+        if detail:
+            raise RuntimeError(f"Notion API エラー: {detail}") from exc
+        raise
+
+
+@register_action(
+    "notion_update_page",
+    metadata={
+        "title": "Notion ページ更新",
+        "description": "Notionの既存ページを更新します（プロパティ、アーカイブ、アイコン等）。",
+        "category": "Notion",
+        "color": "#000000",
+        "params": [
+            {
+                "key": "page_id",
+                "description": "ページID",
+                "required": True,
+                "example": "0123456789abcdef0123456789abcdef"
+            },
+            {
+                "key": "properties",
+                "description": "更新するプロパティ（JSON または辞書）",
+                "required": False,
+                "example": '{"Status": {"select": {"name": "Done"}}}'
+            },
+            {
+                "key": "archived",
+                "description": "アーカイブ（削除）するかどうか",
+                "required": False,
+                "default": False,
+                "example": "false"
+            },
+            {
+                "key": "icon",
+                "description": "アイコン（emoji または URL）",
+                "required": False,
+                "example": "✅"
+            },
+            {
+                "key": "cover",
+                "description": "カバー画像URL",
+                "required": False,
+                "example": "https://example.com/cover.jpg"
+            },
+            {
+                "key": "api_key",
+                "description": "Notion API キー（直接指定）",
+                "required": False,
+                "example": "secret_xxx"
+            },
+            {
+                "key": "api_key_file",
+                "description": "API キーのファイルパス",
+                "required": False,
+                "default": "secrets/notion_api_key.txt",
+                "example": "secrets/notion_api_key.txt"
+            }
+        ],
+        "outputs": [
+            {"key": "page_id", "description": "ページID"},
+            {"key": "url", "description": "ページURL"},
+            {"key": "properties", "description": "更新後のプロパティ"},
+            {"key": "archived", "description": "アーカイブ状態"},
+            {"key": "last_edited_time", "description": "最終更新日時（ISO 8601）"}
+        ]
+    }
+)
+async def action_notion_update_page(
+    params: dict[str, Any], context: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Notion の既存ページを更新
+
+    params:
+        page_id: ページID（必須）
+        properties: 更新するプロパティ（JSON または辞書、オプション）
+        archived: アーカイブ（削除）フラグ（オプション）
+        icon: アイコン（emoji または URL、オプション）
+        cover: カバー画像URL（オプション）
+        api_key: Notion API キー（直接指定、オプション）
+        api_key_file: API キーのファイルパス（オプション）
+
+    context:
+        base_dir: プロジェクトルート
+
+    Returns:
+        {
+            "page_id": str,              # ページID
+            "url": str,                  # ページURL
+            "properties": dict,          # 更新後のプロパティ
+            "archived": bool,            # アーカイブ状態
+            "last_edited_time": str      # 最終更新日時（ISO 8601）
+        }
+    """
+    # パラメータ取得とバリデーション
+    page_id = params.get("page_id")
+    if not page_id:
+        raise ValueError("page_id は必須です")
+
+    # API キー読み込み
+    base_dir = context.get("base_dir", Path.cwd())
+    api_key = params.get("api_key")
+    if isinstance(api_key, str):
+        api_key = api_key.strip()
+    if not api_key:
+        api_key_file = params.get("api_key_file", DEFAULT_NOTION_KEY_FILE)
+        api_key = _load_api_key(str(api_key_file), base_dir, DEFAULT_NOTION_KEY_ENV)
+
+    # オプションパラメータ
+    properties = _normalize_json(params.get("properties"))
+    archived = params.get("archived")
+    if archived is not None:
+        if isinstance(archived, str):
+            archived = archived.lower() in ("true", "1", "yes")
+        archived = bool(archived)
+
+    icon = params.get("icon")
+    cover = params.get("cover")
+
+    # 少なくとも1つの更新項目が必要
+    if properties is None and archived is None and not icon and not cover:
+        raise ValueError("更新する項目（properties、archived、icon、cover）のいずれかを指定してください")
+
+    logger.info(f"Notion ページ更新開始: page_id={page_id}")
+
+    try:
+        result = await _update_page(
+            page_id=page_id,
+            properties=properties,
+            api_key=api_key,
+            archived=archived,
+            icon=icon,
+            cover=cover,
+        )
+
+        logger.info(f"Notion ページ更新完了: page_id={page_id}")
+
+        return {
+            "page_id": result.get("id"),
+            "url": result.get("url"),
+            "properties": result.get("properties"),
+            "archived": result.get("archived", False),
+            "last_edited_time": result.get("last_edited_time"),
         }
 
     except requests.HTTPError as exc:
