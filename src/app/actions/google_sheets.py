@@ -91,6 +91,65 @@ def _get_sheets_service(credentials_path: Path):
     return service
 
 
+def _normalize_spreadsheet_id(id_or_url: str) -> str:
+    """
+    Google Sheets IDまたはURLからIDを抽出・正規化
+
+    Args:
+        id_or_url: Spreadsheet ID または Google Sheets URL
+
+    Returns:
+        正規化されたSpreadsheet ID
+
+    Examples:
+        - "1AbCdEfGhIjKlMnOpQrStUvWxYz" → "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+        - "https://docs.google.com/spreadsheets/d/1AbCdEfGh.../edit" → "1AbCdEfGh..."
+    """
+    import re
+    from urllib.parse import urlparse
+
+    if not id_or_url:
+        raise ValueError("Spreadsheet ID または URL が空です")
+
+    id_or_url = str(id_or_url).strip()
+
+    # URLの場合はIDを抽出
+    if id_or_url.startswith("http://") or id_or_url.startswith("https://"):
+        # URLをパース
+        parsed = urlparse(id_or_url)
+
+        # Google Sheets URLかチェック
+        if "docs.google.com" not in parsed.netloc:
+            raise ValueError(
+                f"Google Sheets の URL ではありません: {id_or_url}\n"
+                f"https://docs.google.com/spreadsheets/... の形式で指定してください。"
+            )
+
+        # パスから ID を抽出
+        # 形式: /spreadsheets/d/{id}/edit
+        # または: /spreadsheets/d/{id}
+        path = parsed.path
+        match = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', path)
+
+        if not match:
+            raise ValueError(
+                f"URLからSpreadsheet IDを抽出できません: {id_or_url}\n"
+                f"正しいGoogle Sheets URLを指定してください。"
+            )
+
+        extracted_id = match.group(1)
+        id_or_url = extracted_id
+
+    # IDの形式をバリデーション（Google Sheets IDは英数字とハイフン、アンダースコア）
+    if not re.match(r'^[a-zA-Z0-9-_]+$', id_or_url):
+        raise ValueError(
+            f"無効なSpreadsheet ID形式です: {id_or_url}\n"
+            f"英数字、ハイフン、アンダースコアのみ使用可能です。"
+        )
+
+    return id_or_url
+
+
 def _normalize_values(values: Any) -> list[list[Any]]:
     """
     values を 2次元配列に正規化
@@ -226,9 +285,9 @@ def _parse_values_with_header(
         "params": [
             {
                 "key": "spreadsheet_id",
-                "description": "スプレッドシートID (URL から取得可能)",
+                "description": "スプレッドシートID（Google SheetsのURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
+                "example": "https://docs.google.com/spreadsheets/d/1AbCdEfGh... または 1AbCdEfGh...",
             },
             {
                 "key": "sheet",
@@ -299,6 +358,9 @@ async def action_sheets_read(
     spreadsheet_id = params.get("spreadsheet_id")
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
+
+    # spreadsheet_id を正規化（URL対応）
+    spreadsheet_id = _normalize_spreadsheet_id(spreadsheet_id)
 
     sheet_param = params.get("sheet")
     range_notation = params.get("range")
@@ -400,6 +462,9 @@ async def action_sheets_list(
     spreadsheet_id = params.get("spreadsheet_id")
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
+
+    # spreadsheet_id を正規化（URL対応）
+    spreadsheet_id = _normalize_spreadsheet_id(spreadsheet_id)
 
     credentials_file = params.get("credentials_file", DEFAULT_CREDENTIALS_FILE)
 
@@ -539,6 +604,9 @@ async def action_sheets_append(
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
 
+    # spreadsheet_id を正規化（URL対応）
+    spreadsheet_id = _normalize_spreadsheet_id(spreadsheet_id)
+
     sheet_param = params.get("sheet")
     range_notation = params.get("range")
     if not range_notation:
@@ -674,6 +742,9 @@ async def action_sheets_write(
     spreadsheet_id = params.get("spreadsheet_id")
     if not spreadsheet_id:
         raise ValueError("spreadsheet_id は必須です")
+
+    # spreadsheet_id を正規化（URL対応）
+    spreadsheet_id = _normalize_spreadsheet_id(spreadsheet_id)
 
     sheet_param = params.get("sheet")
     range_notation = params.get("range")

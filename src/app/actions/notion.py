@@ -7,7 +7,22 @@ API キー設定:
     環境変数 NOTION_API_KEY または secrets/notion_api_key.txt に Notion API キー
 
 使用例 (YAML):
+    # データベース検索（シンプル形式）- 推奨
     - id: query_db
+      type: notion_query_database
+      params:
+        database_id: "0123456789abcdef0123456789abcdef"
+        filter_simple:
+          Status: "完了"
+          Priority: ">5"
+          Completed: true
+        sorts_simple:
+          - Created: desc
+          - Priority: asc
+        page_size: 50
+
+    # データベース検索（Notion API形式）- 上級者向け
+    - id: query_db_advanced
       type: notion_query_database
       params:
         database_id: "0123456789abcdef0123456789abcdef"
@@ -16,9 +31,38 @@ API キー設定:
             "property": "Status",
             "select": {"equals": "Done"}
           }
+        sorts: |
+          [
+            {"property": "Created", "direction": "descending"}
+          ]
         page_size: 50
 
+    # ページ作成（シンプル形式）- 推奨
     - id: create_page
+      type: notion_create_page
+      params:
+        database_id: "0123456789abcdef0123456789abcdef"
+        properties_simple:
+          Name: "新しいタスク"
+          Status: "進行中"
+          Priority: 5
+          Due: "2026-01-15"
+          Completed: false
+        content: "これはページの本文です"
+        icon: "📝"
+
+    # ページ更新（シンプル形式）- 推奨
+    - id: update_page
+      type: notion_update_page
+      params:
+        page_id: "{{ create_page.page_id }}"
+        properties_simple:
+          Status: "完了"
+          Priority: 10
+        icon: "✅"
+
+    # ページ作成（Notion API形式）- 上級者向け
+    - id: create_page_advanced
       type: notion_create_page
       params:
         database_id: "0123456789abcdef0123456789abcdef"
@@ -26,20 +70,13 @@ API キー設定:
           {
             "Name": {
               "title": [{"text": {"content": "新しいタスク"}}]
+            },
+            "Status": {
+              "select": {"name": "進行中"}
             }
           }
         content: "これはページの本文です"
         icon: "📝"
-
-    - id: update_page
-      type: notion_update_page
-      params:
-        page_id: "{{ create_page.page_id }}"
-        properties: |
-          {
-            "Status": {"select": {"name": "Done"}}
-          }
-        icon: "✅"
 """
 
 import asyncio
@@ -135,6 +172,78 @@ def _load_api_key(file_path: str, base_dir: Path, env_var_name: str = "NOTION_AP
     return key
 
 
+def _normalize_notion_id(id_or_url: str) -> str:
+    """
+    Notion IDまたはURLからIDを抽出・正規化
+
+    Args:
+        id_or_url: Notion ID（32文字の16進数）またはNotion URL
+
+    Returns:
+        正規化されたID（32文字、ハイフンなし）
+
+    Examples:
+        - "abc123def456..." → "abc123def456..."
+        - "abc123de-f456-..." → "abc123def456..."（ハイフン削除）
+        - "https://www.notion.so/workspace/Page-abc123def456" → "abc123def456..."
+        - "https://www.notion.so/abc123def456" → "abc123def456..."
+    """
+    import re
+    from urllib.parse import urlparse
+
+    if not id_or_url:
+        raise ValueError("ID または URL が空です")
+
+    id_or_url = str(id_or_url).strip()
+
+    # URLの場合はIDを抽出
+    if id_or_url.startswith("http://") or id_or_url.startswith("https://"):
+        # URLをパース
+        parsed = urlparse(id_or_url)
+        path = parsed.path
+
+        # パスからIDを抽出
+        # 形式1: /workspace/Title-{id}
+        # 形式2: /{id}
+        # 形式3: /workspace/{id}
+
+        # 32文字の16進数（ハイフンあり・なし）を探す
+        # Notion IDは通常32文字（ハイフンなし）または36文字（UUID形式、ハイフンあり）
+        id_pattern = r'([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})'
+        match = re.search(id_pattern, path)
+
+        if match:
+            extracted_id = match.group(1)
+        else:
+            # パスの最後のセグメントを取得（クエリパラメータを除く）
+            segments = [s for s in path.split('/') if s]
+            if not segments:
+                raise ValueError(f"URLからIDを抽出できません: {id_or_url}")
+
+            last_segment = segments[-1]
+            # タイトル-ID形式の場合、最後のハイフン以降がID
+            if '-' in last_segment:
+                potential_id = last_segment.split('-')[-1]
+            else:
+                potential_id = last_segment
+
+            extracted_id = potential_id
+
+        id_or_url = extracted_id
+
+    # ハイフンを削除
+    normalized_id = id_or_url.replace('-', '')
+
+    # 32文字の16進数であることを確認
+    if not re.match(r'^[0-9a-fA-F]{32}$', normalized_id):
+        raise ValueError(
+            f"無効なNotion ID形式です: {id_or_url}\n"
+            f"32文字の16進数、またはNotion URLを指定してください。"
+        )
+
+    return normalized_id
+
+
 def _normalize_json(value: Any) -> dict | list | None:
     """
     JSON 文字列を dict/list に正規化
@@ -205,6 +314,253 @@ def _normalize_content(content: Any) -> list[dict] | None:
         ]
 
     raise ValueError("content はブロック配列、JSON文字列、またはプレーンテキストで指定してください")
+
+
+def _normalize_properties_simple(properties_simple: dict[str, Any]) -> dict[str, Any]:
+    """
+    シンプルな key-value 形式のプロパティを Notion API 形式に変換
+
+    Args:
+        properties_simple: シンプルな辞書（例: {"Name": "タスク名", "Status": "完了"}）
+
+    Returns:
+        Notion API 形式のプロパティ辞書
+
+    変換ルール:
+        - "Name", "Title", "名前" → title
+        - 文字列 → rich_text
+        - 数値（int/float） → number
+        - 日付文字列（YYYY-MM-DD） → date
+        - ブール値 → checkbox
+        - リスト → multi_select（文字列リストの場合）
+    """
+    import re
+    from datetime import datetime
+
+    result: dict[str, Any] = {}
+
+    # Title フィールド候補
+    TITLE_KEYS = {"name", "title", "名前", "タイトル"}
+
+    for key, value in properties_simple.items():
+        if value is None:
+            continue
+
+        key_lower = key.lower()
+
+        # Title プロパティ（最優先）
+        if key_lower in TITLE_KEYS:
+            result[key] = {
+                "title": [{"type": "text", "text": {"content": str(value)}}]
+            }
+        # ブール値 → checkbox
+        elif isinstance(value, bool):
+            result[key] = {"checkbox": value}
+        # 数値 → number
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            result[key] = {"number": value}
+        # リスト → multi_select
+        elif isinstance(value, list):
+            # 文字列リストの場合
+            if all(isinstance(v, str) for v in value):
+                result[key] = {
+                    "multi_select": [{"name": str(v)} for v in value if v]
+                }
+            else:
+                # 混合型リストは文字列化して rich_text に
+                text = ", ".join(str(v) for v in value)
+                result[key] = {
+                    "rich_text": [{"type": "text", "text": {"content": text}}]
+                }
+        # 文字列
+        elif isinstance(value, str):
+            value_str = value.strip()
+            if not value_str:
+                continue
+
+            # 日付形式（YYYY-MM-DD または YYYY-MM-DD HH:MM:SS）
+            date_match = re.match(r"^(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$", value_str)
+            if date_match:
+                try:
+                    # 日付バリデーション
+                    datetime.fromisoformat(value_str.replace(" ", "T"))
+                    # date プロパティ（start のみ）
+                    result[key] = {"date": {"start": date_match.group(1)}}
+                    continue
+                except ValueError:
+                    pass
+
+            # 通常の文字列 → rich_text
+            result[key] = {
+                "rich_text": [{"type": "text", "text": {"content": value_str}}]
+            }
+        else:
+            # その他の型は文字列化
+            result[key] = {
+                "rich_text": [{"type": "text", "text": {"content": str(value)}}]
+            }
+
+    return result
+
+
+def _normalize_filter_simple(filter_simple: dict[str, Any]) -> dict[str, Any]:
+    """
+    シンプルな key-value 形式のフィルタを Notion API 形式に変換
+
+    Args:
+        filter_simple: シンプルな辞書（例: {"Status": "完了", "Priority": ">5"}）
+
+    Returns:
+        Notion API 形式のフィルタ辞書
+
+    変換ルール:
+        - "値" → equals
+        - ">値" → greater_than
+        - ">=値" → greater_than_or_equal_to
+        - "<値" → less_than
+        - "<=値" → less_than_or_equal_to
+        - "!=値" → does_not_equal
+        - 複数条件は and で結合
+    """
+    import re
+    from datetime import datetime
+
+    if not filter_simple:
+        return {}
+
+    filters = []
+
+    for key, value in filter_simple.items():
+        if value is None:
+            continue
+
+        filter_obj: dict[str, Any] = {"property": key}
+
+        # ブール値 → checkbox
+        if isinstance(value, bool):
+            filter_obj["checkbox"] = {"equals": value}
+        # 数値 → number
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            filter_obj["number"] = {"equals": value}
+        # 文字列
+        elif isinstance(value, str):
+            value_str = value.strip()
+            if not value_str:
+                continue
+
+            # 比較演算子を解析
+            operator_match = re.match(r"^(>=|<=|>|<|!=)\s*(.+)$", value_str)
+            if operator_match:
+                operator, operand = operator_match.groups()
+                operand = operand.strip()
+
+                # 数値比較
+                try:
+                    num_value = float(operand)
+                    operator_map = {
+                        ">": "greater_than",
+                        ">=": "greater_than_or_equal_to",
+                        "<": "less_than",
+                        "<=": "less_than_or_equal_to",
+                        "!=": "does_not_equal"
+                    }
+                    filter_obj["number"] = {operator_map[operator]: num_value}
+                except ValueError:
+                    # 日付比較
+                    if re.match(r"^\d{4}-\d{2}-\d{2}", operand):
+                        try:
+                            datetime.fromisoformat(operand.replace(" ", "T"))
+                            operator_map = {
+                                ">": "after",
+                                ">=": "on_or_after",
+                                "<": "before",
+                                "<=": "on_or_before",
+                                "!=": "does_not_equal"
+                            }
+                            filter_obj["date"] = {operator_map[operator]: operand.split()[0]}
+                        except ValueError:
+                            # 文字列として扱う
+                            filter_obj["rich_text"] = {"contains": operand}
+                    else:
+                        # 文字列として扱う（!= の場合）
+                        if operator == "!=":
+                            filter_obj["select"] = {"does_not_equal": operand}
+                        else:
+                            filter_obj["rich_text"] = {"contains": operand}
+            else:
+                # 演算子なし → equals
+                # 日付形式チェック
+                if re.match(r"^\d{4}-\d{2}-\d{2}", value_str):
+                    try:
+                        datetime.fromisoformat(value_str.replace(" ", "T"))
+                        filter_obj["date"] = {"equals": value_str.split()[0]}
+                    except ValueError:
+                        # select として扱う
+                        filter_obj["select"] = {"equals": value_str}
+                else:
+                    # select として扱う（Status, Priority 等）
+                    filter_obj["select"] = {"equals": value_str}
+        else:
+            # その他の型は文字列化して select
+            filter_obj["select"] = {"equals": str(value)}
+
+        filters.append(filter_obj)
+
+    # 単一条件の場合はそのまま、複数条件の場合は and で結合
+    if len(filters) == 0:
+        return {}
+    elif len(filters) == 1:
+        return filters[0]
+    else:
+        return {"and": filters}
+
+
+def _normalize_sorts_simple(sorts_simple: list[dict[str, str]] | list[str]) -> list[dict[str, str]]:
+    """
+    シンプルなソート指定を Notion API 形式に変換
+
+    Args:
+        sorts_simple: シンプルなリスト（例: [{"Created": "desc"}, {"Priority": "asc"}] または ["Created:desc", "Priority"]）
+
+    Returns:
+        Notion API 形式のソート配列
+
+    変換ルール:
+        - {"プロパティ名": "desc"} → {"property": "プロパティ名", "direction": "descending"}
+        - {"プロパティ名": "asc"} → {"property": "プロパティ名", "direction": "ascending"}
+        - "プロパティ名:desc" → {"property": "プロパティ名", "direction": "descending"}
+        - "プロパティ名" → {"property": "プロパティ名", "direction": "ascending"}（デフォルト）
+    """
+    if not sorts_simple:
+        return []
+
+    result = []
+
+    for sort_item in sorts_simple:
+        # 辞書形式
+        if isinstance(sort_item, dict):
+            for prop_name, direction in sort_item.items():
+                direction_str = str(direction).lower()
+                if direction_str in ("desc", "descending", "down"):
+                    result.append({"property": prop_name, "direction": "descending"})
+                else:
+                    result.append({"property": prop_name, "direction": "ascending"})
+        # 文字列形式
+        elif isinstance(sort_item, str):
+            # "プロパティ名:desc" 形式
+            if ":" in sort_item:
+                prop_name, direction = sort_item.split(":", 1)
+                prop_name = prop_name.strip()
+                direction = direction.strip().lower()
+                if direction in ("desc", "descending", "down"):
+                    result.append({"property": prop_name, "direction": "descending"})
+                else:
+                    result.append({"property": prop_name, "direction": "ascending"})
+            else:
+                # プロパティ名のみ → 昇順
+                result.append({"property": sort_item.strip(), "direction": "ascending"})
+
+    return result
 
 
 def _extract_error_detail(response: requests.Response | None) -> str:
@@ -458,19 +814,31 @@ async def _update_page(
         "params": [
             {
                 "key": "database_id",
-                "description": "データベースID（URL から取得可能）",
+                "description": "データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
+            },
+            {
+                "key": "filter_simple",
+                "description": "フィルタ条件（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、比較演算子をサポート（>, >=, <, <=, !=）。",
+                "required": False,
+                "example": '{"Status": "完了", "Priority": ">5", "Created": ">=2026-01-01", "Completed": true}'
             },
             {
                 "key": "filter",
-                "description": "フィルタ条件（JSON または辞書）",
+                "description": "フィルタ条件（Notion API形式）上級者向け。複雑なフィルタ条件が必要な場合のみ使用。",
                 "required": False,
                 "example": '{"property": "Status", "select": {"equals": "Done"}}'
             },
             {
+                "key": "sorts_simple",
+                "description": "ソート条件（シンプル形式）※AI使用時・初心者はこちらを優先。リスト形式で、各要素は {プロパティ名: desc/asc}。",
+                "required": False,
+                "example": '[{"Created": "desc"}, {"Priority": "asc"}]'
+            },
+            {
                 "key": "sorts",
-                "description": "ソート条件（JSON または配列）",
+                "description": "ソート条件（Notion API形式）上級者向け。複雑なソート条件が必要な場合のみ使用。",
                 "required": False,
                 "example": '[{"property": "Created", "direction": "descending"}]'
             },
@@ -518,8 +886,10 @@ async def action_notion_query_database(
 
     params:
         database_id: データベースID（必須）
-        filter: フィルタ条件（JSON または辞書、オプション）
-        sorts: ソート条件（JSON または配列、オプション）
+        filter_simple: フィルタ条件（シンプル形式、推奨）
+        filter: フィルタ条件（Notion API形式、上級者向け）
+        sorts_simple: ソート条件（シンプル形式、推奨）
+        sorts: ソート条件（Notion API形式、上級者向け）
         page_size: 取得件数（デフォルト: 100、最大: 100）
         start_cursor: ページネーション用カーソル（オプション）
         api_key: Notion API キー（直接指定、オプション）
@@ -542,6 +912,9 @@ async def action_notion_query_database(
     if not database_id:
         raise ValueError("database_id は必須です")
 
+    # database_id を正規化（URL対応）
+    database_id = _normalize_notion_id(database_id)
+
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
     api_key = params.get("api_key")
@@ -551,9 +924,37 @@ async def action_notion_query_database(
         api_key_file = params.get("api_key_file", DEFAULT_NOTION_KEY_FILE)
         api_key = _load_api_key(str(api_key_file), base_dir, DEFAULT_NOTION_KEY_ENV)
 
-    # オプションパラメータ
-    filter_obj = _normalize_json(params.get("filter"))
-    sorts = _normalize_json(params.get("sorts"))
+    # フィルタ処理（filter_simple を優先）
+    filter_simple = params.get("filter_simple")
+    filter_obj = params.get("filter")
+
+    if filter_simple is not None:
+        # YAML から辞書として取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(filter_simple, str):
+            filter_simple = _normalize_json(filter_simple)
+        if not isinstance(filter_simple, dict):
+            raise ValueError("filter_simple は辞書形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        filter_obj = _normalize_filter_simple(filter_simple)
+    elif filter_obj is not None:
+        # 従来の filter パラメータ
+        filter_obj = _normalize_json(filter_obj)
+
+    # ソート処理（sorts_simple を優先）
+    sorts_simple = params.get("sorts_simple")
+    sorts = params.get("sorts")
+
+    if sorts_simple is not None:
+        # YAML からリストとして取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(sorts_simple, str):
+            sorts_simple = _normalize_json(sorts_simple)
+        if not isinstance(sorts_simple, list):
+            raise ValueError("sorts_simple はリスト形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        sorts = _normalize_sorts_simple(sorts_simple)
+    elif sorts is not None:
+        # 従来の sorts パラメータ
+        sorts = _normalize_json(sorts)
     page_size = _coerce_int(params.get("page_size"), "page_size") or 100
     start_cursor = params.get("start_cursor")
 
@@ -600,14 +1001,20 @@ async def action_notion_query_database(
         "params": [
             {
                 "key": "database_id",
-                "description": "親データベースID",
+                "description": "親データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
+            },
+            {
+                "key": "properties_simple",
+                "description": "ページプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
+                "required": False,
+                "example": '{"Name": "新しいタスク", "Status": "進行中", "Priority": 5, "Due": "2026-01-15", "Completed": false}'
             },
             {
                 "key": "properties",
-                "description": "ページプロパティ（JSON または辞書）",
-                "required": True,
+                "description": "ページプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
+                "required": False,
                 "example": '{"Name": {"title": [{"text": {"content": "新しいタスク"}}]}}'
             },
             {
@@ -659,7 +1066,8 @@ async def action_notion_create_page(
 
     params:
         database_id: 親データベースID（必須）
-        properties: ページプロパティ（JSON または辞書、必須）
+        properties_simple: ページプロパティ（シンプル形式、推奨）
+        properties: ページプロパティ（Notion API形式、上級者向け）
         content: ページ本文（ブロック配列、または簡易テキスト、オプション）
         icon: アイコン（emoji または URL、オプション）
         cover: カバー画像URL（オプション）
@@ -683,11 +1091,29 @@ async def action_notion_create_page(
     if not database_id:
         raise ValueError("database_id は必須です")
 
-    properties = _normalize_json(params.get("properties"))
-    if not properties:
-        raise ValueError("properties は必須です")
-    if not isinstance(properties, dict):
-        raise ValueError("properties は辞書形式で指定してください")
+    # database_id を正規化（URL対応）
+    database_id = _normalize_notion_id(database_id)
+
+    # properties_simple と properties の両方をサポート
+    properties_simple = params.get("properties_simple")
+    properties = params.get("properties")
+
+    # properties_simple を優先
+    if properties_simple is not None:
+        # YAML から辞書として取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(properties_simple, str):
+            properties_simple = _normalize_json(properties_simple)
+        if not isinstance(properties_simple, dict):
+            raise ValueError("properties_simple は辞書形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        properties = _normalize_properties_simple(properties_simple)
+    elif properties is not None:
+        # 従来の properties パラメータ
+        properties = _normalize_json(properties)
+        if not isinstance(properties, dict):
+            raise ValueError("properties は辞書形式で指定してください")
+    else:
+        raise ValueError("properties_simple または properties のいずれかは必須です")
 
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
@@ -744,13 +1170,19 @@ async def action_notion_create_page(
         "params": [
             {
                 "key": "page_id",
-                "description": "ページID",
+                "description": "ページID（NotionのページURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Page-abc123... または abc123..."
+            },
+            {
+                "key": "properties_simple",
+                "description": "更新するプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
+                "required": False,
+                "example": '{"Status": "完了", "Priority": 10, "Completed": true}'
             },
             {
                 "key": "properties",
-                "description": "更新するプロパティ（JSON または辞書）",
+                "description": "更新するプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
                 "required": False,
                 "example": '{"Status": {"select": {"name": "Done"}}}'
             },
@@ -804,7 +1236,8 @@ async def action_notion_update_page(
 
     params:
         page_id: ページID（必須）
-        properties: 更新するプロパティ（JSON または辞書、オプション）
+        properties_simple: 更新するプロパティ（シンプル形式、推奨）
+        properties: 更新するプロパティ（Notion API形式、上級者向け）
         archived: アーカイブ（削除）フラグ（オプション）
         icon: アイコン（emoji または URL、オプション）
         cover: カバー画像URL（オプション）
@@ -828,6 +1261,9 @@ async def action_notion_update_page(
     if not page_id:
         raise ValueError("page_id は必須です")
 
+    # page_id を正規化（URL対応）
+    page_id = _normalize_notion_id(page_id)
+
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
     api_key = params.get("api_key")
@@ -837,8 +1273,22 @@ async def action_notion_update_page(
         api_key_file = params.get("api_key_file", DEFAULT_NOTION_KEY_FILE)
         api_key = _load_api_key(str(api_key_file), base_dir, DEFAULT_NOTION_KEY_ENV)
 
-    # オプションパラメータ
-    properties = _normalize_json(params.get("properties"))
+    # properties_simple と properties の両方をサポート
+    properties_simple = params.get("properties_simple")
+    properties = params.get("properties")
+
+    # properties_simple を優先
+    if properties_simple is not None:
+        # YAML から辞書として取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(properties_simple, str):
+            properties_simple = _normalize_json(properties_simple)
+        if not isinstance(properties_simple, dict):
+            raise ValueError("properties_simple は辞書形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        properties = _normalize_properties_simple(properties_simple)
+    elif properties is not None:
+        # 従来の properties パラメータ
+        properties = _normalize_json(properties)
     archived = params.get("archived")
     if archived is not None:
         if isinstance(archived, str):
