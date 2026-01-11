@@ -177,16 +177,16 @@ def _normalize_notion_id(id_or_url: str) -> str:
     Notion IDまたはURLからIDを抽出・正規化
 
     Args:
-        id_or_url: Notion ID（32文字の16進数）またはNotion URL
+        id_or_url: Notion ID（UUID形式）またはNotion URL
 
     Returns:
-        正規化されたID（32文字、ハイフンなし）
+        正規化されたID（UUID形式、ハイフン付き: 8-4-4-4-12）
 
     Examples:
-        - "abc123def456..." → "abc123def456..."
-        - "abc123de-f456-..." → "abc123def456..."（ハイフン削除）
-        - "https://www.notion.so/workspace/Page-abc123def456" → "abc123def456..."
-        - "https://www.notion.so/abc123def456" → "abc123def456..."
+        - "abc123def456..." → "abc123de-f456-..." (UUID形式に変換)
+        - "abc123de-f456-..." → "abc123de-f456-..." (そのまま)
+        - "https://www.notion.so/workspace/Page-abc123def456" → "abc123de-f456-..." (UUID形式に変換)
+        - "https://www.notion.so/abc123def456" → "abc123de-f456-..." (UUID形式に変換)
     """
     import re
     from urllib.parse import urlparse
@@ -231,7 +231,7 @@ def _normalize_notion_id(id_or_url: str) -> str:
 
         id_or_url = extracted_id
 
-    # ハイフンを削除
+    # ハイフンを削除して正規化
     normalized_id = id_or_url.replace('-', '')
 
     # 32文字の16進数であることを確認
@@ -241,7 +241,10 @@ def _normalize_notion_id(id_or_url: str) -> str:
             f"32文字の16進数、またはNotion URLを指定してください。"
         )
 
-    return normalized_id
+    # UUID形式（8-4-4-4-12）に変換
+    uuid_formatted = f"{normalized_id[:8]}-{normalized_id[8:12]}-{normalized_id[12:16]}-{normalized_id[16:20]}-{normalized_id[20:]}"
+
+    return uuid_formatted
 
 
 def _normalize_json(value: Any) -> dict | list | None:

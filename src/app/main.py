@@ -334,6 +334,10 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
     per_page = 50
     offset = (page - 1) * per_page
 
+    # 空文字列の場合はNoneに変換
+    if workflow is not None and workflow.strip() == "":
+        workflow = None
+
     workflow_options = sorted({wf.name for wf in loader.list_workflows() if wf.name})
     if workflow and workflow not in workflow_options:
         workflow_options = [workflow, *workflow_options]

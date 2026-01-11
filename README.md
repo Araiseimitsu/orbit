@@ -4,17 +4,21 @@ n8n ライクなワークフロー実行エンジン（MVP）。YAML でワー�
 
 ## できること
 
-- YAML でワークフロー定義（manual / schedule トリガー）
-- ステップを順番に実行し、結果を context に格納
-- Jinja2 テンプレートでパラメータを動的に展開
-- APScheduler による cron スケジュール実行
-- 実行ログを JSONL に記録・UI で参照
-- UI からワークフローの参照・編集・実行
-- AI（Gemini）によるテキスト生成・判定
-- Excel/Google Sheets の読み書き
-- ファイル操作（読み書き、コピー、移動、削除、リネーム）
-- AIを使わない判定アクション（完全一致、部分一致、正規表現、数値比較）
-- サブワークフローによるワークフローの再利用
+- **ビジュアルエディタ**: ノードをドラッグ＆ドロップで直感的にワークフロー作成
+- **AI フロー自動構築**: 自然言語でワークフローを自動生成
+- **YAML 定義**: manual / schedule トリガーで柔軟なワークフロー定義
+- **ステップ実行**: 順番に実行し、結果を context に格納して次ステップで参照可能
+- **テンプレート機能**: Jinja2 でパラメータを動的に展開
+- **スケジュール実行**: APScheduler による cron スケジュール実行
+- **実行履歴**: 実行ログを JSONL に記録・UI で参照・フィルタリング
+- **条件分岐**: when 条件でステップをスキップ可能
+- **AI 統合**: Gemini によるテキスト生成・判定・Web検索
+- **データ連携**: Excel/Google Sheets/Notion の読み書き
+- **ファイル操作**: 読み書き、コピー、移動、削除、リネーム
+- **判定アクション**: 完全一致、部分一致、正規表現、数値比較
+- **サブワークフロー**: ワークフローの再利用と呼び出し
+- **インポート/エクスポート**: ワークフローの YAML ファイル入出力
+- **バックアップ**: 自動バックアップ機能（最大10世代保持）
 
 ## 動作環境
 
@@ -145,7 +149,7 @@ steps:
 | `excel_read` | Excel ファイル読み込み |
 | `excel_write` | Excel ファイル書き込み |
 | `excel_append` | Excel ファイル追記 |
-| `excel_create` | 新規 Excel ファイル作成 |
+| `excel_list_sheets` | Excel シート一覧取得 |
 
 ### Google Sheets
 
@@ -154,13 +158,21 @@ steps:
 | `sheets_read` | スプレッドシート読み込み |
 | `sheets_write` | スプレッドシート書き込み |
 | `sheets_append` | スプレッドシート追記 |
-| `sheets_create` | 新規スプレッドシート作成 |
+| `sheets_list` | スプレッドシートのシート一覧取得 |
+
+### Notion
+
+| アクション名 | 説明 |
+|------------|------|
+| `notion_query_database` | Notion データベース検索 |
+| `notion_create_page` | Notion ページ作成 |
+| `notion_update_page` | Notion ページ更新 |
 
 ### AI
 
 | アクション名 | 説明 |
 |------------|------|
-| `ai_generate` | AI によるテキスト生成（Gemini） |
+| `ai_generate` | AI によるテキスト生成（Gemini）、Web検索対応 |
 | `ai_judge` | AI による yes/no 判定（Gemini） |
 
 ### 判定（非AI）
@@ -235,7 +247,15 @@ steps:
 |---------|------|------|
 | `GEMINI_API_KEY` | Gemini API キー | ai_generate / ai_judge 使用時 |
 | `ARAICHAT_API_KEY` | ARAICHAT API キー | araichat_send_message 使用時 |
+| `ARAICHAT_ROOM_ID` | ARAICHAT デフォルトルームID | araichat_send_message 使用時（オプション） |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Google サービスアカウントJSONパス | sheets_* 使用時 |
+| `NOTION_API_KEY` | Notion インテグレーショントークン | notion_* 使用時 |
+
+**フォールバック**: 環境変数が設定されていない場合、以下のファイルから読み込みます：
+- Gemini: `secrets/gemini_api_key.txt`
+- ARAICHAT: `secrets/araichat_api_key.txt`
+- Google Sheets: `secrets/google_service_account.json`
+- Notion: `secrets/notion_api_key.txt`
 
 ## アクション拡張
 
@@ -255,14 +275,36 @@ async def your_action_handler(params: dict, context: dict) -> dict:
 - 実行ログは `runs/YYYYMMDD.jsonl` に追記
 - UI の「実行履歴」から参照可能
 
-## 主要 API（デバッグ用）
+## 主要 API
+
+### UI エンドポイント
 
 - `GET  /` ダッシュボード
+- `GET  /workflows/new` ワークフロー新規作成（テンプレート選択）
+- `GET  /workflows/new/visual` ビジュアルエディタ（新規作成）
 - `GET  /workflows/{name}` ワークフロー詳細
+- `GET  /workflows/{name}/edit` ビジュアルエディタ（編集）
 - `GET  /runs` 実行履歴一覧
+
+### API エンドポイント
+
 - `POST /api/workflows/{name}/run` 手動実行
-- `GET  /api/scheduler/jobs` 登録済みジョブ一覧
+- `POST /api/workflows/{name}/stop` 実行中ワークフローを停止
+- `POST /api/workflows/{name}/toggle` ワークフローの有効/無効切り替え
+- `POST /api/workflows/{name}/delete` ワークフロー削除
+- `POST /api/workflows/save` ワークフロー保存
+- `POST /api/workflows/import` YAML ファイルからインポート
+- `GET  /api/workflows/{name}/export` YAML ファイルとしてエクスポート
+- `GET  /api/workflows` ワークフロー一覧取得
+- `GET  /api/actions` 登録済みアクション一覧
+- `POST /api/ai/flow` AI でワークフロー案を生成
+- `POST /api/ai/expression` AI で Jinja2 テンプレート式を生成
+- `POST /api/ai/params` AI でステップパラメータを生成
+- `GET  /api/scheduler/jobs` 登録済みスケジュールジョブ一覧
 - `POST /api/scheduler/reload` ワークフロー再読み込み
+- `POST /api/scheduler/preview` cron の次回実行時刻をプレビュー
+- `POST /api/logs/cleanup` ログファイルの手動クリーンアップ
+- `GET  /health` ヘルスチェック
 
 ## 開発メモ
 

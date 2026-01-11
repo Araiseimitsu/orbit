@@ -328,12 +328,16 @@
                                 主要アクションの例
                             </h3>
                             <ul class="text-sm text-gray-300 space-y-2">
-                                <li>AI 生成: プロンプトを渡して要約・分類・生成</li>
-                                <li>ARAICHAT 送信: room_id / text / files を指定して送信</li>
-                                <li>Excel: 読み込み / 書き込み / 追記 / シート一覧</li>
-                                <li>Google Sheets: 読み込み / 書き込み / 追記 / シート一覧</li>
-                                <li>ファイル: 読み込み / 書き込み（相対パスはプロジェクト基準）</li>
-                                <li>Log: 任意メッセージを実行ログに記録</li>
+                                <li><strong>AI 生成:</strong> プロンプトを渡して要約・分類・生成（Web検索対応）</li>
+                                <li><strong>AI 判定:</strong> yes/no で判定、条件分岐と組み合わせ可能</li>
+                                <li><strong>ARAICHAT 送信:</strong> room_id / text / files を指定して送信</li>
+                                <li><strong>Excel:</strong> 読み込み / 書き込み / 追記 / シート一覧</li>
+                                <li><strong>Google Sheets:</strong> 読み込み / 書き込み / 追記 / シート一覧</li>
+                                <li><strong>Notion:</strong> データベース検索 / ページ作成 / ページ更新</li>
+                                <li><strong>ファイル:</strong> 読み書き / コピー / 移動 / 削除 / リネーム</li>
+                                <li><strong>判定:</strong> 完全一致 / 部分一致 / 正規表現 / 数値比較</li>
+                                <li><strong>サブワークフロー:</strong> 他のワークフローを呼び出し</li>
+                                <li><strong>Log:</strong> 任意メッセージを実行ログに記録</li>
                             </ul>
                         </div>
                         <div class="apple-card p-4 border border-white/10 bg-black/30">
@@ -341,24 +345,30 @@
                                 設定とキー類
                             </h3>
                             <ul class="text-sm text-gray-300 space-y-2">
-                                <li>Gemini API キー: <code class="font-mono text-white/80">secrets/gemini_api_key.txt</code></li>
-                                <li>ARAICHAT API キー: <code class="font-mono text-white/80">secrets/araichat_api_key.txt</code></li>
-                                <li>Google Sheets: <code class="font-mono text-white/80">secrets/google_service_account.json</code></li>
+                                <li>Gemini API キー: <code class="font-mono text-white/80">secrets/gemini_api_key.txt</code> または <code class="font-mono text-white/80">GEMINI_API_KEY</code></li>
+                                <li>ARAICHAT API キー: <code class="font-mono text-white/80">secrets/araichat_api_key.txt</code> または <code class="font-mono text-white/80">ARAICHAT_API_KEY</code></li>
+                                <li>Google Sheets: <code class="font-mono text-white/80">secrets/google_service_account.json</code> または <code class="font-mono text-white/80">GOOGLE_APPLICATION_CREDENTIALS</code></li>
+                                <li>Notion API キー: <code class="font-mono text-white/80">secrets/notion_api_key.txt</code> または <code class="font-mono text-white/80">NOTION_API_KEY</code></li>
                             </ul>
+                            <p class="mt-2 text-xs text-gray-500">
+                                環境変数が優先されます（<code class="font-mono text-white/80">.env</code> ファイルで設定可能）
+                            </p>
                         </div>
                         <div class="apple-card p-4 border border-white/10 bg-black/30">
                             <h3 class="text-white font-semibold text-base mb-3">
                                 リリースノート（抜粋）
                             </h3>
                             <ul class="text-sm text-gray-300 space-y-2">
-                                <li>2026-01-05: when 条件に match（equals/contains）を追加</li>
-                                <li>2026-01-05: ai_generate の Web検索（google_search）対応を追加</li>
-                                <li>2026-01-05: AIフロー自動構築パネルと検索トグルを追加</li>
-                                <li>2026-01-05: Runs のフィルターUI、JSイベント集約を実施</li>
-                                <li>2026-01-04: when 条件による分岐実行を追加</li>
-                                <li>2026-01-03: Google Sheets 追記/上書きを追加</li>
-                                <li>2026-01-03: ローカル Excel 連携を追加</li>
-                                <li>2026-01-03: ARAICHAT 送信の files に単一パス対応</li>
+                                <li>2026-01-11: /runs の All workflows フィルター修正</li>
+                                <li>2026-01-11: Notion 統合（検索/作成/更新）を追加</li>
+                                <li>2026-01-09: AI パラメータ生成機能（シンプル形式優先）</li>
+                                <li>2026-01-08: サブワークフロー機能を追加</li>
+                                <li>2026-01-07: ワークフローインポート/エクスポート機能</li>
+                                <li>2026-01-06: ビジュアルエディタの大幅改善</li>
+                                <li>2026-01-05: AI フロー自動構築、Web検索対応</li>
+                                <li>2026-01-05: when 条件分岐に match（equals/contains）を追加</li>
+                                <li>2026-01-04: 条件分岐（when）機能を追加</li>
+                                <li>2026-01-03: Excel/Google Sheets 連携を追加</li>
                             </ul>
                             <p class="mt-3 text-xs text-gray-500">
                                 詳細は <code class="font-mono text-white/80">.docs/update.md</code> を参照してください。
