@@ -10,22 +10,22 @@
             <p class="text-gray-500 font-medium">Manage and automate your processes with precision.</p>
         </div>
         <div class="flex flex-wrap items-center gap-4">
-            <form method="get" class="flex items-center gap-2">
-                <div class="relative">
+            <form method="get" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div class="relative flex-1 min-w-0 w-full sm:w-auto">
                     <input id="search-query" type="search" name="q" value="{{ search_query }}"
-                        placeholder="Search workflows..." class="w-64" autocomplete="off" />
+                        placeholder="Search workflows..." class="w-full sm:w-64" autocomplete="off" />
                 </div>
                 {% if search_query %}
-                <a href="/" class="apple-button apple-button-secondary px-4 py-2 text-xs">
+                <a href="/" class="apple-button apple-button-secondary px-4 py-2 text-xs w-full sm:w-auto">
                     Clear
                 </a>
                 {% endif %}
-                <button type="submit" class="apple-button apple-button-primary px-4 py-2 text-xs">
+                <button type="submit" class="apple-button apple-button-primary px-4 py-2 text-xs w-full sm:w-auto">
                     Search
                 </button>
             </form>
             <button type="button"
-                class="apple-button apple-button-secondary px-6 py-2.5 text-sm"
+                class="apple-button apple-button-secondary px-6 py-2.5 text-sm w-full sm:w-auto"
                 data-import-trigger>
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -35,7 +35,7 @@
             </button>
             <input type="file" id="import-file-input" accept=".yaml,.yml" class="hidden"
                 data-import-input />
-            <a href="/workflows/new/visual" class="apple-button apple-button-primary px-6 py-2.5 text-sm">
+            <a href="/workflows/new/visual" class="apple-button apple-button-primary px-6 py-2.5 text-sm w-full sm:w-auto">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -46,9 +46,9 @@
 </div>
 
 {% if workflows %}
-<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
     {% for workflow in workflows %}
-    <div class="apple-card p-6 flex flex-col h-full {% if not workflow.is_valid %}ring-1 ring-red-500/50{% endif %}">
+    <div class="apple-card p-6 flex flex-col h-full min-w-0 {% if not workflow.is_valid %}ring-1 ring-red-500/50{% endif %}">
         <div class="flex items-start justify-between mb-4">
             <div class="overflow-hidden">
                 <a href="/workflows/{{ workflow.name }}"
