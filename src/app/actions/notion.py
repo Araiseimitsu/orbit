@@ -748,25 +748,25 @@ async def _update_page(
             },
             {
                 "key": "filter_simple",
-                "description": "フィルタ条件（シンプル形式：辞書で指定）※推奨",
+                "description": "フィルタ条件（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、比較演算子をサポート（>, >=, <, <=, !=）。",
                 "required": False,
-                "example": '{"Status": "完了", "Priority": ">5"}'
+                "example": '{"Status": "完了", "Priority": ">5", "Created": ">=2026-01-01", "Completed": true}'
             },
             {
                 "key": "filter",
-                "description": "フィルタ条件（Notion API形式：上級者向け）",
+                "description": "フィルタ条件（Notion API形式）上級者向け。複雑なフィルタ条件が必要な場合のみ使用。",
                 "required": False,
                 "example": '{"property": "Status", "select": {"equals": "Done"}}'
             },
             {
                 "key": "sorts_simple",
-                "description": "ソート条件（シンプル形式：リストで指定）※推奨",
+                "description": "ソート条件（シンプル形式）※AI使用時・初心者はこちらを優先。リスト形式で、各要素は {プロパティ名: desc/asc}。",
                 "required": False,
                 "example": '[{"Created": "desc"}, {"Priority": "asc"}]'
             },
             {
                 "key": "sorts",
-                "description": "ソート条件（Notion API形式：上級者向け）",
+                "description": "ソート条件（Notion API形式）上級者向け。複雑なソート条件が必要な場合のみ使用。",
                 "required": False,
                 "example": '[{"property": "Created", "direction": "descending"}]'
             },
@@ -932,13 +932,13 @@ async def action_notion_query_database(
             },
             {
                 "key": "properties_simple",
-                "description": "ページプロパティ（シンプル形式：辞書で指定）※推奨",
+                "description": "ページプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
                 "required": False,
-                "example": '{"Name": "新しいタスク", "Status": "進行中", "Priority": 5}'
+                "example": '{"Name": "新しいタスク", "Status": "進行中", "Priority": 5, "Due": "2026-01-15", "Completed": false}'
             },
             {
                 "key": "properties",
-                "description": "ページプロパティ（Notion API形式：上級者向け）",
+                "description": "ページプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
                 "required": False,
                 "example": '{"Name": {"title": [{"text": {"content": "新しいタスク"}}]}}'
             },
@@ -1098,13 +1098,13 @@ async def action_notion_create_page(
             },
             {
                 "key": "properties_simple",
-                "description": "更新するプロパティ（シンプル形式：辞書で指定）※推奨",
+                "description": "更新するプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
                 "required": False,
-                "example": '{"Status": "完了", "Priority": 10}'
+                "example": '{"Status": "完了", "Priority": 10, "Completed": true}'
             },
             {
                 "key": "properties",
-                "description": "更新するプロパティ（Notion API形式：上級者向け）",
+                "description": "更新するプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
                 "required": False,
                 "example": '{"Status": {"select": {"name": "Done"}}}'
             },
