@@ -7,6 +7,7 @@ API キー設定:
     環境変数 NOTION_API_KEY または secrets/notion_api_key.txt に Notion API キー
 
 使用例 (YAML):
+    # データベース検索
     - id: query_db
       type: notion_query_database
       params:
@@ -18,7 +19,32 @@ API キー設定:
           }
         page_size: 50
 
+    # ページ作成（シンプル形式）- 推奨
     - id: create_page
+      type: notion_create_page
+      params:
+        database_id: "0123456789abcdef0123456789abcdef"
+        properties_simple:
+          Name: "新しいタスク"
+          Status: "進行中"
+          Priority: 5
+          Due: "2026-01-15"
+          Completed: false
+        content: "これはページの本文です"
+        icon: "📝"
+
+    # ページ更新（シンプル形式）- 推奨
+    - id: update_page
+      type: notion_update_page
+      params:
+        page_id: "{{ create_page.page_id }}"
+        properties_simple:
+          Status: "完了"
+          Priority: 10
+        icon: "✅"
+
+    # ページ作成（Notion API形式）- 上級者向け
+    - id: create_page_advanced
       type: notion_create_page
       params:
         database_id: "0123456789abcdef0123456789abcdef"
@@ -26,20 +52,13 @@ API キー設定:
           {
             "Name": {
               "title": [{"text": {"content": "新しいタスク"}}]
+            },
+            "Status": {
+              "select": {"name": "進行中"}
             }
           }
         content: "これはページの本文です"
         icon: "📝"
-
-    - id: update_page
-      type: notion_update_page
-      params:
-        page_id: "{{ create_page.page_id }}"
-        properties: |
-          {
-            "Status": {"select": {"name": "Done"}}
-          }
-        icon: "✅"
 """
 
 import asyncio
@@ -205,6 +224,93 @@ def _normalize_content(content: Any) -> list[dict] | None:
         ]
 
     raise ValueError("content はブロック配列、JSON文字列、またはプレーンテキストで指定してください")
+
+
+def _normalize_properties_simple(properties_simple: dict[str, Any]) -> dict[str, Any]:
+    """
+    シンプルな key-value 形式のプロパティを Notion API 形式に変換
+
+    Args:
+        properties_simple: シンプルな辞書（例: {"Name": "タスク名", "Status": "完了"}）
+
+    Returns:
+        Notion API 形式のプロパティ辞書
+
+    変換ルール:
+        - "Name", "Title", "名前" → title
+        - 文字列 → rich_text
+        - 数値（int/float） → number
+        - 日付文字列（YYYY-MM-DD） → date
+        - ブール値 → checkbox
+        - リスト → multi_select（文字列リストの場合）
+    """
+    import re
+    from datetime import datetime
+
+    result: dict[str, Any] = {}
+
+    # Title フィールド候補
+    TITLE_KEYS = {"name", "title", "名前", "タイトル"}
+
+    for key, value in properties_simple.items():
+        if value is None:
+            continue
+
+        key_lower = key.lower()
+
+        # Title プロパティ（最優先）
+        if key_lower in TITLE_KEYS:
+            result[key] = {
+                "title": [{"type": "text", "text": {"content": str(value)}}]
+            }
+        # ブール値 → checkbox
+        elif isinstance(value, bool):
+            result[key] = {"checkbox": value}
+        # 数値 → number
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            result[key] = {"number": value}
+        # リスト → multi_select
+        elif isinstance(value, list):
+            # 文字列リストの場合
+            if all(isinstance(v, str) for v in value):
+                result[key] = {
+                    "multi_select": [{"name": str(v)} for v in value if v]
+                }
+            else:
+                # 混合型リストは文字列化して rich_text に
+                text = ", ".join(str(v) for v in value)
+                result[key] = {
+                    "rich_text": [{"type": "text", "text": {"content": text}}]
+                }
+        # 文字列
+        elif isinstance(value, str):
+            value_str = value.strip()
+            if not value_str:
+                continue
+
+            # 日付形式（YYYY-MM-DD または YYYY-MM-DD HH:MM:SS）
+            date_match = re.match(r"^(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$", value_str)
+            if date_match:
+                try:
+                    # 日付バリデーション
+                    datetime.fromisoformat(value_str.replace(" ", "T"))
+                    # date プロパティ（start のみ）
+                    result[key] = {"date": {"start": date_match.group(1)}}
+                    continue
+                except ValueError:
+                    pass
+
+            # 通常の文字列 → rich_text
+            result[key] = {
+                "rich_text": [{"type": "text", "text": {"content": value_str}}]
+            }
+        else:
+            # その他の型は文字列化
+            result[key] = {
+                "rich_text": [{"type": "text", "text": {"content": str(value)}}]
+            }
+
+    return result
 
 
 def _extract_error_detail(response: requests.Response | None) -> str:
@@ -605,9 +711,15 @@ async def action_notion_query_database(
                 "example": "0123456789abcdef0123456789abcdef"
             },
             {
+                "key": "properties_simple",
+                "description": "ページプロパティ（シンプル形式：辞書で指定）※推奨",
+                "required": False,
+                "example": '{"Name": "新しいタスク", "Status": "進行中", "Priority": 5}'
+            },
+            {
                 "key": "properties",
-                "description": "ページプロパティ（JSON または辞書）",
-                "required": True,
+                "description": "ページプロパティ（Notion API形式：上級者向け）",
+                "required": False,
                 "example": '{"Name": {"title": [{"text": {"content": "新しいタスク"}}]}}'
             },
             {
@@ -659,7 +771,8 @@ async def action_notion_create_page(
 
     params:
         database_id: 親データベースID（必須）
-        properties: ページプロパティ（JSON または辞書、必須）
+        properties_simple: ページプロパティ（シンプル形式、推奨）
+        properties: ページプロパティ（Notion API形式、上級者向け）
         content: ページ本文（ブロック配列、または簡易テキスト、オプション）
         icon: アイコン（emoji または URL、オプション）
         cover: カバー画像URL（オプション）
@@ -683,11 +796,26 @@ async def action_notion_create_page(
     if not database_id:
         raise ValueError("database_id は必須です")
 
-    properties = _normalize_json(params.get("properties"))
-    if not properties:
-        raise ValueError("properties は必須です")
-    if not isinstance(properties, dict):
-        raise ValueError("properties は辞書形式で指定してください")
+    # properties_simple と properties の両方をサポート
+    properties_simple = params.get("properties_simple")
+    properties = params.get("properties")
+
+    # properties_simple を優先
+    if properties_simple is not None:
+        # YAML から辞書として取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(properties_simple, str):
+            properties_simple = _normalize_json(properties_simple)
+        if not isinstance(properties_simple, dict):
+            raise ValueError("properties_simple は辞書形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        properties = _normalize_properties_simple(properties_simple)
+    elif properties is not None:
+        # 従来の properties パラメータ
+        properties = _normalize_json(properties)
+        if not isinstance(properties, dict):
+            raise ValueError("properties は辞書形式で指定してください")
+    else:
+        raise ValueError("properties_simple または properties のいずれかは必須です")
 
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
@@ -749,8 +877,14 @@ async def action_notion_create_page(
                 "example": "0123456789abcdef0123456789abcdef"
             },
             {
+                "key": "properties_simple",
+                "description": "更新するプロパティ（シンプル形式：辞書で指定）※推奨",
+                "required": False,
+                "example": '{"Status": "完了", "Priority": 10}'
+            },
+            {
                 "key": "properties",
-                "description": "更新するプロパティ（JSON または辞書）",
+                "description": "更新するプロパティ（Notion API形式：上級者向け）",
                 "required": False,
                 "example": '{"Status": {"select": {"name": "Done"}}}'
             },
@@ -804,7 +938,8 @@ async def action_notion_update_page(
 
     params:
         page_id: ページID（必須）
-        properties: 更新するプロパティ（JSON または辞書、オプション）
+        properties_simple: 更新するプロパティ（シンプル形式、推奨）
+        properties: 更新するプロパティ（Notion API形式、上級者向け）
         archived: アーカイブ（削除）フラグ（オプション）
         icon: アイコン（emoji または URL、オプション）
         cover: カバー画像URL（オプション）
@@ -837,8 +972,22 @@ async def action_notion_update_page(
         api_key_file = params.get("api_key_file", DEFAULT_NOTION_KEY_FILE)
         api_key = _load_api_key(str(api_key_file), base_dir, DEFAULT_NOTION_KEY_ENV)
 
-    # オプションパラメータ
-    properties = _normalize_json(params.get("properties"))
+    # properties_simple と properties の両方をサポート
+    properties_simple = params.get("properties_simple")
+    properties = params.get("properties")
+
+    # properties_simple を優先
+    if properties_simple is not None:
+        # YAML から辞書として取得した場合はそのまま、JSON 文字列の場合は変換
+        if isinstance(properties_simple, str):
+            properties_simple = _normalize_json(properties_simple)
+        if not isinstance(properties_simple, dict):
+            raise ValueError("properties_simple は辞書形式で指定してください")
+        # シンプル形式を Notion API 形式に変換
+        properties = _normalize_properties_simple(properties_simple)
+    elif properties is not None:
+        # 従来の properties パラメータ
+        properties = _normalize_json(properties)
     archived = params.get("archived")
     if archived is not None:
         if isinstance(archived, str):
