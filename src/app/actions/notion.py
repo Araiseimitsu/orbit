@@ -172,6 +172,78 @@ def _load_api_key(file_path: str, base_dir: Path, env_var_name: str = "NOTION_AP
     return key
 
 
+def _normalize_notion_id(id_or_url: str) -> str:
+    """
+    Notion IDまたはURLからIDを抽出・正規化
+
+    Args:
+        id_or_url: Notion ID（32文字の16進数）またはNotion URL
+
+    Returns:
+        正規化されたID（32文字、ハイフンなし）
+
+    Examples:
+        - "abc123def456..." → "abc123def456..."
+        - "abc123de-f456-..." → "abc123def456..."（ハイフン削除）
+        - "https://www.notion.so/workspace/Page-abc123def456" → "abc123def456..."
+        - "https://www.notion.so/abc123def456" → "abc123def456..."
+    """
+    import re
+    from urllib.parse import urlparse
+
+    if not id_or_url:
+        raise ValueError("ID または URL が空です")
+
+    id_or_url = str(id_or_url).strip()
+
+    # URLの場合はIDを抽出
+    if id_or_url.startswith("http://") or id_or_url.startswith("https://"):
+        # URLをパース
+        parsed = urlparse(id_or_url)
+        path = parsed.path
+
+        # パスからIDを抽出
+        # 形式1: /workspace/Title-{id}
+        # 形式2: /{id}
+        # 形式3: /workspace/{id}
+
+        # 32文字の16進数（ハイフンあり・なし）を探す
+        # Notion IDは通常32文字（ハイフンなし）または36文字（UUID形式、ハイフンあり）
+        id_pattern = r'([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})'
+        match = re.search(id_pattern, path)
+
+        if match:
+            extracted_id = match.group(1)
+        else:
+            # パスの最後のセグメントを取得（クエリパラメータを除く）
+            segments = [s for s in path.split('/') if s]
+            if not segments:
+                raise ValueError(f"URLからIDを抽出できません: {id_or_url}")
+
+            last_segment = segments[-1]
+            # タイトル-ID形式の場合、最後のハイフン以降がID
+            if '-' in last_segment:
+                potential_id = last_segment.split('-')[-1]
+            else:
+                potential_id = last_segment
+
+            extracted_id = potential_id
+
+        id_or_url = extracted_id
+
+    # ハイフンを削除
+    normalized_id = id_or_url.replace('-', '')
+
+    # 32文字の16進数であることを確認
+    if not re.match(r'^[0-9a-fA-F]{32}$', normalized_id):
+        raise ValueError(
+            f"無効なNotion ID形式です: {id_or_url}\n"
+            f"32文字の16進数、またはNotion URLを指定してください。"
+        )
+
+    return normalized_id
+
+
 def _normalize_json(value: Any) -> dict | list | None:
     """
     JSON 文字列を dict/list に正規化
@@ -742,9 +814,9 @@ async def _update_page(
         "params": [
             {
                 "key": "database_id",
-                "description": "データベースID（URL から取得可能）",
+                "description": "データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
             },
             {
                 "key": "filter_simple",
@@ -840,6 +912,9 @@ async def action_notion_query_database(
     if not database_id:
         raise ValueError("database_id は必須です")
 
+    # database_id を正規化（URL対応）
+    database_id = _normalize_notion_id(database_id)
+
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
     api_key = params.get("api_key")
@@ -926,9 +1001,9 @@ async def action_notion_query_database(
         "params": [
             {
                 "key": "database_id",
-                "description": "親データベースID",
+                "description": "親データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
             },
             {
                 "key": "properties_simple",
@@ -1016,6 +1091,9 @@ async def action_notion_create_page(
     if not database_id:
         raise ValueError("database_id は必須です")
 
+    # database_id を正規化（URL対応）
+    database_id = _normalize_notion_id(database_id)
+
     # properties_simple と properties の両方をサポート
     properties_simple = params.get("properties_simple")
     properties = params.get("properties")
@@ -1092,9 +1170,9 @@ async def action_notion_create_page(
         "params": [
             {
                 "key": "page_id",
-                "description": "ページID",
+                "description": "ページID（NotionのページURLをそのまま貼り付け可能、またはIDのみ）",
                 "required": True,
-                "example": "0123456789abcdef0123456789abcdef"
+                "example": "https://www.notion.so/workspace/Page-abc123... または abc123..."
             },
             {
                 "key": "properties_simple",
@@ -1182,6 +1260,9 @@ async def action_notion_update_page(
     page_id = params.get("page_id")
     if not page_id:
         raise ValueError("page_id は必須です")
+
+    # page_id を正規化（URL対応）
+    page_id = _normalize_notion_id(page_id)
 
     # API キー読み込み
     base_dir = context.get("base_dir", Path.cwd())
