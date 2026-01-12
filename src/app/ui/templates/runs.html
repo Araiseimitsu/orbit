@@ -58,6 +58,10 @@ content %}
                     <span class="text-sm font-bold text-white leading-tight"
                         >{{ run.workflow }}</span
                     >
+                    {% set folder_label = workflow_folders.get(run.workflow) %}
+                    <span class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5"
+                        >{{ folder_label if folder_label else "不明" }}</span
+                    >
                     <span
                         class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-0.5"
                         >{{ run.run_id }}</span

@@ -195,20 +195,6 @@ def build_error_run(workflow_name: str, message: str) -> RunLog:
     )
 
 
-def get_workflow_status(workflow_name: str) -> tuple[str, str | None]:
-    """ワークフローの最新ステータスと実行時刻を取得"""
-    latest = run_logger.get_latest_run(workflow_name)
-    if latest:
-        status_map = {
-            "success": "成功",
-            "failed": "失敗",
-            "running": "実行中",
-            "stopped": "停止",
-        }
-        return status_map.get(latest.status, latest.status), latest.started_at
-    return "未実行", None
-
-
 @app.get("/health")
 async def health_check():
     """
@@ -263,13 +249,24 @@ async def health_check():
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, q: str | None = None):
     """ダッシュボード - ワークフロー一覧"""
+    start_time = time.perf_counter()
     workflows = loader.list_workflows()
+    list_elapsed = time.perf_counter() - start_time
     query = (q or "").strip()
 
     # 最新実行ステータスを反映
+    valid_names = {wf.name for wf in workflows if wf.is_valid and wf.name}
+    latest_map = run_logger.get_latest_runs_map(valid_names)
+    status_map = {"success": "成功", "failed": "失敗", "running": "実行中", "stopped": "停止"}
     for wf in workflows:
-        if wf.is_valid:
-            wf.status, wf.last_run = get_workflow_status(wf.name)
+        if not wf.is_valid or not wf.name:
+            continue
+        latest = latest_map.get(wf.name)
+        if latest:
+            wf.status = status_map.get(latest.status, latest.status)
+            wf.last_run = latest.started_at
+    status_elapsed = time.perf_counter() - start_time
+    logger.info("Dashboard load: workflows=%d valid=%d list=%.3fs status=%.3fs", len(workflows), len(valid_names), list_elapsed, status_elapsed)
 
     if query:
         lowered = query.lower()
@@ -369,9 +366,18 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
     if workflow is not None and workflow.strip() == "":
         workflow = None
 
-    workflow_options = sorted({wf.name for wf in loader.list_workflows() if wf.name})
+    workflows = loader.list_workflows()
+    workflow_options = sorted({wf.name for wf in workflows if wf.name})
     if workflow and workflow not in workflow_options:
         workflow_options = [workflow, *workflow_options]
+    def normalize_folder(value: str | None) -> str:
+        label = (value or "").strip()
+        return label if label else "未分類"
+    workflow_folders = {
+        wf.name: normalize_folder(wf.folder)
+        for wf in workflows
+        if wf.name
+    }
     runs = run_logger.get_all_runs(
         limit=per_page, offset=offset, workflow_filter=workflow
     )
@@ -385,6 +391,7 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
             "runs": runs,
             "workflow_filter": workflow,
             "workflow_options": workflow_options,
+            "workflow_folders": workflow_folders,
             "pagination": {
                 "page": page,
                 "per_page": per_page,

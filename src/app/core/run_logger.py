@@ -4,6 +4,7 @@ ORBIT MVP - Run Logger
 """
 import json
 import logging
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -86,6 +87,54 @@ class RunLogger:
         """ワークフローの最新実行結果を取得"""
         runs = self.get_runs_for_workflow(workflow_name, limit=1)
         return runs[0] if runs else None
+
+    def get_latest_runs_map(self, workflow_names: set[str]) -> dict[str, RunLog]:
+        """複数ワークフローの最新実行結果をまとめて取得"""
+        if not workflow_names:
+            return {}
+
+        start_time = time.perf_counter()
+        latest: dict[str, RunLog] = {}
+        remaining = set(workflow_names)
+        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
+
+        for log_file in log_files:
+            if not remaining:
+                break
+            try:
+                lines = log_file.read_text(encoding="utf-8").splitlines()
+            except Exception as e:
+                logger.error(f"Failed to read log file {log_file}: {e}")
+                continue
+
+            for line in reversed(lines):
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    run = RunLog.model_validate(data)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Invalid JSON in {log_file}: {e}")
+                    continue
+                except Exception as e:
+                    logger.warning(f"Failed to parse run log: {e}")
+                    continue
+
+                if run.workflow in remaining:
+                    latest[run.workflow] = run
+                    remaining.remove(run.workflow)
+                    if not remaining:
+                        break
+
+        elapsed = time.perf_counter() - start_time
+        logger.info(
+            "Latest runs map: workflows=%d found=%d files=%d elapsed=%.3fs",
+            len(workflow_names),
+            len(latest),
+            len(log_files),
+            elapsed,
+        )
+        return latest
 
     def _read_log_file(self, log_file: Path, workflow_filter: str | None = None) -> list[RunLog]:
         """ログファイルを読み込み"""
