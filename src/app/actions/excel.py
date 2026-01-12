@@ -71,15 +71,52 @@ def _normalize_values(values: Any) -> list[list[Any]]:
     return values
 
 
+def _format_values_as_text(values: list[list[Any]]) -> str:
+    """
+    2次元配列を読みやすいテキスト形式に変換
+
+    Args:
+        values: 2D リスト（正規化済み）
+
+    Returns:
+        整形されたテキスト（タブ区切り、改行区切り）
+    """
+    if not values:
+        return ""
+
+    lines = []
+    for row in values:
+        # タブ区切りで結合（空セルは空文字列に変換）
+        line = "\t".join(str(cell) if cell is not None else "" for cell in row)
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
 def _parse_values_with_header(
     values: list[list[Any]], header_row: bool
 ) -> dict[str, Any]:
     if not values:
-        return {"headers": [], "rows": [], "raw": [], "row_count": 0, "col_count": 0}
+        return {
+            "headers": [],
+            "rows": [],
+            "raw": [],
+            "text": "",
+            "row_count": 0,
+            "col_count": 0
+        }
+
+    # ヘッダー行を正規化（datetime オブジェクトの可能性があるため）
+    normalized_headers = [_normalize_cell_value(h) for h in values[0]]
+
+    # raw データを正規化
+    normalized_raw = []
+    for row in values:
+        normalized_raw.append([_normalize_cell_value(cell) for cell in row])
+
+    text = _format_values_as_text(normalized_raw)
 
     if header_row and len(values) >= 1:
-        # ヘッダー行を正規化（datetime オブジェクトの可能性があるため）
-        normalized_headers = [_normalize_cell_value(h) for h in values[0]]
         headers = [
             str(h) if h else f"col_{i}" for i, h in enumerate(normalized_headers)
         ]
@@ -95,29 +132,23 @@ def _parse_values_with_header(
                 row_dict[header] = normalized_value
             rows.append(row_dict)
 
-        # raw データも正規化
-        normalized_raw = []
-        for row in values:
-            normalized_raw.append([_normalize_cell_value(cell) for cell in row])
-
         return {
             "headers": headers,
             "rows": rows,
             "raw": normalized_raw,
+            "text": text,
             "row_count": len(data_rows),
             "col_count": len(headers),
         }
 
-    # ヘッダーなしの場合も正規化
+    # ヘッダーなしの場合
     col_count = max(len(row) for row in values) if values else 0
-    normalized_raw = []
-    for row in values:
-        normalized_raw.append([_normalize_cell_value(cell) for cell in row])
 
     return {
         "headers": [],
         "rows": [],
         "raw": normalized_raw,
+        "text": text,
         "row_count": len(values),
         "col_count": col_count,
     }
@@ -232,7 +263,8 @@ def _calc_updated_range(
         "outputs": [
             {"key": "headers", "description": "ヘッダー行"},
             {"key": "rows", "description": "データ行"},
-            {"key": "raw", "description": "生データ"},
+            {"key": "raw", "description": "生データ（2次元配列）"},
+            {"key": "text", "description": "整形されたテキスト（タブ区切り・改行区切り、Araichat送信などで使用）"},
             {"key": "row_count", "description": "行数"},
             {"key": "col_count", "description": "列数"},
         ],

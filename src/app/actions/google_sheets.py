@@ -225,6 +225,28 @@ def _parse_sheet_and_range(sheet: str | None, range_param: str) -> str:
         return final_range
 
 
+def _format_values_as_text(values: list[list[Any]]) -> str:
+    """
+    2次元配列を読みやすいテキスト形式に変換
+
+    Args:
+        values: 2D リスト
+
+    Returns:
+        整形されたテキスト（タブ区切り、改行区切り）
+    """
+    if not values:
+        return ""
+
+    lines = []
+    for row in values:
+        # タブ区切りで結合（空セルは空文字列に変換）
+        line = "\t".join(str(cell) if cell is not None else "" for cell in row)
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
 def _parse_values_with_header(
     values: list[list[Any]], header_row: bool
 ) -> dict[str, Any]:
@@ -239,11 +261,21 @@ def _parse_values_with_header(
         {
             "headers": ["col1", "col2", ...],
             "rows": [{"col1": "val1", "col2": "val2", ...}, ...],
-            "raw": [[...], [...], ...]
+            "raw": [[...], [...], ...],
+            "text": "整形されたテキスト"
         }
     """
+    text = _format_values_as_text(values)
+
     if not values:
-        return {"headers": [], "rows": [], "raw": [], "row_count": 0, "col_count": 0}
+        return {
+            "headers": [],
+            "rows": [],
+            "raw": [],
+            "text": text,
+            "row_count": 0,
+            "col_count": 0
+        }
 
     if header_row and len(values) >= 1:
         headers = [str(h) if h else f"col_{i}" for i, h in enumerate(values[0])]
@@ -260,6 +292,7 @@ def _parse_values_with_header(
             "headers": headers,
             "rows": rows,
             "raw": values,
+            "text": text,
             "row_count": len(data_rows),
             "col_count": len(headers),
         }
@@ -270,6 +303,7 @@ def _parse_values_with_header(
             "headers": [],
             "rows": [],
             "raw": values,
+            "text": text,
             "row_count": len(values),
             "col_count": col_count,
         }
@@ -319,7 +353,8 @@ def _parse_values_with_header(
         "outputs": [
             {"key": "headers", "description": "ヘッダー行"},
             {"key": "rows", "description": "データ行"},
-            {"key": "raw", "description": "生データ"},
+            {"key": "raw", "description": "生データ（2次元配列）"},
+            {"key": "text", "description": "整形されたテキスト（タブ区切り・改行区切り、Araichat送信などで使用）"},
             {"key": "row_count", "description": "行数"},
             {"key": "col_count", "description": "列数"},
             {"key": "spreadsheet_id", "description": "スプレッドシートID"},
