@@ -107,6 +107,7 @@ class WorkflowLoader:
                 info = WorkflowInfo(
                     name=workflow.name,
                     filename=yaml_file.name,
+                    folder=workflow.folder,
                     status="未実行",
                     last_run=None,
                     trigger_type=workflow.trigger.type,
@@ -120,6 +121,7 @@ class WorkflowLoader:
                 info = WorkflowInfo(
                     name=name,
                     filename=yaml_file.name,
+                    folder=None,
                     status="エラー",
                     last_run=None,
                     trigger_type="unknown",

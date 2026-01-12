@@ -46,9 +46,15 @@
 </div>
 
 {% if workflows %}
-<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-    {% for workflow in workflows %}
-    <div class="apple-card p-6 flex flex-col h-full min-w-0 {% if not workflow.is_valid %}ring-1 ring-red-500/50{% endif %}">
+{% for group in workflow_groups %}
+<div class="mb-10">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm sm:text-base font-semibold text-gray-300 tracking-wide">{{ group.name }}</h2>
+        <span class="text-[11px] text-gray-500 font-mono">{{ group.count }} workflows</span>
+    </div>
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {% for workflow in group.workflows %}
+        <div class="apple-card p-6 flex flex-col h-full min-w-0 {% if not workflow.is_valid %}ring-1 ring-red-500/50{% endif %}">
         <div class="flex items-start justify-between mb-4">
             <div class="overflow-hidden">
                 <a href="/workflows/{{ workflow.name }}"
@@ -132,9 +138,11 @@
                 Delete
             </button>
         </div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
+{% endfor %}
 {% else %}
 <div class="apple-card p-20 text-center">
     <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6">

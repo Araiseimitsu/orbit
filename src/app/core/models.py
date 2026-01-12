@@ -56,6 +56,7 @@ class Workflow(BaseModel):
     trigger: Trigger = Field(..., description="トリガー設定")
     steps: list[Step] = Field(..., min_length=1, description="ステップ一覧")
     description: str | None = Field(default=None, description="説明（任意）")
+    folder: str | None = Field(default=None, description="フォルダ（任意）")
     enabled: bool = Field(default=True, description="有効/無効フラグ（スケジュール登録に影響）")
 
 
@@ -63,6 +64,7 @@ class WorkflowInfo(BaseModel):
     """ワークフロー一覧表示用"""
     name: str
     filename: str
+    folder: str | None = None
     status: str = "未実行"
     last_run: str | None = None
     trigger_type: str = "manual"

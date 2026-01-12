@@ -9,6 +9,7 @@
     workflow: config.workflow || {
       name: "",
       description: "",
+      folder: "",
       trigger: { type: "manual" },
       steps: [],
     },
@@ -41,6 +42,7 @@
   };
 
   const nameInput = document.getElementById("workflow-name");
+  const folderInput = document.getElementById("workflow-folder");
   const triggerSelect = document.getElementById("trigger-type");
   const cronField = document.getElementById("cron-field");
   const cronInput = document.getElementById("trigger-cron");
@@ -64,6 +66,17 @@
   const aiBody = document.getElementById("flow-ai-body");
   const aiControls = document.getElementById("flow-ai-controls");
   const aiFooter = document.getElementById("flow-ai-footer");
+
+  if (typeof state.workflow.folder !== "string") {
+    state.workflow.folder = "";
+  }
+
+  if (folderInput) {
+    folderInput.value = state.workflow.folder;
+    folderInput.addEventListener("input", () => {
+      state.workflow.folder = (folderInput.value || "").trim();
+    });
+  }
 
   const REQUIRED_PARAMS = {
     ai_generate: ["prompt"],
@@ -1673,13 +1686,23 @@
       trigger.cron = cronInput.value.trim();
     }
 
-    return {
+    const folderValue = folderInput
+      ? (folderInput.value || "").trim()
+      : typeof state.workflow.folder === "string"
+        ? state.workflow.folder.trim()
+        : "";
+
+    const payload = {
       name: (nameInput.value || "").trim(),
       description: state.workflow.description || "",
       enabled: enabledInput ? !!enabledInput.checked : true,
       trigger,
       steps,
     };
+    if (folderValue) {
+      payload.folder = folderValue;
+    }
+    return payload;
   };
 
   const normalizeIncomingWhen = (raw) => {
@@ -1780,6 +1803,9 @@
       if (workflow.description !== undefined) {
         state.workflow.description = workflow.description || "";
       }
+      if (typeof workflow.folder === "string") {
+        state.workflow.folder = workflow.folder;
+      }
       if (workflow.trigger) {
         state.workflow.trigger = workflow.trigger;
       }
@@ -1791,6 +1817,9 @@
     }
 
     nameInput.value = state.workflow.name || "";
+    if (folderInput) {
+      folderInput.value = state.workflow.folder || "";
+    }
     triggerSelect.value = state.workflow.trigger?.type || "manual";
     cronInput.value = state.workflow.trigger?.cron || "";
     if (enabledInput) {
@@ -2045,6 +2074,9 @@
   }
 
   nameInput.value = state.workflow.name || "";
+  if (folderInput) {
+    folderInput.value = state.workflow.folder || "";
+  }
   triggerSelect.value = state.workflow.trigger?.type || "manual";
   cronInput.value = state.workflow.trigger?.cron || "";
   if (enabledInput) {

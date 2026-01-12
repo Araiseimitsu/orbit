@@ -143,6 +143,7 @@ def build_editor_data(workflow: Workflow | None) -> dict:
         return {
             "name": "",
             "description": "",
+            "folder": "",
             "enabled": True,
             "trigger": {"type": "manual"},
             "steps": [],
@@ -173,6 +174,7 @@ def build_editor_data(workflow: Workflow | None) -> dict:
     return {
         "name": workflow.name,
         "description": workflow.description or "",
+        "folder": workflow.folder or "",
         "enabled": workflow.enabled,
         "trigger": trigger_data,
         "steps": steps,
@@ -272,12 +274,41 @@ async def dashboard(request: Request, q: str | None = None):
     if query:
         lowered = query.lower()
         workflows = [
-            wf for wf in workflows if (wf.name or "").lower().find(lowered) != -1
+            wf
+            for wf in workflows
+            if (wf.name or "").lower().find(lowered) != -1
+            or (wf.folder or "").lower().find(lowered) != -1
         ]
+
+    def normalize_folder(value: str | None) -> str:
+        label = (value or "").strip()
+        return label if label else "未分類"
+
+    grouped = {}
+    for wf in workflows:
+        label = normalize_folder(wf.folder)
+        grouped.setdefault(label, []).append(wf)
+
+    ordered_labels = sorted(
+        grouped.keys(), key=lambda label: (label != "未分類", label.lower())
+    )
+    workflow_groups = [
+        {
+            "name": label,
+            "workflows": grouped[label],
+            "count": len(grouped[label]),
+        }
+        for label in ordered_labels
+    ]
 
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "workflows": workflows, "search_query": query},
+        {
+            "request": request,
+            "workflows": workflows,
+            "workflow_groups": workflow_groups,
+            "search_query": query,
+        },
     )
 
 
@@ -818,6 +849,14 @@ async def save_workflow(request: Request):
         raise HTTPException(status_code=400, detail="未対応のトリガーです")
     steps = payload.get("steps") or []
     description = payload.get("description") or None
+    folder_raw = payload.get("folder")
+    folder = None
+    if folder_raw is not None:
+        if not isinstance(folder_raw, str):
+            raise HTTPException(
+                status_code=400, detail="folder は文字列で指定してください"
+            )
+        folder = folder_raw.strip() or None
     enabled = payload.get("enabled", True)
     if not isinstance(enabled, bool):
         raise HTTPException(
@@ -902,6 +941,7 @@ async def save_workflow(request: Request):
     workflow_data = {
         "name": name,
         "description": description,
+        "folder": folder,
         "enabled": enabled,
         "trigger": trigger,
         "steps": normalized_steps,
