@@ -11,6 +11,7 @@ const initApp = () => {
   initGlobalEventListeners();
   initHelpModal();
   initRunDetailsToggle();
+  initFolderGroupToggle();
   initDeleteModal();
   initImportWorkflow();
 };
@@ -449,6 +450,60 @@ function initRunDetailsToggle() {
     }
 
     target.setAttribute("aria-expanded", isHidden ? "true" : "false");
+  });
+}
+
+function initFolderGroupToggle() {
+  const STORAGE_PREFIX = "orbit.dashboard.folder:";
+  const getStorageKey = (target, panelId) => {
+    const rawKey = target.getAttribute("data-folder-key") || panelId || "";
+    return `${STORAGE_PREFIX}${rawKey}`;
+  };
+  const setExpandedState = (target, panel, expanded) => {
+    panel.classList.toggle("hidden", !expanded);
+    target.setAttribute("aria-expanded", expanded ? "true" : "false");
+    const icon = target.querySelector("[data-folder-toggle-icon]");
+    if (icon) {
+      icon.classList.toggle("rotate-180", expanded);
+    }
+  };
+
+  document.querySelectorAll("[data-folder-toggle]").forEach((target) => {
+    const panelId = target.getAttribute("data-folder-toggle");
+    if (!panelId) return;
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const stored = localStorage.getItem(getStorageKey(target, panelId));
+    if (stored === "collapsed") {
+      setExpandedState(target, panel, false);
+    } else {
+      setExpandedState(target, panel, true);
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-folder-toggle]")
+        : null;
+    if (!target) return;
+
+    event.preventDefault();
+
+    const panelId = target.getAttribute("data-folder-toggle");
+    if (!panelId) return;
+
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const isHidden = panel.classList.contains("hidden");
+    const nextExpanded = isHidden;
+    setExpandedState(target, panel, nextExpanded);
+    localStorage.setItem(
+      getStorageKey(target, panelId),
+      nextExpanded ? "expanded" : "collapsed",
+    );
   });
 }
 
