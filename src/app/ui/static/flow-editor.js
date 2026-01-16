@@ -187,6 +187,25 @@
     }, 3000);
   };
 
+  const showSaveCompleteNotification = () => {
+    const notification = document.createElement("div");
+    notification.className = "ai-complete-notification save-complete-notification";
+    notification.innerHTML = `
+      <div class="ai-complete-icon">✓</div>
+      <div class="ai-complete-message">保存が完了しました</div>
+    `;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add("show");
+    }, 10);
+
+    setTimeout(() => {
+      notification.classList.remove("show");
+      setTimeout(() => notification.remove(), 300);
+    }, 2500);
+  };
+
   const setZoom = (level) => {
     state.zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level));
     canvasEl.style.transform = `scale(${state.zoomLevel})`;
@@ -1949,7 +1968,9 @@
       }
       const result = await response.json();
       setStatus("保存しました");
+      showSaveCompleteNotification();
       if (result.name && window.location.pathname.indexOf("/edit") === -1) {
+        sessionStorage.setItem("workflowSaved", "1");
         window.location.href = `/workflows/${result.name}/edit`;
       }
     } catch (error) {
@@ -2043,6 +2064,11 @@
 
   if (aiGenerateButton) {
     aiGenerateButton.addEventListener("click", requestAiFlow);
+  }
+  if (sessionStorage.getItem("workflowSaved") === "1") {
+    sessionStorage.removeItem("workflowSaved");
+    showSaveCompleteNotification();
+    setStatus("保存しました");
   }
   if (aiClearButton && aiPromptInput) {
     aiClearButton.addEventListener("click", () => {

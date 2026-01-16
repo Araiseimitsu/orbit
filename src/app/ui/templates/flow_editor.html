@@ -45,14 +45,17 @@
                         <option value="*/5 * * * *">5分ごと</option>
                         <option value="0 * * * *">毎時（毎時00分）</option>
                         <option value="0 9 * * *">毎日 9:00</option>
-                        <option value="0 9 * * 1-5">平日 9:00</option>
+                        <option value="0 9 * * mon-fri">平日 9:00</option>
                         <option value="0 9 * * 0">毎週日曜 9:00</option>
                     </select>
                 </div>
                 <div id="cron-preview" class="cron-preview"></div>
                 <div id="cron-error" class="cron-error"></div>
                 <div class="cron-help">
-                    形式: 分(0-59) 時(0-23) 日(1-31) 月(1-12) 曜日(0-6/SUN-SAT)
+                    形式: 分(0-59) 時(0-23) 日(1-31) 月(1-12) 曜日(0-6/mon-sun)
+                </div>
+                <div class="cron-help">
+                    曜日番号は 0=月, 6=日（例: 平日は mon-fri / 0-4）
                 </div>
                 <div class="cron-help">
                     * = すべて / */n = nごと（例: */5 * * * * = 5分ごと） ※タイムゾーンはJST固定

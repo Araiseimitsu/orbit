@@ -1268,6 +1268,15 @@
     color: var(--text-primary);
 }
 
+/* 保存完了通知 */
+.save-complete-notification {
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+.save-complete-notification .ai-complete-icon {
+    background: var(--accent-blue);
+}
+
 /* AIパラメータ設定ボタン */
 .ai-params-button {
     width: 100%;
