@@ -13,20 +13,20 @@
             <form method="get" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <div class="relative flex-1 min-w-0 w-full sm:w-auto">
                     <input id="search-query" type="search" name="q" value="{{ search_query }}"
-                        placeholder="Search workflows..." class="w-full sm:w-64" autocomplete="off" />
+                        placeholder="Search workflows..." class="w-full sm:w-64" autocomplete="off" title="ワークフローを検索" />
                 </div>
                 {% if search_query %}
-                <a href="/" class="apple-button apple-button-secondary px-4 py-2 text-xs w-full sm:w-auto">
+                <a href="/" class="apple-button apple-button-secondary px-4 py-2 text-xs w-full sm:w-auto" title="検索条件をクリア">
                     Clear
                 </a>
                 {% endif %}
-                <button type="submit" class="apple-button apple-button-primary px-4 py-2 text-xs w-full sm:w-auto">
+                <button type="submit" class="apple-button apple-button-primary px-4 py-2 text-xs w-full sm:w-auto" title="検索実行">
                     Search
                 </button>
             </form>
             <button type="button"
                 class="apple-button apple-button-secondary px-6 py-2.5 text-sm w-full sm:w-auto"
-                data-import-trigger>
+                data-import-trigger title="YAMLファイルからワークフローをインポート">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -35,7 +35,7 @@
             </button>
             <input type="file" id="import-file-input" accept=".yaml,.yml" class="hidden"
                 data-import-input />
-            <a href="/workflows/new/visual" class="apple-button apple-button-primary px-6 py-2.5 text-sm w-full sm:w-auto">
+            <a href="/workflows/new/visual" class="apple-button apple-button-primary px-6 py-2.5 text-sm w-full sm:w-auto" title="新しいビジュアルワークフローを作成">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -54,7 +54,8 @@
             data-folder-toggle="folder-group-{{ loop.index }}"
             data-folder-key="{{ group.name }}"
             aria-controls="folder-group-{{ loop.index }}"
-            aria-expanded="true">
+            aria-expanded="true"
+            title="フォルダを開く/閉じる">
             <span class="sr-only">Toggle</span>
             <svg class="w-3 h-3 transition-transform rotate-180" data-folder-toggle-icon
                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,12 +112,12 @@
         <div class="mt-auto space-y-3">
             <div class="grid grid-cols-2 gap-2">
                 <a href="/workflows/{{ workflow.name }}/edit"
-                    class="apple-button apple-button-secondary py-2 text-xs {% if not workflow.is_valid %}opacity-50 cursor-not-allowed pointer-events-none{% endif %}">
+                    class="apple-button apple-button-secondary py-2 text-xs {% if not workflow.is_valid %}opacity-50 cursor-not-allowed pointer-events-none{% endif %}" title="ワークフローを編集">
                     Edit
                 </a>
                 <button class="apple-button apple-button-secondary py-2 text-xs"
                     data-toggle-workflow="{{ workflow.name }}"
-                    data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}">
+                    data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}" title="ワークフローを有効化/無効化">
                     {% if workflow.enabled %}Pause{% else %}Enable{% endif %}
                 </button>
             </div>
@@ -125,7 +126,7 @@
                 class="apple-button apple-button-primary w-full py-2.5 text-sm run-button {% if not workflow.is_valid %}opacity-50 cursor-not-allowed{% endif %}"
                 data-workflow-run="{{ workflow.name }}"
                 hx-post="/api/workflows/{{ workflow.name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if
-                not workflow.is_valid %}disabled{% endif %}>
+                not workflow.is_valid %}disabled{% endif %} title="ワークフローを実行">
                 <div class="htmx-indicator flex items-center">
                     <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
@@ -140,13 +141,13 @@
             </button>
             <button type="button"
                 class="apple-button apple-button-danger w-full py-2.5 text-sm stop-button hidden"
-                data-workflow-stop="{{ workflow.name }}" {% if not workflow.is_valid %}disabled{% endif %}>
+                data-workflow-stop="{{ workflow.name }}" {% if not workflow.is_valid %}disabled{% endif %} title="実行中のワークフローを停止">
                 Stop
             </button>
 
             <button class="apple-button apple-button-danger w-full py-2 text-xs"
                 data-delete-workflow="{{ workflow.name }}"
-                data-cron="{{ workflow.cron or '' }}">
+                data-cron="{{ workflow.cron or '' }}" title="ワークフローを削除">
                 Delete
             </button>
         </div>
@@ -165,7 +166,7 @@
     </div>
     <h3 class="text-xl font-bold text-white mb-2">No workflows found</h3>
     <p class="text-gray-500 mb-8">Get started by creating your first automation workflow.</p>
-    <a href="/workflows/new/visual" class="apple-button apple-button-primary px-8 py-3">
+    <a href="/workflows/new/visual" class="apple-button apple-button-primary px-8 py-3" title="最初のワークフローを作成">
         Create Your First Workflow
     </a>
 </div>

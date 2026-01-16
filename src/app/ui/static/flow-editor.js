@@ -714,6 +714,7 @@
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.textContent = "削除";
+    removeButton.title = "このパラメータを削除";
 
     row.appendChild(keyWrap);
     row.appendChild(valueWrap);
@@ -823,6 +824,7 @@
           const applyButton = document.createElement("button");
           applyButton.textContent = "この式を適用";
           applyButton.className = "apply-expression-button";
+          applyButton.title = "この式を適用";
           applyButton.addEventListener("click", () => {
             targetInput.value = expression;
             targetInput.dispatchEvent(new Event("input"));
@@ -1033,6 +1035,7 @@
           const applyButton = document.createElement("button");
           applyButton.textContent = "適用して閉じる";
           applyButton.className = "apply-params-button";
+          applyButton.title = "パラメータを適用して閉じる";
           applyButton.addEventListener("click", () => {
             applyParams(params);
             closeModal();
@@ -1389,6 +1392,7 @@
     addParamButton.type = "button";
     addParamButton.className = "ghost-button";
     addParamButton.textContent = "+ 追加";
+    addParamButton.title = "パラメータを追加";
     addParamButton.addEventListener("click", () => {
       appendParamRow("", "");
     });
@@ -1563,6 +1567,7 @@
     deleteButton.type = "button";
     deleteButton.className = "danger-button";
     deleteButton.textContent = "削除";
+    deleteButton.title = "このステップを削除";
     deleteButton.addEventListener("click", () => removeStep(step.id));
     actionsRow.appendChild(deleteButton);
 

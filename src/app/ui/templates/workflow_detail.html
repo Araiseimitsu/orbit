@@ -5,7 +5,7 @@
 {% block content %}
 <div class="mb-8">
     <a href="/"
-        class="text-blue-500 hover:text-blue-400 text-xs font-bold tracking-widest uppercase flex items-center transition-colors">
+        class="text-blue-500 hover:text-blue-400 text-xs font-bold tracking-widest uppercase flex items-center transition-colors" title="ダッシュボードへ戻る">
         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
@@ -63,32 +63,32 @@
         <div class="flex flex-wrap items-center gap-3">
             <a href="/api/workflows/{{ name }}/export"
                 class="apple-button apple-button-secondary px-6 py-2.5 text-sm"
-                download="{{ name }}.yaml">
+                download="{{ name }}.yaml" title="ワークフローをYAMLとしてエクスポート">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 Export
             </a>
-            <a href="/workflows/{{ name }}/edit" class="apple-button apple-button-secondary px-6 py-2.5 text-sm">
+            <a href="/workflows/{{ name }}/edit" class="apple-button apple-button-secondary px-6 py-2.5 text-sm" title="ビジュアルエディタを開く">
                 Visual Editor
             </a>
             {% if workflow %}
             <button class="apple-button apple-button-secondary px-6 py-2.5 text-sm" data-toggle-workflow="{{ name }}"
-                data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}">
+                data-enabled="{% if workflow.enabled %}true{% else %}false{% endif %}" title="ワークフローを一時停止/有効化">
                 {% if workflow.enabled %}Pause{% else %}Enable{% endif %}
             </button>
             {% endif %}
             <button class="apple-button apple-button-danger px-6 py-2.5 text-sm"
                 data-delete-workflow="{{ name }}"
-                data-cron="{% if workflow and workflow.trigger.type == 'schedule' %}{{ workflow.trigger.cron }}{% endif %}">
+                data-cron="{% if workflow and workflow.trigger.type == 'schedule' %}{{ workflow.trigger.cron }}{% endif %}" title="ワークフローを削除">
                 Delete
             </button>
             <button
                 class="apple-button apple-button-primary px-8 py-2.5 text-sm run-button {% if error %}opacity-50 cursor-not-allowed{% endif %}"
                 data-workflow-run="{{ name }}"
                 hx-post="/api/workflows/{{ name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if error
-                %}disabled{% endif %}>
+                %}disabled{% endif %} title="ワークフローを実行">
                 <div class="htmx-indicator flex items-center">
                     <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
@@ -177,7 +177,7 @@
                             <span class="text-[10px] font-medium text-gray-500 uppercase tracking-tighter">{{
                                 run.started_at }}</span>
                             <button data-run-details-toggle="{{ run.run_id }}" aria-controls="details-{{ run.run_id }}" aria-expanded="false"
-                                class="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest transition-colors">Details</button>
+                                class="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest transition-colors" title="実行詳細を表示/非表示">Details</button>
                         </div>
                     </div>
                     <div id="details-{{ run.run_id }}" class="hidden p-5 bg-black/20 border-t border-white/5">
@@ -223,7 +223,7 @@
                 <div class="flex items-center space-x-2">
                     {% if pagination.has_prev %}
                     <a href="/workflows/{{ name }}?page={{ pagination.page - 1 }}"
-                        class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                        class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors" title="前のページへ">
                         Previous
                     </a>
                     {% endif %}
@@ -243,7 +243,7 @@
 
                     {% if pagination.has_next %}
                     <a href="/workflows/{{ name }}?page={{ pagination.page + 1 }}"
-                        class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                        class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors" title="次のページへ">
                         Next
                     </a>
                     {% endif %}

@@ -24,11 +24,11 @@ content %}
             </select>
         </div>
         <div class="flex items-center gap-2">
-            <button type="submit" class="apple-button apple-button-primary px-5 py-2 text-xs">
+            <button type="submit" class="apple-button apple-button-primary px-5 py-2 text-xs" title="フィルターを適用">
                 Filter
             </button>
             {% if workflow_filter %}
-            <a href="/runs" class="apple-button apple-button-secondary px-5 py-2 text-xs">
+            <a href="/runs" class="apple-button apple-button-secondary px-5 py-2 text-xs" title="フィルターをクリア">
                 Clear
             </a>
             {% endif %}
@@ -82,6 +82,7 @@ content %}
                     aria-controls="details-{{ run.run_id }}"
                     aria-expanded="false"
                     class="apple-button apple-button-secondary px-4 py-2 text-[11px]"
+                    title="実行詳細を表示"
                 >
                     View Details
                 </button>
@@ -242,7 +243,7 @@ content %}
         <div class="flex items-center space-x-2">
             {% if pagination.has_prev %}
             <a href="/runs?{% if workflow_filter %}workflow={{ workflow_filter }}&{% endif %}page={{ pagination.page - 1 }}"
-                class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors" title="前のページへ">
                 Previous
             </a>
             {% endif %}
@@ -262,7 +263,7 @@ content %}
 
             {% if pagination.has_next %}
             <a href="/runs?{% if workflow_filter %}workflow={{ workflow_filter }}&{% endif %}page={{ pagination.page + 1 }}"
-                class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors" title="次のページへ">
                 Next
             </a>
             {% endif %}
