@@ -14,7 +14,8 @@
 }
 
 body {
-    background-color: var(--bg-black);
+    background-color: transparent;
+    /* Changed from var(--bg-black) to transparent */
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -234,4 +235,66 @@ select:focus {
 select option {
     background-color: var(--surface-dark);
     color: white;
+}
+
+/* Workflow Background */
+.workflow-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    background-color: #020202;
+    /* Primary Grid */
+    background-image:
+        linear-gradient(rgba(0, 122, 255, 0.25) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 122, 255, 0.25) 1px, transparent 1px),
+        /* Secondary Finer Grid for depth */
+        linear-gradient(rgba(0, 122, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 122, 255, 0.1) 1px, transparent 1px),
+        /* Glow */
+        radial-gradient(circle at 50% 50%, rgba(0, 80, 255, 0.15) 0%, transparent 70%);
+    background-size:
+        100px 100px, 100px 100px,
+        /* Primary Grid size */
+        20px 20px, 20px 20px,
+        /* Secondary Grid size */
+        100% 100%;
+    /* Glow size */
+    animation: backgroundMove 40s linear infinite;
+    pointer-events: none;
+}
+
+.workflow-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 50%, transparent 0%, #000000 90%);
+    pointer-events: none;
+}
+
+@keyframes backgroundMove {
+    0% {
+        background-position:
+            0 0, 0 0,
+            /* Primary Grid */
+            0 0, 0 0,
+            /* Secondary Grid */
+            50% 50%;
+        /* Glow */
+    }
+
+    100% {
+        background-position:
+            100px 100px, 100px 100px,
+            /* Primary Grid moves full cell */
+            20px 20px, 20px 20px,
+            /* Secondary Grid moves full cell */
+            50% 50%;
+        /* Glow stays */
+    }
 }
