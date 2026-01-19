@@ -341,6 +341,7 @@
     grid-template-columns: 240px minmax(0, 1fr) 380px;
     gap: 20px;
     align-items: stretch;
+    --flow-panel-height: calc(100vh - 100px);
 }
 
 .flow-panel {
@@ -350,7 +351,8 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    max-height: calc(100vh - 100px);
+    height: var(--flow-panel-height);
+    max-height: var(--flow-panel-height);
     overflow: hidden;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -515,7 +517,8 @@
     border-radius: 20px;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 100px);
+    height: var(--flow-panel-height);
+    max-height: var(--flow-panel-height);
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -1278,7 +1281,7 @@
 
     .flow-panel,
     .flow-canvas-wrap {
-        min-height: 560px;
+        min-height: min(560px, var(--flow-panel-height));
     }
 
     .flow-ai-head {

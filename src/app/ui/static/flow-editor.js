@@ -21,6 +21,14 @@
     workflowsCache: [],
   };
 
+  const DEBUG = config.debug === true;
+  const logDebug = (...args) => {
+    if (!DEBUG) {
+      return;
+    }
+    console.debug("[flow-editor]", ...args);
+  };
+
   const buildActionGuides = (metadata) => {
     const guides = {};
     for (const [type, meta] of Object.entries(metadata)) {
@@ -55,6 +63,7 @@
   const actionListEl = document.getElementById("action-list");
   const canvasEl = document.getElementById("flow-canvas");
   const inspectorEl = document.getElementById("inspector");
+  const layoutEl = document.querySelector(".flow-editor-layout");
   const aiPromptInput = document.getElementById("ai-flow-prompt");
   const aiModeSelect = document.getElementById("ai-flow-mode");
   const aiSearchToggle = document.getElementById("ai-flow-search");
@@ -89,6 +98,45 @@
   const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 2.0;
   const ZOOM_STEP = 0.1;
+  const DEFAULT_CANVAS_MIN_HEIGHT = 500;
+  const CANVAS_PADDING = 160;
+  const PANEL_HEIGHT_MULTIPLIER = 1.5;
+
+  let layoutSyncId = null;
+  const syncLayoutHeight = () => {
+    if (!layoutEl) {
+      return;
+    }
+    const rect = layoutEl.getBoundingClientRect();
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight || 0;
+    const safeGap = 24;
+    const minHeight = Math.max(
+      320,
+      Math.round(420 * PANEL_HEIGHT_MULTIPLIER),
+    );
+    const available = Math.max(
+      minHeight,
+      Math.floor((viewportHeight - rect.top - safeGap) * PANEL_HEIGHT_MULTIPLIER),
+    );
+    layoutEl.style.setProperty("--flow-panel-height", `${available}px`);
+    logDebug("layout height synced", {
+      top: Math.round(rect.top),
+      viewportHeight,
+      minHeight,
+      available,
+    });
+  };
+
+  const scheduleLayoutSync = () => {
+    if (layoutSyncId !== null) {
+      cancelAnimationFrame(layoutSyncId);
+    }
+    layoutSyncId = requestAnimationFrame(() => {
+      layoutSyncId = null;
+      syncLayoutHeight();
+    });
+  };
 
   const buildActionGroups = (actions) => {
     const categoryMap = new Map();
@@ -166,6 +214,7 @@
     if (aiFooter) {
       aiFooter.style.display = isExpanded ? "none" : "";
     }
+    scheduleLayoutSync();
   };
 
   const showAiCompleteNotification = () => {
@@ -504,6 +553,29 @@
       node.appendChild(label);
       node.appendChild(deleteButton);
       canvasEl.appendChild(node);
+    });
+
+    const nodes = Array.from(canvasEl.querySelectorAll(".flow-node"));
+    if (nodes.length === 0) {
+      canvasEl.style.minHeight = `${DEFAULT_CANVAS_MIN_HEIGHT}px`;
+      logDebug("canvas bounds reset", { minHeight: DEFAULT_CANVAS_MIN_HEIGHT });
+      return;
+    }
+    let maxBottom = 0;
+    nodes.forEach((node) => {
+      const bottom = node.offsetTop + node.offsetHeight;
+      if (bottom > maxBottom) {
+        maxBottom = bottom;
+      }
+    });
+    const nextMinHeight = Math.max(
+      DEFAULT_CANVAS_MIN_HEIGHT,
+      maxBottom + CANVAS_PADDING,
+    );
+    canvasEl.style.minHeight = `${nextMinHeight}px`;
+    logDebug("canvas bounds updated", {
+      nodes: nodes.length,
+      minHeight: nextMinHeight,
     });
   };
 
@@ -1653,6 +1725,7 @@
   const updateTriggerVisibility = () => {
     const isSchedule = triggerSelect.value === "schedule";
     cronField.style.display = isSchedule ? "grid" : "none";
+    scheduleLayoutSync();
   };
 
   let cronPreviewTimer = null;
@@ -2162,4 +2235,7 @@
   if (aiToggle) {
     aiToggle.addEventListener("click", toggleAiPanel);
   }
+  window.addEventListener("resize", scheduleLayoutSync);
+  window.addEventListener("pageshow", scheduleLayoutSync);
+  scheduleLayoutSync();
 })();

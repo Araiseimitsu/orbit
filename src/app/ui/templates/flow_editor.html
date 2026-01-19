@@ -3,7 +3,7 @@
 {% block title %}{{ page_title }} - ORBIT{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="/static/flow-editor.css?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/flow-editor.css?v={{ static_mtime('flow-editor.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -135,5 +135,5 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="/static/flow-editor.js?v={{ static_version }}" defer></script>
+    <script src="/static/flow-editor.js?v={{ static_mtime('flow-editor.js') }}" defer></script>
 {% endblock %}

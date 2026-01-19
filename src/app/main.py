@@ -134,6 +134,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_flow_editor_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path in ("/static/flow-editor.js", "/static/flow-editor.css"):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
