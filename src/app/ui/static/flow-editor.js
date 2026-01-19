@@ -452,9 +452,32 @@
       label.className = "flow-node-id";
       label.textContent = step.id;
 
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "flow-node-delete";
+      deleteButton.title = "このステップを削除";
+      deleteButton.setAttribute("aria-label", "このステップを削除");
+      deleteButton.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 7h14" />
+          <path d="M9 7V5h6v2" />
+          <path d="M10 11v6" />
+          <path d="M14 11v6" />
+          <path d="M7 7l1 12h8l1-12" />
+        </svg>
+      `;
+      deleteButton.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+      });
+      deleteButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        removeStep(step.id);
+      });
+
       node.appendChild(orderBadge);
       node.appendChild(title);
       node.appendChild(label);
+      node.appendChild(deleteButton);
       canvasEl.appendChild(node);
     });
   };
@@ -1561,16 +1584,6 @@
     whenEqualsInput.addEventListener("input", syncWhen);
     syncWhen();
 
-    const actionsRow = document.createElement("div");
-    actionsRow.className = "inspector-actions";
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "danger-button";
-    deleteButton.textContent = "削除";
-    deleteButton.title = "このステップを削除";
-    deleteButton.addEventListener("click", () => removeStep(step.id));
-    actionsRow.appendChild(deleteButton);
-
     inspectorEl.appendChild(orderRow);
     inspectorEl.appendChild(idRow);
     inspectorEl.appendChild(typeRow);
@@ -1579,7 +1592,6 @@
     }
     inspectorEl.appendChild(paramsRow);
     inspectorEl.appendChild(whenRow);
-    inspectorEl.appendChild(actionsRow);
 
     const updateId = () => {
       const nextId = idInput.value.trim();

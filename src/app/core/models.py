@@ -70,9 +70,11 @@ class WorkflowInfo(BaseModel):
     trigger_type: str = "manual"
     cron: str | None = None
     step_count: int = 0
+    first_step_type: str | None = None
     is_valid: bool = True
     error: str | None = None
     enabled: bool = True
+
 
 
 class RunLog(BaseModel):

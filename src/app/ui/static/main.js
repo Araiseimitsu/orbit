@@ -13,6 +13,7 @@ const initApp = () => {
   initRunDetailsToggle();
   initFolderGroupToggle();
   initDeleteModal();
+  initRunPromptModal();
   initImportWorkflow();
 };
 
@@ -297,9 +298,193 @@ function initGlobalEventListeners() {
 }
 
 /**
+ * Run Prompt Modal
+ */
+let pendingRunWorkflow = null;
+let pendingRunButton = null;
+
+function showRunPromptModal(name) {
+  const modal = document.getElementById("run-prompt-modal");
+  if (!modal) return;
+
+  pendingRunWorkflow = name;
+  pendingRunButton = document.querySelector(
+    `[data-workflow-run="${escapeSelector(name)}"]`,
+  );
+
+  const promptInput = modal.querySelector("#run-prompt-input");
+  if (promptInput) {
+    promptInput.value = "";
+    promptInput.focus();
+  }
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  document.body.classList.add("overflow-hidden");
+}
+
+function hideRunPromptModal(modal) {
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+  document.body.classList.remove("overflow-hidden");
+}
+
+async function submitRunPrompt({ prompt, skipPrompt }) {
+  if (!pendingRunWorkflow) return;
+
+  const modal = document.getElementById("run-prompt-modal");
+  const hasModal = !!modal;
+
+  if (hasModal) {
+    hideRunPromptModal(modal);
+  }
+
+  const submitButton = hasModal
+    ? modal.querySelector("[data-run-prompt-submit]")
+    : null;
+  const skipButton = hasModal
+    ? modal.querySelector("[data-run-prompt-skip]")
+    : null;
+  const buttons = [submitButton, skipButton].filter(Boolean);
+
+  buttons.forEach((btn) => {
+    btn.disabled = true;
+  });
+
+  if (pendingRunButton) {
+    pendingRunButton.disabled = true;
+    pendingRunButton.classList.add("htmx-request");
+  }
+
+  if (pendingRunWorkflow) {
+    updateDashboardBadge(pendingRunWorkflow, "running");
+    const stopButton = getStopButton(pendingRunWorkflow);
+    if (stopButton) {
+      stopButton.classList.remove("hidden");
+      stopButton.disabled = false;
+      stopButton.textContent = "Stop";
+    }
+  }
+
+  try {
+    const payload = skipPrompt ? {} : { prompt: prompt || "" };
+    const response = await fetch(
+      `/api/workflows/${encodeURIComponent(pendingRunWorkflow)}/run`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    const html = await response.text();
+    if (!response.ok) {
+      throw new Error("実行に失敗しました");
+    }
+
+    const toastContainer = document.getElementById("toast-container");
+    if (toastContainer) {
+      const fragment = document
+        .createRange()
+        .createContextualFragment(html);
+      toastContainer.appendChild(fragment);
+    }
+  } catch (error) {
+    window.alert(error.message || "実行に失敗しました");
+  } finally {
+    buttons.forEach((btn) => {
+      btn.disabled = false;
+    });
+    if (pendingRunButton) {
+      pendingRunButton.disabled = false;
+      pendingRunButton.classList.remove("htmx-request");
+    }
+    if (pendingRunWorkflow) {
+      const stopButton = getStopButton(pendingRunWorkflow);
+      if (stopButton) {
+        stopButton.classList.add("hidden");
+        stopButton.disabled = false;
+        stopButton.textContent = "Stop";
+      }
+    }
+    pendingRunWorkflow = null;
+    pendingRunButton = null;
+  }
+}
+
+function initRunPromptModal() {
+  const modal = document.getElementById("run-prompt-modal");
+  if (!modal) return;
+
+  const overlay = modal.querySelector("[data-run-prompt-overlay]");
+  const closeButtons = modal.querySelectorAll("[data-run-prompt-close]");
+  const skipButton = modal.querySelector("[data-run-prompt-skip]");
+  const submitButton = modal.querySelector("[data-run-prompt-submit]");
+  const promptInput = modal.querySelector("#run-prompt-input");
+
+  const closeModal = () => {
+    hideRunPromptModal(modal);
+    pendingRunWorkflow = null;
+    pendingRunButton = null;
+  };
+
+  overlay?.addEventListener("click", closeModal);
+  closeButtons.forEach((btn) => btn.addEventListener("click", closeModal));
+
+  skipButton?.addEventListener("click", () => {
+    submitRunPrompt({ prompt: "", skipPrompt: true });
+  });
+
+  submitButton?.addEventListener("click", () => {
+    const prompt = (promptInput?.value || "").trim();
+    submitRunPrompt({ prompt, skipPrompt: false });
+  });
+
+  promptInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      const prompt = (promptInput?.value || "").trim();
+      submitRunPrompt({ prompt, skipPrompt: false });
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-workflow-run]")
+        : null;
+    if (!target) return;
+
+    event.preventDefault();
+    const name = target.getAttribute("data-workflow-run");
+    if (!name) return;
+
+    const promptEnabled =
+      target.getAttribute("data-run-prompt-enabled") === "true";
+
+    if (promptEnabled) {
+      showRunPromptModal(name);
+      return;
+    }
+
+    pendingRunWorkflow = name;
+    pendingRunButton = target;
+    submitRunPrompt({ prompt: "", skipPrompt: true });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+}
+
+/**
  * Delete Modal Management
  */
 let pendingDeleteWorkflow = null;
+
 
 function showDeleteModal(name, cron = null) {
   const modal = document.getElementById("delete-modal");

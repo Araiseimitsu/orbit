@@ -403,6 +403,50 @@
         </div>
     </div>
 
+    <!-- Run Prompt Modal -->
+    <div id="run-prompt-modal" class="fixed inset-0 z-50 hidden items-center justify-center" role="dialog" aria-modal="true"
+        aria-labelledby="run-prompt-modal-title">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" data-run-prompt-overlay></div>
+        <div class="relative w-full max-w-2xl mx-4 sm:mx-6">
+            <div class="apple-card p-6 sm:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.3em] text-gray-500">Run Workflow</p>
+                        <h3 id="run-prompt-modal-title" class="text-xl sm:text-2xl font-semibold text-white mt-2">
+                            実行プロンプト
+                        </h3>
+                        <p class="text-sm text-gray-400 mt-2">
+                            先頭ステップが AI 生成の場合にのみ、入力内容がプロンプトとして渡されます。
+                        </p>
+                    </div>
+                    <button type="button"
+                        class="text-gray-400 hover:text-white border border-white/10 rounded-full w-9 h-9 flex items-center justify-center transition-colors"
+                        aria-label="モーダルを閉じる" data-run-prompt-close title="閉じる">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="mt-6">
+                    <label for="run-prompt-input" class="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        Prompt
+                    </label>
+                    <textarea id="run-prompt-input" rows="5"
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例: 次の売上CSVを要約して、重要ポイントを3つ書いてください"></textarea>
+                </div>
+                <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                    <button type="button" class="apple-button apple-button-secondary px-6 py-2.5 text-sm"
+                        data-run-prompt-skip title="プロンプトなしで実行">
+                        プロンプトなしで実行
+                    </button>
+                    <button type="button" class="apple-button apple-button-primary px-6 py-2.5 text-sm"
+                        data-run-prompt-submit title="入力内容で実行">
+                        入力して実行
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center" role="dialog" aria-modal="true"
         aria-labelledby="delete-modal-title">

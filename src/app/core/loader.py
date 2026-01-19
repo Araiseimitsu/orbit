@@ -104,6 +104,7 @@ class WorkflowLoader:
                 cron = None
                 if workflow.trigger.type == "schedule":
                     cron = workflow.trigger.cron
+                first_step_type = workflow.steps[0].type if workflow.steps else None
                 info = WorkflowInfo(
                     name=workflow.name,
                     filename=yaml_file.name,
@@ -113,6 +114,7 @@ class WorkflowLoader:
                     trigger_type=workflow.trigger.type,
                     cron=cron,
                     step_count=len(workflow.steps),
+                    first_step_type=first_step_type,
                     is_valid=True,
                     error=None,
                     enabled=workflow.enabled
@@ -126,6 +128,7 @@ class WorkflowLoader:
                     last_run=None,
                     trigger_type="unknown",
                     step_count=0,
+                    first_step_type=None,
                     is_valid=False,
                     error=error,
                     enabled=False

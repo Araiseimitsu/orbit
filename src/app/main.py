@@ -546,6 +546,18 @@ async def run_workflow(request: Request, name: str):
         )
 
     try:
+        payload = {}
+        try:
+            payload = await request.json()
+        except Exception:
+            if request.headers.get("content-type", "").startswith(
+                "application/x-www-form-urlencoded"
+            ):
+                form = await request.form()
+                payload = dict(form)
+
+        prompt = (payload.get("prompt") or "").strip()
+
         workflow, error = loader.load_workflow(safe_name)
 
         if error or not workflow:
@@ -557,6 +569,12 @@ async def run_workflow(request: Request, name: str):
                 "partials/run_result.html",
                 {"request": request, "run": error_run, "workflow_name": safe_name},
             )
+
+        if prompt and workflow.steps:
+            first_step = workflow.steps[0]
+            if first_step.type == "ai_generate":
+                first_step.params = dict(first_step.params or {})
+                first_step.params["prompt"] = prompt
 
         task = asyncio.create_task(executor.run(workflow))
         registered = await run_manager.register(safe_name, task)

@@ -98,6 +98,14 @@
                 </svg>
                 {{ workflow.step_count }} steps
             </div>
+            {% if workflow.first_step_type %}
+            <div class="flex items-center text-[11px] text-gray-400 font-medium">
+                <svg class="w-3.5 h-3.5 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16M4 10h16M4 16h16" />
+                </svg>
+                First: {{ workflow.first_step_type }}
+            </div>
+            {% endif %}
             <div
                 class="apple-badge {% if workflow.enabled %}badge-success{% else %}badge-neutral{% endif %} !text-[10px] scale-90 origin-left">
                 {% if workflow.enabled %}ACTIVE{% else %}PAUSED{% endif %}
@@ -123,9 +131,9 @@
             </div>
 
             <button
+                type="button"
                 class="apple-button apple-button-primary w-full py-2.5 text-sm run-button {% if not workflow.is_valid %}opacity-50 cursor-not-allowed{% endif %}"
-                data-workflow-run="{{ workflow.name }}"
-                hx-post="/api/workflows/{{ workflow.name }}/run" hx-target="#toast-container" hx-swap="beforeend" {% if
+                data-workflow-run="{{ workflow.name }}" data-run-prompt-enabled="{{ 'true' if workflow.first_step_type == 'ai_generate' else 'false' }}" {% if
                 not workflow.is_valid %}disabled{% endif %} title="ワークフローを実行">
                 <div class="htmx-indicator flex items-center">
                     <svg class="w-4 h-4 mr-2 spinner" fill="none" viewBox="0 0 24 24">
