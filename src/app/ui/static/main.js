@@ -3,6 +3,25 @@
  */
 
 window.__orbitMainLoaded = true;
+if (!window.__orbitPageShowFixAdded) {
+  window.__orbitPageShowFixAdded = true;
+  window.addEventListener("pageshow", () => {
+    document.body.classList.remove("page-transition-loading");
+    document.body.classList.add("page-loaded");
+    document.body.classList.remove("overflow-hidden");
+    ["help-modal", "delete-modal", "run-prompt-modal"].forEach((id) => {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    });
+    const loader = document.getElementById("global-loader");
+    if (loader) {
+      loader.classList.add("hidden");
+      loader.classList.remove("flex");
+    }
+  });
+}
 
 const initApp = () => {
   initPageLoad();
