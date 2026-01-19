@@ -415,13 +415,38 @@
 
   const renderCanvas = () => {
     canvasEl.innerHTML = "";
-    const orderMap = new Map(
-      [...state.workflow.steps]
-        .sort(
-          (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
-        )
-        .map((step, index) => [step.id, index + 1]),
+    const orderedSteps = [...state.workflow.steps].sort(
+      (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
     );
+    const orderMap = new Map(
+      orderedSteps.map((step, index) => [step.id, index + 1]),
+    );
+
+    if (orderedSteps.length > 1) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.classList.add("flow-connection-layer");
+      svg.setAttribute("aria-hidden", "true");
+      orderedSteps.forEach((step, index) => {
+        if (index === orderedSteps.length - 1) {
+          return;
+        }
+        const next = orderedSteps[index + 1];
+        const startX = step.position.x + 80;
+        const startY = step.position.y + 70;
+        const endX = next.position.x + 80;
+        const endY = next.position.y + 12;
+        const midY = (startY + endY) / 2;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.classList.add("flow-connection-path");
+        path.setAttribute(
+          "d",
+          `M ${startX} ${startY} C ${startX} ${midY} ${endX} ${midY} ${endX} ${endY}`,
+        );
+        svg.appendChild(path);
+      });
+      canvasEl.appendChild(svg);
+    }
+
     state.workflow.steps.forEach((step) => {
       const node = document.createElement("div");
       node.className =
