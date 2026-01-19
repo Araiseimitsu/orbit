@@ -103,25 +103,37 @@
   const PANEL_HEIGHT_MULTIPLIER = 1.5;
 
   let layoutSyncId = null;
+  const getDocumentTop = (el) => {
+    let top = 0;
+    let current = el;
+    while (current) {
+      top += current.offsetTop || 0;
+      current = current.offsetParent;
+    }
+    return top;
+  };
+
   const syncLayoutHeight = () => {
     if (!layoutEl) {
       return;
     }
-    const rect = layoutEl.getBoundingClientRect();
     const viewportHeight =
       window.innerHeight || document.documentElement.clientHeight || 0;
     const safeGap = 24;
+    const documentTop = getDocumentTop(layoutEl);
     const minHeight = Math.max(
       320,
       Math.round(420 * PANEL_HEIGHT_MULTIPLIER),
     );
     const available = Math.max(
       minHeight,
-      Math.floor((viewportHeight - rect.top - safeGap) * PANEL_HEIGHT_MULTIPLIER),
+      Math.floor(
+        (viewportHeight - documentTop - safeGap) * PANEL_HEIGHT_MULTIPLIER,
+      ),
     );
     layoutEl.style.setProperty("--flow-panel-height", `${available}px`);
     logDebug("layout height synced", {
-      top: Math.round(rect.top),
+      documentTop: Math.round(documentTop),
       viewportHeight,
       minHeight,
       available,
@@ -136,6 +148,23 @@
       layoutSyncId = null;
       syncLayoutHeight();
     });
+  };
+
+  const observeLayoutAnchors = () => {
+    if (!("ResizeObserver" in window)) {
+      return;
+    }
+    const targets = [
+      document.querySelector(".nav-glass"),
+      document.querySelector(".flow-editor-header"),
+      document.getElementById("flow-ai-panel"),
+      document.querySelector(".flow-editor-error"),
+    ].filter(Boolean);
+    if (targets.length === 0) {
+      return;
+    }
+    const observer = new ResizeObserver(scheduleLayoutSync);
+    targets.forEach((target) => observer.observe(target));
   };
 
   const buildActionGroups = (actions) => {
@@ -2237,5 +2266,6 @@
   }
   window.addEventListener("resize", scheduleLayoutSync);
   window.addEventListener("pageshow", scheduleLayoutSync);
+  observeLayoutAnchors();
   scheduleLayoutSync();
 })();
