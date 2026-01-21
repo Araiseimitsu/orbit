@@ -231,6 +231,35 @@ function initGlobalEventListeners() {
     }
   });
 
+  // Toast details toggle handler
+  document.addEventListener("click", (event) => {
+    const target =
+      event.target instanceof Element
+        ? event.target.closest("[data-toast-details-toggle]")
+        : null;
+    if (!target) return;
+
+    event.preventDefault();
+    const toast = target.closest(".toast-item");
+    if (!toast) return;
+
+    const detailsDiv = toast.querySelector(".toast-details");
+    if (!detailsDiv) return;
+
+    const isHidden = detailsDiv.classList.contains("hidden");
+    const currentText = target.textContent || "";
+    const showText = currentText.includes("エラー") ? "エラー詳細を表示" : "詳細を表示";
+    const hideText = "詳細を非表示";
+
+    if (isHidden) {
+      detailsDiv.classList.remove("hidden");
+      target.textContent = hideText;
+    } else {
+      detailsDiv.classList.add("hidden");
+      target.textContent = showText;
+    }
+  });
+
   // Delete workflow handler (モーダルを表示)
   document.addEventListener("click", (event) => {
     const target =
@@ -404,10 +433,28 @@ async function submitRunPrompt({ prompt, skipPrompt }) {
 
     const toastContainer = document.getElementById("toast-container");
     if (toastContainer) {
-      const fragment = document
-        .createRange()
-        .createContextualFragment(html);
-      toastContainer.appendChild(fragment);
+      // Alpine.jsを初期化するためにtemp divを作成
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      const toastElement = temp.firstElementChild;
+      if (toastElement) {
+        // x-cloakを削除してAlpine.jsの初期化待ちを回避
+        toastElement.classList.remove("x-cloak");
+        // Alpineのx-transitionの代わりにCSSトランジションを使用
+        toastElement.style.transform = "translateX(100%)";
+        toastElement.style.opacity = "0";
+        toastElement.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
+        toastContainer.appendChild(toastElement);
+        // アニメーション開始（次のフレームで）
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            toastElement.style.transform = "translateX(0)";
+            toastElement.style.opacity = "1";
+          });
+        });
+        // registerToastで自動消去を設定
+        registerToast(toastElement);
+      }
     }
   } catch (error) {
     window.alert(error.message || "実行に失敗しました");
