@@ -33,6 +33,7 @@ google-auth>=2.0.0
 
 # Excel (local)
 openpyxl>=3.1.2
+xlrd>=2.0.0  # .xls (Excel 97-2003) 読み込み用
 
 # Testing
 pytest>=7.4.0

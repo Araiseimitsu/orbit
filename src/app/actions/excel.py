@@ -1,15 +1,16 @@
 """
-Excel actions (local .xlsx/.xlsm files)
+Excel actions (local .xlsx/.xlsm/.xls files)
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, date
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
+import xlrd
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter, range_boundaries
 
@@ -28,27 +29,13 @@ def _resolve_path(path_str: str, base_dir: Path) -> Path:
 
 
 def _normalize_cell_value(value: Any) -> Any:
-    """
-    セルの値を正規化（datetime/date オブジェクトを文字列に変換）
-
-    Args:
-        value: セルの値（datetime, date, その他）
-
-    Returns:
-        正規化された値（datetime/date は YYYY/MM/DD 形式の文字列に変換）
-    """
+    """セルの値を正規化（datetime/date を YYYY/MM/DD 形式の文字列に変換）"""
     if value is None:
         return ""
-
     if isinstance(value, datetime):
-        # datetime オブジェクトを YYYY/MM/DD 形式の文字列に変換
         return value.strftime("%Y/%m/%d")
-
     if isinstance(value, date):
-        # date オブジェクトを YYYY/MM/DD 形式の文字列に変換
         return value.strftime("%Y/%m/%d")
-
-    # その他の型はそのまま返す
     return value
 
 
@@ -72,24 +59,13 @@ def _normalize_values(values: Any) -> list[list[Any]]:
 
 
 def _format_values_as_text(values: list[list[Any]]) -> str:
-    """
-    2次元配列を読みやすいテキスト形式に変換
-
-    Args:
-        values: 2D リスト（正規化済み）
-
-    Returns:
-        整形されたテキスト（タブ区切り、改行区切り）
-    """
+    """2次元配列をタブ区切り・改行区切りのテキストに変換"""
     if not values:
         return ""
-
-    lines = []
-    for row in values:
-        # タブ区切りで結合（空セルは空文字列に変換）
-        line = "\t".join(str(cell) if cell is not None else "" for cell in row)
-        lines.append(line)
-
+    lines = [
+        "\t".join(str(cell) if cell is not None else "" for cell in row)
+        for row in values
+    ]
     return "\n".join(lines)
 
 
@@ -106,13 +82,11 @@ def _parse_values_with_header(
             "col_count": 0
         }
 
-    # ヘッダー行を正規化（datetime オブジェクトの可能性があるため）
     normalized_headers = [_normalize_cell_value(h) for h in values[0]]
-
-    # raw データを正規化
-    normalized_raw = []
-    for row in values:
-        normalized_raw.append([_normalize_cell_value(cell) for cell in row])
+    normalized_raw = [
+        [_normalize_cell_value(cell) for cell in row]
+        for row in values
+    ]
 
     text = _format_values_as_text(normalized_raw)
 
@@ -124,12 +98,10 @@ def _parse_values_with_header(
 
         rows = []
         for row in data_rows:
-            row_dict = {}
-            for i, header in enumerate(headers):
-                cell_value = row[i] if i < len(row) else ""
-                # セル値を正規化（datetime/date を文字列に変換）
-                normalized_value = _normalize_cell_value(cell_value)
-                row_dict[header] = normalized_value
+            row_dict = {
+                header: _normalize_cell_value(row[i] if i < len(row) else "")
+                for i, header in enumerate(headers)
+            }
             rows.append(row_dict)
 
         return {
@@ -171,10 +143,83 @@ def _is_xlsm(path: Path) -> bool:
     return path.suffix.lower() == ".xlsm"
 
 
-def _load_workbook_for_read(path: Path, data_only: bool) -> Workbook:
+def _is_xls(path: Path) -> bool:
+    return path.suffix.lower() == ".xls"
+
+
+def _ensure_file_exists(path: Path) -> None:
     if not path.exists():
         raise FileNotFoundError(f"Excel ファイルが見つかりません: {path}")
+
+
+def _load_workbook_for_read(path: Path, data_only: bool) -> Workbook:
+    _ensure_file_exists(path)
     return load_workbook(filename=path, data_only=data_only, keep_vba=_is_xlsm(path))
+
+
+def _read_xls_file(
+    path: Path,
+    sheet_name: str | None,
+    range_part: str,
+) -> tuple[list[list[Any]], str]:
+    """xlrd を使用して .xls ファイルを読み込む"""
+    _ensure_file_exists(path)
+
+    wb = xlrd.open_workbook(path)
+
+    # シート取得
+    if sheet_name:
+        try:
+            ws = wb.sheet_by_name(sheet_name)
+        except xlrd.biffh.XLRDError:
+            raise ValueError(f"シートが見つかりません: {sheet_name}")
+    else:
+        ws = wb.sheet_by_index(0)
+
+    # 範囲をパース
+    min_col, min_row, max_col, max_row = _range_to_bounds(range_part)
+
+    values = []
+    for row_idx in range(min_row - 1, max_row):
+        row_values = []
+        for col_idx in range(min_col - 1, max_col):
+            if row_idx < ws.nrows and col_idx < ws.ncols:
+                cell = ws.cell(row_idx, col_idx)
+                value = _convert_xls_cell_value(cell, wb.datemode)
+            else:
+                value = None
+            row_values.append(value)
+        values.append(row_values)
+
+    return values, ws.name
+
+
+def _convert_xls_cell_value(cell: xlrd.sheet.Cell, datemode: int) -> Any:
+    """xlrd のセル値を Python の値に変換"""
+    if cell.ctype == xlrd.XL_CELL_EMPTY:
+        return None
+    elif cell.ctype == xlrd.XL_CELL_TEXT:
+        return cell.value
+    elif cell.ctype == xlrd.XL_CELL_NUMBER:
+        # 整数の場合は int に変換
+        if cell.value == int(cell.value):
+            return int(cell.value)
+        return cell.value
+    elif cell.ctype == xlrd.XL_CELL_DATE:
+        try:
+            date_tuple = xlrd.xldate_as_tuple(cell.value, datemode)
+            if date_tuple[3:] == (0, 0, 0):
+                # 時刻部分がない場合は date
+                return date(date_tuple[0], date_tuple[1], date_tuple[2])
+            return datetime(*date_tuple)
+        except (ValueError, xlrd.xldate.XLDateError):
+            return cell.value
+    elif cell.ctype == xlrd.XL_CELL_BOOLEAN:
+        return bool(cell.value)
+    elif cell.ctype == xlrd.XL_CELL_ERROR:
+        return None
+    else:
+        return cell.value
 
 
 def _load_workbook_for_write(path: Path) -> Workbook:
@@ -223,13 +268,13 @@ def _calc_updated_range(
     "excel_read",
     metadata={
         "title": "Excel 読み込み",
-        "description": "Excelファイルからデータを読み取ります。",
+        "description": "Excelファイルからデータを読み取ります（.xlsx/.xlsm/.xls対応）。",
         "category": "Excel",
         "color": "#22c55e",
         "params": [
             {
                 "key": "path",
-                "description": "Excelファイルパス",
+                "description": "Excelファイルパス（.xlsx/.xlsm/.xls）",
                 "required": True,
                 "example": "data.xlsx",
             },
@@ -274,7 +319,7 @@ async def action_excel_read(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
-    Excel からデータを読み取る
+    Excel からデータを読み取る（.xlsx/.xlsm/.xls対応）
 
     params:
         path: Excel ファイルパス
@@ -296,25 +341,29 @@ async def action_excel_read(
     path = _resolve_path(path_str, base_dir)
     sheet, range_part = _split_sheet_and_range(range_str, sheet)
 
-    wb = _load_workbook_for_read(path, data_only=bool(data_only))
-    ws = _get_sheet(wb, sheet, create=False)
+    if _is_xls(path):
+        values, sheet_title = _read_xls_file(path, sheet, range_part)
+    else:
+        wb = _load_workbook_for_read(path, data_only=bool(data_only))
+        ws = _get_sheet(wb, sheet, create=False)
+        sheet_title = ws.title
 
-    min_col, min_row, max_col, max_row = _range_to_bounds(range_part)
-    values = []
-    for row in ws.iter_rows(
-        min_row=min_row,
-        max_row=max_row,
-        min_col=min_col,
-        max_col=max_col,
-        values_only=True,
-    ):
-        values.append(list(row))
+        min_col, min_row, max_col, max_row = _range_to_bounds(range_part)
+        values = []
+        for row in ws.iter_rows(
+            min_row=min_row,
+            max_row=max_row,
+            min_col=min_col,
+            max_col=max_col,
+            values_only=True,
+        ):
+            values.append(list(row))
 
     parsed = _parse_values_with_header(values, bool(header_row))
     return {
         **parsed,
         "path": str(path),
-        "sheet": ws.title,
+        "sheet": sheet_title,
         "range": range_part,
     }
 
@@ -323,13 +372,13 @@ async def action_excel_read(
     "excel_list_sheets",
     metadata={
         "title": "Excel シート一覧",
-        "description": "Excelファイルのシート一覧を取得します。",
+        "description": "Excelファイルのシート一覧を取得します（.xlsx/.xlsm/.xls対応）。",
         "category": "Excel",
         "color": "#22c55e",
         "params": [
             {
                 "key": "path",
-                "description": "Excelファイルパス",
+                "description": "Excelファイルパス（.xlsx/.xlsm/.xls）",
                 "required": True,
                 "example": "data.xlsx",
             }
@@ -344,14 +393,20 @@ async def action_excel_list_sheets(
     params: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
-    Excel のシート一覧を取得
+    Excel のシート一覧を取得（.xlsx/.xlsm/.xls対応）
     """
     path_str = params.get("path", "")
     base_dir = context.get("base_dir", Path.cwd())
     path = _resolve_path(path_str, base_dir)
 
-    wb = _load_workbook_for_read(path, data_only=True)
-    sheets = [{"title": name, "index": idx} for idx, name in enumerate(wb.sheetnames)]
+    if _is_xls(path):
+        _ensure_file_exists(path)
+        wb = xlrd.open_workbook(path)
+        sheets = [{"title": name, "index": idx} for idx, name in enumerate(wb.sheet_names())]
+    else:
+        wb = _load_workbook_for_read(path, data_only=True)
+        sheets = [{"title": name, "index": idx} for idx, name in enumerate(wb.sheetnames)]
+
     return {"path": str(path), "sheets": sheets}
 
 
@@ -432,8 +487,6 @@ async def action_excel_write(
     if row_count == 0 or col_count == 0:
         raise ValueError("values は空でない2次元配列が必要です")
 
-    # 開始セルのみ指定の場合（例: G1）、データサイズに合わせて書き込み
-    # 範囲指定の場合（例: A1:C2）、指定範囲内のみ書き込み
     is_single_cell = min_col == max_col and min_row == max_row
     if not is_single_cell:
         range_rows = max_row - min_row + 1
