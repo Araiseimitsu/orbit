@@ -90,7 +90,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting ORBIT application...")
 
     # ログローテーション実行
-    cleanup_result = run_logger.cleanup(retention_days=30)
+    cleanup_result = run_logger.cleanup(retention_days=3)
     logger.info(f"Log cleanup: {cleanup_result['deleted_count']} old files removed")
 
     workflow_scheduler.start()
@@ -102,7 +102,7 @@ async def lifespan(app: FastAPI):
             trigger=CronTrigger.from_crontab(
                 "0 3 * * *", timezone=ZoneInfo("Asia/Tokyo")
             ),
-            kwargs={"retention_days": 30},
+            kwargs={"retention_days": 3},
             id="log_cleanup",
             name="Log Cleanup",
             replace_existing=True,

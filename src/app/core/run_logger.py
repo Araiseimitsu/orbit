@@ -186,12 +186,12 @@ class RunLogger:
 
         return count
 
-    def cleanup(self, retention_days: int = 30) -> dict:
+    def cleanup(self, retention_days: int = 3) -> dict:
         """
         古いログファイルを削除
 
         Args:
-            retention_days: 保持日数（デフォルト: 30日）
+            retention_days: 保持日数（デフォルト: 3日）
 
         Returns:
             削除結果の統計情報
