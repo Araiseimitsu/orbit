@@ -1,0 +1,18 @@
+services:
+  orbit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orbit-app
+    ports:
+      - "8005:8000"
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - ./workflows:/app/workflows
+      - ./runs:/app/runs
+      - ./secrets:/app/secrets
+      - ./backups:/app/backups
+    restart: always

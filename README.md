@@ -50,6 +50,53 @@ py -3.13 -m uvicorn src.app.main:app --reload
 py -3.13 -m uvicorn src.app.main:app --host 0.0.0.0 --port 8000
 ```
 
+## Docker / Docker Compose で起動
+
+Windows + Docker Desktop 前提で、そのまま起動できます。
+
+```bash
+# 1) .env を作成（未作成の場合）
+copy .env.example .env
+
+# 2) ビルドして起動（バックグラウンド）
+docker compose up -d --build
+
+# 3) ログ確認
+docker compose logs -f
+```
+
+ブラウザで `http://localhost:8000` にアクセスしてください。
+
+### 停止
+
+```bash
+docker compose down
+```
+
+### 主なマウント先（永続化）
+
+- `./workflows` -> `/app/workflows`
+- `./runs` -> `/app/runs`
+- `./secrets` -> `/app/secrets`
+- `./backups` -> `/app/backups`
+
+### Docker 単体で起動
+
+```bash
+# 1) イメージ作成
+docker build -t orbit:latest .
+
+# 2) コンテナ起動
+docker run -d --name orbit-app -p 8000:8000 --env-file .env -v "${PWD}/workflows:/app/workflows" -v "${PWD}/runs:/app/runs" -v "${PWD}/secrets:/app/secrets" -v "${PWD}/backups:/app/backups" orbit:latest
+```
+
+停止・削除:
+
+```bash
+docker stop orbit-app
+docker rm orbit-app
+```
+
 ## ディレクトリ構成
 
 ```
