@@ -37,6 +37,7 @@
         description: meta.description,
         params: (meta.params || []).map((p) => ({
           key: p.key,
+          label: p.label || p.key,
           desc: p.description,
           example: p.example,
         })),
@@ -608,7 +609,7 @@
     });
   };
 
-  const buildParamRow = (key, value, availableKeys) => {
+  const buildParamRow = (key, value, availableParams) => {
     const row = document.createElement("div");
     row.className = "param-row";
 
@@ -621,10 +622,30 @@
     defaultOption.textContent = "入力パラメータを選択";
     keySelect.appendChild(defaultOption);
 
-    (availableKeys || []).forEach((paramKey) => {
+    const getParamKey = (param) =>
+      typeof param === "string" ? param : param?.key || "";
+    const getParamLabel = (param) => {
+      if (typeof param === "string") {
+        return param;
+      }
+      const label = typeof param?.label === "string" ? param.label.trim() : "";
+      const paramKey = getParamKey(param);
+      return label || paramKey;
+    };
+    const availableParamKeys = (availableParams || [])
+      .map((param) => getParamKey(param))
+      .filter(Boolean);
+
+    (availableParams || []).forEach((param) => {
+      const paramKey = getParamKey(param);
+      const paramLabel = getParamLabel(param);
+      if (!paramKey) {
+        return;
+      }
       const opt = document.createElement("option");
       opt.value = paramKey;
-      opt.textContent = paramKey;
+      opt.textContent =
+        paramLabel === paramKey ? paramKey : `${paramLabel} (${paramKey})`;
       keySelect.appendChild(opt);
     });
 
@@ -654,7 +675,7 @@
       }
     };
 
-    if (key && (availableKeys || []).includes(key)) {
+    if (key && availableParamKeys.includes(key)) {
       keySelect.value = key;
       setKeyMode(key);
     } else if (key) {
@@ -926,6 +947,39 @@
       container.scrollTop = container.scrollHeight;
     };
 
+    // 前のステップの情報を収集（式生成時の参照候補）
+    const getPreviousSteps = () => {
+      const orderedSteps = [...state.workflow.steps].sort(
+        (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
+      );
+      const currentIndex = orderedSteps.findIndex((s) => s.id === step.id);
+      const previousSteps = [];
+
+      for (let i = 0; i < currentIndex; i++) {
+        const prevStep = orderedSteps[i];
+        const meta = state.ACTION_GUIDES[prevStep.type];
+        const outputs = meta?.outputs || [];
+        previousSteps.push({
+          id: prevStep.id,
+          type: prevStep.type,
+          outputs: outputs.map((o) => o.key),
+        });
+      }
+      return previousSteps;
+    };
+
+    const previousSteps = getPreviousSteps();
+    if (previousSteps.length > 0) {
+      const contextDiv = modal.querySelector(".expression-context");
+      const prevInfo = document.createElement("p");
+      const refs = previousSteps.map((prev) => {
+        const firstKey = prev.outputs?.[0] || "key";
+        return `{{ ${prev.id}.${firstKey} }}`;
+      });
+      prevInfo.innerHTML = `<strong>参照候補:</strong> ${refs.slice(0, 3).join(" / ")}`;
+      contextDiv.appendChild(prevInfo);
+    }
+
     const sendMessage = async () => {
       const prompt = promptInput.value.trim();
       if (!prompt) return;
@@ -955,7 +1009,7 @@
                 "workflow",
                 "base_dir",
               ],
-              step_outputs: Object.keys(step.params || {}),
+              previous_steps: previousSteps,
             },
           }),
         });
@@ -1099,15 +1153,13 @@
       existingRows.forEach((row) => row.remove());
 
       // 新しいパラメータ行を追加
-      const availableKeys = (state.ACTION_GUIDES[step.type]?.params || []).map(
-        (item) => item.key,
-      );
+      const availableParams = state.ACTION_GUIDES[step.type]?.params || [];
 
       Object.entries(params).forEach(([key, value]) => {
         const { row, keyInput, keySelect, valueInput, removeButton } = buildParamRow(
           key,
           value,
-          availableKeys,
+          availableParams,
         );
         paramsList.appendChild(row);
 
@@ -1375,9 +1427,13 @@
           line.className = "guide-item";
 
           // キー名
+          const keyLabel =
+            item.label && item.label !== item.key
+              ? `${item.label} (${item.key})`
+              : item.key;
           const keySpan = document.createElement("span");
           keySpan.className = "guide-text";
-          keySpan.textContent = `${item.key}: `;
+          keySpan.textContent = `${keyLabel}: `;
           line.appendChild(keySpan);
 
           // description内の {{ ... }} をチップ化
@@ -1467,9 +1523,7 @@
 
     const paramsList = document.createElement("div");
     const entries = Object.entries(step.params || {});
-    const availableKeys = (state.ACTION_GUIDES[step.type]?.params || []).map(
-      (item) => item.key,
-    );
+    const availableParams = state.ACTION_GUIDES[step.type]?.params || [];
     if (entries.length === 0) {
       entries.push(["", ""]);
     }
@@ -1502,7 +1556,7 @@
 
     const appendParamRow = (key, value) => {
       const { row, keyInput, keySelect, valueInput, removeButton, aiButton } =
-        buildParamRow(key, value, availableKeys);
+        buildParamRow(key, value, availableParams);
       paramsList.appendChild(row);
       removeButton.addEventListener("click", () => {
         row.remove();

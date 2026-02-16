@@ -5,10 +5,12 @@ ORBIT MVP - FastAPI Application Entry Point
 import asyncio
 import json
 import logging
+import re
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 # ========== 環境変数読み込み（最優先） ==========
@@ -726,33 +728,207 @@ async def build_expression_with_ai(request: Request):
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt が必要です")
 
-    param_key = payload.get("param_key", "")
-    step_type = payload.get("step_type", "")
-    context = payload.get("context", {})
+    param_key = (payload.get("param_key") or "").strip()
+    step_type = (payload.get("step_type") or "").strip()
+    raw_context = payload.get("context")
+    context = raw_context if isinstance(raw_context, dict) else {}
 
-    # AIに式生成を依頼
-    system_prompt = """あなたはJinja2テンプレート式の生成アシスタントです。
-ユーザーの要望に基づいて、適切なJinja2テンプレート式を生成してください。
+    default_available_vars = [
+        "run_id",
+        "now",
+        "today",
+        "yesterday",
+        "tomorrow",
+        "today_ymd",
+        "now_ymd_hms",
+        "workflow",
+        "base_dir",
+    ]
+    available_vars_raw = context.get("available_vars")
+    available_vars: list[str] = []
+    if isinstance(available_vars_raw, list):
+        for item in available_vars_raw:
+            if isinstance(item, str) and item.strip():
+                available_vars.append(item.strip())
+    if not available_vars:
+        available_vars = default_available_vars
 
-利用可能な変数:
-- {{ run_id }}: 実行ID
-- {{ now }}: 現在時刻（ISO8601）
-- {{ today }}: 今日の日付（YYYY-MM-DD）
-- {{ yesterday }}: 昨日の日付
-- {{ tomorrow }}: 明日の日付
-- {{ today_ymd }}: 今日の日付（YYYYMMDD）
-- {{ now_ymd_hms }}: 現在時刻（YYYYMMDD_HHMMSS）
-- {{ workflow }}: ワークフロー名
-- {{ base_dir }}: ベースディレクトリ
-- {{ step_id.key }}: 前ステップの出力参照
+    previous_steps_raw = context.get("previous_steps")
+    previous_steps: list[dict[str, Any]] = []
+    if isinstance(previous_steps_raw, list):
+        for item in previous_steps_raw:
+            if not isinstance(item, dict):
+                continue
+            step_id = str(item.get("id") or "").strip()
+            step_type_name = str(item.get("type") or "").strip()
+            outputs_raw = item.get("outputs")
+            outputs: list[str] = []
+            if isinstance(outputs_raw, list):
+                for output_key in outputs_raw:
+                    if isinstance(output_key, str) and output_key.strip():
+                        outputs.append(output_key.strip())
+            if step_id:
+                previous_steps.append(
+                    {"id": step_id, "type": step_type_name, "outputs": outputs}
+                )
 
-Jinja2フィルター例:
-- {{ today_ymd[-2:] }}: 日部分のみ（例: "06"）
-- {{ today_ymd[-2:] | int }}: 日部分を整数に（例: 6）
-- {{ name | upper }}: 大文字に変換
+    available_filters = [
+        "int",
+        "float",
+        "string",
+        "default",
+        "replace",
+        "lower",
+        "upper",
+        "title",
+        "trim",
+        "length",
+        "join",
+        "first",
+        "last",
+        "round",
+        "abs",
+        "tojson_utf8",
+        "fromjson",
+    ]
 
-ユーザーの要望に応じて、適切なJinja2式を生成してください。
-式のみを返してください（説明は不要）。"""
+    prev_lines = []
+    for prev in previous_steps:
+        outputs = prev.get("outputs") or []
+        outputs_text = ", ".join(outputs) if outputs else "(出力キー不明)"
+        prev_lines.append(f"- {prev['id']} ({prev.get('type') or 'unknown'}): {outputs_text}")
+    previous_steps_text = "\n".join(prev_lines) if prev_lines else "- なし"
+
+    system_prompt = (
+        "あなたは ORBIT 専用のJinja2式生成アシスタントです。\n"
+        "このプロジェクトで実際に使える構文のみ提案してください。\n"
+        "回答は必ず {{ ... }} 形式の式1つのみ。説明文・前置き・コードフェンスは禁止。\n\n"
+        "## 現在のコンテキスト\n"
+        f"- 対象ステップタイプ: {step_type or '(不明)'}\n"
+        f"- 対象パラメータ: {param_key or '(不明)'}\n\n"
+        "## 利用可能な共通変数\n"
+        + "\n".join(f"- {var}" for var in available_vars)
+        + "\n\n"
+        "## 前ステップ参照（利用可能な場合）\n"
+        f"{previous_steps_text}\n"
+        "参照形式は {{ step_id.output_key }}。\n\n"
+        "## 利用可能フィルター（主要）\n"
+        + "\n".join(f"- {flt}" for flt in available_filters)
+        + "\n\n"
+        "## 厳守ルール\n"
+        "- 未定義の関数・フィルター・変数を使わない。\n"
+        "- Pythonコードやimport、関数定義を書かない。\n"
+        "- 1つの式のみ返す。\n"
+    )
+
+    user_prompt_text = (
+        f"ユーザー要望: {prompt}\n"
+        f"対象パラメータ: {param_key or '(不明)'}\n"
+        "上記要望を満たす、実行可能な式を1つだけ返してください。"
+    )
+
+    def extract_first_expression_candidate(raw_text: str) -> str | None:
+        cleaned = (raw_text or "").strip()
+        if not cleaned:
+            return None
+
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:jinja|jinja2|text|json)?", "", cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r"```$", "", cleaned).strip()
+
+        matches = re.findall(r"\{\{[\s\S]*?\}\}", cleaned)
+        if matches:
+            return matches[0].strip()
+
+        # 式本体のみ（{{ }} なし）で返された場合に備えて、簡易候補を抽出
+        for line in cleaned.splitlines():
+            candidate = line.strip().strip("`").strip()
+            if not candidate:
+                continue
+            if candidate.startswith("- "):
+                candidate = candidate[2:].strip()
+            if candidate.startswith("{{") and candidate.endswith("}}"):
+                return candidate
+            if re.search(r"(run_id|now|today|yesterday|tomorrow|today_ymd|now_ymd_hms|workflow|base_dir|\w+\.\w+)", candidate):
+                return f"{{{{ {candidate} }}}}"
+        return None
+
+    def validate_expression(expression: str) -> tuple[bool, str | None]:
+        text = (expression or "").strip()
+        if not text:
+            return False, "式が空です"
+        if not (text.startswith("{{") and text.endswith("}}")):
+            return False, "{{ ... }} 形式ではありません"
+
+        expr = text[2:-2].strip()
+        if not expr:
+            return False, "式本体が空です"
+
+        allowed_roots = set(available_vars)
+        allowed_roots.update(prev["id"] for prev in previous_steps if prev.get("id"))
+        allowed_filters_set = set(available_filters)
+        keywords = {
+            "true",
+            "false",
+            "none",
+            "and",
+            "or",
+            "not",
+            "in",
+            "is",
+            "if",
+            "else",
+        }
+        root_tokens = re.findall(r"(?<!\.)\b([A-Za-z_][A-Za-z0-9_]*)\b", expr)
+        for token in root_tokens:
+            token_lower = token.lower()
+            if token_lower in keywords:
+                continue
+            if token in allowed_roots:
+                continue
+            if token in allowed_filters_set:
+                continue
+            return False, f"未サポートの識別子: {token}"
+
+        if re.search(r"(?<![\.\|])\b[A-Za-z_][A-Za-z0-9_]*\s*\(", expr):
+            return False, "関数呼び出し形式はサポート外です"
+
+        try:
+            from .core.templating import _env
+
+            _env.compile_expression(expr)
+            return True, None
+        except Exception as exc:
+            return False, str(exc)
+
+    def fallback_expression(user_prompt: str) -> str:
+        prompt_lower = (user_prompt or "").lower()
+        prompt_text = (user_prompt or "")
+
+        if (
+            "日部分" in prompt_text
+            or "日だけ" in prompt_text
+            or "day" in prompt_lower
+            or "先頭0なし" in prompt_text
+        ):
+            return "{{ today_ymd[-2:] | int }}"
+        if "yyyymmdd" in prompt_lower:
+            return "{{ today_ymd }}"
+        if "現在時刻" in prompt_text or "timestamp" in prompt_lower or "時刻" in prompt_text:
+            return "{{ now_ymd_hms }}"
+        if "昨日" in prompt_text:
+            return "{{ yesterday }}"
+        if "明日" in prompt_text:
+            return "{{ tomorrow }}"
+        if "今日" in prompt_text or "日付" in prompt_text or "date" in prompt_lower:
+            return "{{ today }}"
+
+        for prev in reversed(previous_steps):
+            outputs = prev.get("outputs") or []
+            if outputs:
+                return f"{{{{ {prev['id']}.{outputs[0]} }}}}"
+
+        return "{{ today }}"
 
     try:
         from .actions.ai import (
@@ -771,7 +947,7 @@ Jinja2フィルター例:
             DEFAULT_GEMINI_KEY_FILE, BASE_DIR, DEFAULT_GEMINI_KEY_ENV
         )
         result = _call_gemini_rest(
-            prompt=prompt,
+            prompt=user_prompt_text,
             model=DEFAULT_MODEL,
             api_key=api_key,
             system=system_prompt,
@@ -780,23 +956,19 @@ Jinja2フィルター例:
             use_search=False,
         )
 
-        expression = result.get("text", "").strip()
-        # 式のみを抽出（説明文を除去）
-        if "{{" in expression:
-            import re
+        raw_text = result.get("text", "")
+        expression = extract_first_expression_candidate(raw_text) or ""
+        valid, reason = validate_expression(expression)
 
-            matches = re.findall(r"\{\{[^}]+\}\}", expression)
-            if matches:
-                expression = matches[0]
-            else:
-                # 複数行の場合は最初の式を取得
-                lines = expression.split("\n")
-                for line in lines:
-                    if "{{" in line:
-                        matches = re.findall(r"\{\{[^}]+\}\}", line)
-                        if matches:
-                            expression = matches[0]
-                            break
+        if not valid:
+            fallback = fallback_expression(prompt)
+            logger.warning(
+                "AI expression invalid, fallback used: reason=%s raw=%s fallback=%s",
+                reason,
+                (raw_text or "")[:300],
+                fallback,
+            )
+            expression = fallback
 
         return {"expression": expression}
 

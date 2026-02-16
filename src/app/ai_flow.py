@@ -377,6 +377,7 @@ def _build_params_system_prompt() -> str:
         "- 前のステップの出力を参照する場合は {{ step_id.key }} の形式を使用\n"
         "- パスを指定する場合は {{ base_dir }} を基準とした相対パスまたは絶対パス\n"
         "- 日時を扱う場合は {{ today }} や {{ now }} を使用\n"
+        "- Notion の日付入力（filter_simple / properties_simple）は YYYY-MM-DD 形式を優先（例: 2026-02-14）\n"
     )
 
 

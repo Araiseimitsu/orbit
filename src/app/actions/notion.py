@@ -82,6 +82,8 @@ API キー設定:
 import asyncio
 import json
 import logging
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -337,9 +339,6 @@ def _normalize_properties_simple(properties_simple: dict[str, Any]) -> dict[str,
         - ブール値 → checkbox
         - リスト → multi_select（文字列リストの場合）
     """
-    import re
-    from datetime import datetime
-
     result: dict[str, Any] = {}
 
     # Title フィールド候補
@@ -381,17 +380,12 @@ def _normalize_properties_simple(properties_simple: dict[str, Any]) -> dict[str,
             if not value_str:
                 continue
 
-            # 日付形式（YYYY-MM-DD または YYYY-MM-DD HH:MM:SS）
-            date_match = re.match(r"^(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$", value_str)
-            if date_match:
-                try:
-                    # 日付バリデーション
-                    datetime.fromisoformat(value_str.replace(" ", "T"))
-                    # date プロパティ（start のみ）
-                    result[key] = {"date": {"start": date_match.group(1)}}
-                    continue
-                except ValueError:
-                    pass
+            # 日付形式はユーザー入力を正規化して判定
+            date_value = _normalize_date_text(value_str)
+            if date_value is not None:
+                # date プロパティ（start のみ）
+                result[key] = {"date": {"start": date_value}}
+                continue
 
             # 通常の文字列 → rich_text
             result[key] = {
@@ -404,6 +398,35 @@ def _normalize_properties_simple(properties_simple: dict[str, Any]) -> dict[str,
             }
 
     return result
+
+
+def _normalize_date_text(value: str) -> str | None:
+    """
+    日付文字列を YYYY-MM-DD へ正規化する。
+
+    対応例:
+        - 2026-02-12
+        - 2026-02-12 10:30:00
+    """
+    text = value.strip()
+    if not text:
+        return None
+
+    # YYYY-MM-DD または YYYY-MM-DD HH:MM[:SS] を許容
+    match = re.match(
+        r"^(\d{4}-\d{2}-\d{2})(?:\s+\d{2}:\d{2}(?::\d{2})?)?$",
+        text,
+    )
+    if not match:
+        return None
+
+    date_part = match.group(1)
+    try:
+        datetime.fromisoformat(date_part)
+    except ValueError:
+        return None
+
+    return date_part
 
 
 def _normalize_filter_simple(filter_simple: dict[str, Any]) -> dict[str, Any]:
@@ -425,9 +448,6 @@ def _normalize_filter_simple(filter_simple: dict[str, Any]) -> dict[str, Any]:
         - "!=値" → does_not_equal
         - 複数条件は and で結合
     """
-    import re
-    from datetime import datetime
-
     if not filter_simple:
         return {}
 
@@ -470,20 +490,16 @@ def _normalize_filter_simple(filter_simple: dict[str, Any]) -> dict[str, Any]:
                     filter_obj["number"] = {operator_map[operator]: num_value}
                 except ValueError:
                     # 日付比較
-                    if re.match(r"^\d{4}-\d{2}-\d{2}", operand):
-                        try:
-                            datetime.fromisoformat(operand.replace(" ", "T"))
-                            operator_map = {
-                                ">": "after",
-                                ">=": "on_or_after",
-                                "<": "before",
-                                "<=": "on_or_before",
-                                "!=": "does_not_equal"
-                            }
-                            filter_obj["date"] = {operator_map[operator]: operand.split()[0]}
-                        except ValueError:
-                            # 文字列として扱う
-                            filter_obj["rich_text"] = {"contains": operand}
+                    date_operand = _normalize_date_text(operand)
+                    if date_operand is not None:
+                        operator_map = {
+                            ">": "after",
+                            ">=": "on_or_after",
+                            "<": "before",
+                            "<=": "on_or_before",
+                            "!=": "does_not_equal"
+                        }
+                        filter_obj["date"] = {operator_map[operator]: date_operand}
                     else:
                         # 文字列として扱う（!= の場合）
                         if operator == "!=":
@@ -493,13 +509,9 @@ def _normalize_filter_simple(filter_simple: dict[str, Any]) -> dict[str, Any]:
             else:
                 # 演算子なし → equals
                 # 日付形式チェック
-                if re.match(r"^\d{4}-\d{2}-\d{2}", value_str):
-                    try:
-                        datetime.fromisoformat(value_str.replace(" ", "T"))
-                        filter_obj["date"] = {"equals": value_str.split()[0]}
-                    except ValueError:
-                        # select として扱う
-                        filter_obj["select"] = {"equals": value_str}
+                date_value = _normalize_date_text(value_str)
+                if date_value is not None:
+                    filter_obj["date"] = {"equals": date_value}
                 else:
                     # select として扱う（Status, Priority 等）
                     filter_obj["select"] = {"equals": value_str}
@@ -817,56 +829,65 @@ async def _update_page(
         "params": [
             {
                 "key": "database_id",
-                "description": "データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
+                "label": "対象データベース",
+                "description": "検索したいNotionデータベース。データベースURLをそのまま貼り付けても使えます。",
                 "required": True,
                 "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
             },
             {
                 "key": "filter_simple",
-                "description": "フィルタ条件（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、比較演算子をサポート（>, >=, <, <=, !=）。",
+                "label": "絞り込み条件（かんたん）",
+                "description": "まずはこちらを使用。※AI使用時・初心者はこちらを優先。{\"項目名\": \"条件\"} 形式で指定します（例: {\"Status\": \"完了\", \"Priority\": \">5\"}）。日付は必ず YYYY-MM-DD 形式（例: 2026-02-14）で入力してください。",
                 "required": False,
                 "example": '{"Status": "完了", "Priority": ">5", "Created": ">=2026-01-01", "Completed": true}'
             },
             {
                 "key": "filter",
-                "description": "フィルタ条件（Notion API形式）上級者向け。複雑なフィルタ条件が必要な場合のみ使用。",
+                "label": "絞り込み条件（詳細）",
+                "description": "複雑な条件が必要な場合だけ使う詳細設定（Notion公式API形式）。通常は未入力でOKです。",
                 "required": False,
                 "example": '{"property": "Status", "select": {"equals": "Done"}}'
             },
             {
                 "key": "sorts_simple",
-                "description": "ソート条件（シンプル形式）※AI使用時・初心者はこちらを優先。リスト形式で、各要素は {プロパティ名: desc/asc}。",
+                "label": "並び順（かんたん）",
+                "description": "まずはこちらを使用。※AI使用時・初心者はこちらを優先。[{\"項目名\": \"desc/asc\"}] 形式で指定します（desc=降順、asc=昇順）。",
                 "required": False,
                 "example": '[{"Created": "desc"}, {"Priority": "asc"}]'
             },
             {
                 "key": "sorts",
-                "description": "ソート条件（Notion API形式）上級者向け。複雑なソート条件が必要な場合のみ使用。",
+                "label": "並び順（詳細）",
+                "description": "複雑な並び替えが必要な場合だけ使う詳細設定（Notion公式API形式）。通常は未入力でOKです。",
                 "required": False,
                 "example": '[{"property": "Created", "direction": "descending"}]'
             },
             {
                 "key": "page_size",
-                "description": "取得件数（最大100）",
+                "label": "取得件数",
+                "description": "1回で取得する件数です（1〜100）。",
                 "required": False,
                 "default": 100,
                 "example": "50"
             },
             {
                 "key": "start_cursor",
-                "description": "ページネーション用カーソル",
+                "label": "続きから取得",
+                "description": "前回の続きから取得したいときに使います。通常は未入力でOKです。",
                 "required": False,
                 "example": "{{ previous_step.next_cursor }}"
             },
             {
                 "key": "api_key",
-                "description": "Notion API キー（直接指定）",
+                "label": "Notion APIキー（直接入力）",
+                "description": "APIキーをその場で直接入力するときだけ使います。通常は未入力でOKです。",
                 "required": False,
                 "example": "secret_xxx"
             },
             {
                 "key": "api_key_file",
-                "description": "API キーのファイルパス",
+                "label": "Notion APIキーファイル",
+                "description": "APIキーを保存したファイルパスです。通常はデフォルトのままでOKです。",
                 "required": False,
                 "default": "secrets/notion_api_key.txt",
                 "example": "secrets/notion_api_key.txt"
@@ -942,6 +963,14 @@ async def action_notion_query_database(
     elif filter_obj is not None:
         # 従来の filter パラメータ
         filter_obj = _normalize_json(filter_obj)
+        # 誤ってシンプル辞書を filter に入れた場合も吸収する
+        if (
+            isinstance(filter_obj, dict)
+            and "property" not in filter_obj
+            and "and" not in filter_obj
+            and "or" not in filter_obj
+        ):
+            filter_obj = _normalize_filter_simple(filter_obj)
 
     # ソート処理（sorts_simple を優先）
     sorts_simple = params.get("sorts_simple")
@@ -1004,49 +1033,57 @@ async def action_notion_query_database(
         "params": [
             {
                 "key": "database_id",
-                "description": "親データベースID（NotionのデータベースURLをそのまま貼り付け可能、またはIDのみ）",
+                "label": "保存先データベース",
+                "description": "保存先のNotionデータベース。データベースURLをそのまま貼り付けても使えます。",
                 "required": True,
                 "example": "https://www.notion.so/workspace/Database-abc123... または abc123..."
             },
             {
                 "key": "properties_simple",
-                "description": "ページプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
+                "label": "項目の値（かんたん）",
+                "description": "まずはこちらを使用。※AI使用時・初心者はこちらを優先。{\"項目名\": 値} の形式で入力すると、自動でNotion形式に変換されます。日付は必ず YYYY-MM-DD 形式（例: 2026-02-14）で入力してください。",
                 "required": False,
                 "example": '{"Name": "新しいタスク", "Status": "進行中", "Priority": 5, "Due": "2026-01-15", "Completed": false}'
             },
             {
                 "key": "properties",
-                "description": "ページプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
+                "label": "項目の値（詳細）",
+                "description": "複雑な項目型が必要な場合だけ使う詳細設定（Notion公式API形式）。通常は未入力でOKです。",
                 "required": False,
                 "example": '{"Name": {"title": [{"text": {"content": "新しいタスク"}}]}}'
             },
             {
                 "key": "content",
-                "description": "ページ本文（ブロック配列、または簡易テキスト文字列）",
+                "label": "本文",
+                "description": "ページ本文です。通常の文字列、またはブロック配列で指定できます。",
                 "required": False,
                 "example": "これはページの本文です"
             },
             {
                 "key": "icon",
-                "description": "アイコン（emoji または URL）",
+                "label": "アイコン",
+                "description": "ページのアイコン（絵文字または画像URL）。",
                 "required": False,
                 "example": "📝"
             },
             {
                 "key": "cover",
-                "description": "カバー画像URL",
+                "label": "カバー画像URL",
+                "description": "ページ上部に表示するカバー画像のURL。",
                 "required": False,
                 "example": "https://example.com/cover.jpg"
             },
             {
                 "key": "api_key",
-                "description": "Notion API キー（直接指定）",
+                "label": "Notion APIキー（直接入力）",
+                "description": "APIキーをその場で直接入力するときだけ使います。通常は未入力でOKです。",
                 "required": False,
                 "example": "secret_xxx"
             },
             {
                 "key": "api_key_file",
-                "description": "API キーのファイルパス",
+                "label": "Notion APIキーファイル",
+                "description": "APIキーを保存したファイルパスです。通常はデフォルトのままでOKです。",
                 "required": False,
                 "default": "secrets/notion_api_key.txt",
                 "example": "secrets/notion_api_key.txt"
@@ -1173,50 +1210,58 @@ async def action_notion_create_page(
         "params": [
             {
                 "key": "page_id",
-                "description": "ページID（NotionのページURLをそのまま貼り付け可能、またはIDのみ）",
+                "label": "更新するページ",
+                "description": "更新したいNotionページ。ページURLをそのまま貼り付けても使えます。",
                 "required": True,
                 "example": "https://www.notion.so/workspace/Page-abc123... または abc123..."
             },
             {
                 "key": "properties_simple",
-                "description": "更新するプロパティ（シンプル形式）※AI使用時・初心者はこちらを優先。辞書形式で、値の型から自動でNotion形式に変換されます。",
+                "label": "更新する項目（かんたん）",
+                "description": "まずはこちらを使用。※AI使用時・初心者はこちらを優先。{\"項目名\": 値} の形式で入力すると、自動でNotion形式に変換されます。日付は必ず YYYY-MM-DD 形式（例: 2026-02-14）で入力してください。",
                 "required": False,
                 "example": '{"Status": "完了", "Priority": 10, "Completed": true}'
             },
             {
                 "key": "properties",
-                "description": "更新するプロパティ（Notion API形式）上級者向け。複雑なプロパティ型が必要な場合のみ使用。",
+                "label": "更新する項目（詳細）",
+                "description": "複雑な項目型が必要な場合だけ使う詳細設定（Notion公式API形式）。通常は未入力でOKです。",
                 "required": False,
                 "example": '{"Status": {"select": {"name": "Done"}}}'
             },
             {
                 "key": "archived",
-                "description": "アーカイブ（削除）するかどうか",
+                "label": "アーカイブする",
+                "description": "trueでページをアーカイブします（完全削除ではありません）。",
                 "required": False,
                 "default": False,
                 "example": "false"
             },
             {
                 "key": "icon",
-                "description": "アイコン（emoji または URL）",
+                "label": "アイコン",
+                "description": "ページのアイコン（絵文字または画像URL）。",
                 "required": False,
                 "example": "✅"
             },
             {
                 "key": "cover",
-                "description": "カバー画像URL",
+                "label": "カバー画像URL",
+                "description": "ページ上部に表示するカバー画像のURL。",
                 "required": False,
                 "example": "https://example.com/cover.jpg"
             },
             {
                 "key": "api_key",
-                "description": "Notion API キー（直接指定）",
+                "label": "Notion APIキー（直接入力）",
+                "description": "APIキーをその場で直接入力するときだけ使います。通常は未入力でOKです。",
                 "required": False,
                 "example": "secret_xxx"
             },
             {
                 "key": "api_key_file",
-                "description": "API キーのファイルパス",
+                "label": "Notion APIキーファイル",
+                "description": "APIキーを保存したファイルパスです。通常はデフォルトのままでOKです。",
                 "required": False,
                 "default": "secrets/notion_api_key.txt",
                 "example": "secrets/notion_api_key.txt"
