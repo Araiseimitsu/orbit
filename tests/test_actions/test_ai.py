@@ -1,6 +1,7 @@
 """
 ORBIT Test Suite - AI Actions
 """
+
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -213,10 +214,7 @@ class TestActionAiGenerate:
         """prompt未指定時はエラー"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
         with pytest.raises(ValueError, match="prompt は必須です"):
-            await action_ai_generate(
-                {},
-                {"base_dir": temp_dir}
-            )
+            await action_ai_generate({}, {"base_dir": temp_dir})
 
     @pytest.mark.asyncio
     async def test_ai_generate_unsupported_provider(self, temp_dir, monkeypatch):
@@ -224,8 +222,7 @@ class TestActionAiGenerate:
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
         with pytest.raises(ValueError, match="未対応の provider"):
             await action_ai_generate(
-                {"prompt": "Test", "provider": "unknown"},
-                {"base_dir": temp_dir}
+                {"prompt": "Test", "provider": "unknown"}, {"base_dir": temp_dir}
             )
 
     @pytest.mark.asyncio
@@ -234,15 +231,17 @@ class TestActionAiGenerate:
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
 
         with patch("src.app.actions.ai._call_gemini") as mock_call:
-            mock_call.return_value = {"text": "Generated text", "model": "gemini-2.5-flash-lite"}
+            mock_call.return_value = {
+                "text": "Generated text",
+                "model": "gemini-3.1-flash-lite-preview",
+            }
 
             result = await action_ai_generate(
-                {"prompt": "Test prompt"},
-                {"base_dir": temp_dir}
+                {"prompt": "Test prompt"}, {"base_dir": temp_dir}
             )
 
             assert result["text"] == "Generated text"
-            assert result["model"] == "gemini-2.5-flash-lite"
+            assert result["model"] == "gemini-3.1-flash-lite-preview"
             mock_call.assert_called_once()
 
     @pytest.mark.asyncio
@@ -251,14 +250,17 @@ class TestActionAiGenerate:
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
 
         with patch("src.app.actions.ai._call_gemini") as mock_call:
-            mock_call.return_value = {"text": "Result", "model": "gemini-1.5-pro"}
+            mock_call.return_value = {
+                "text": "Result",
+                "model": "gemini-3.1-flash-lite-preview",
+            }
 
             result = await action_ai_generate(
-                {"prompt": "Test", "model": "gemini-1.5-pro"},
-                {"base_dir": temp_dir}
+                {"prompt": "Test", "model": "gemini-3.1-flash-lite-preview"},
+                {"base_dir": temp_dir},
             )
 
-            assert result["model"] == "gemini-1.5-pro"
+            assert result["model"] == "gemini-3.1-flash-lite-preview"
 
     @pytest.mark.asyncio
     async def test_ai_generate_with_max_tokens_string(self, temp_dir, monkeypatch):
@@ -269,8 +271,7 @@ class TestActionAiGenerate:
             mock_call.return_value = {"text": "Result", "model": "test"}
 
             await action_ai_generate(
-                {"prompt": "Test", "max_tokens": "100"},
-                {"base_dir": temp_dir}
+                {"prompt": "Test", "max_tokens": "100"}, {"base_dir": temp_dir}
             )
 
             # 文字列が整数に変換されて呼ばれる
@@ -286,15 +287,16 @@ class TestActionAiGenerate:
             mock_call.return_value = {"text": "Result", "model": "test"}
 
             await action_ai_generate(
-                {"prompt": "Test", "temperature": "0.7"},
-                {"base_dir": temp_dir}
+                {"prompt": "Test", "temperature": "0.7"}, {"base_dir": temp_dir}
             )
 
             call_args = mock_call.call_args
             assert call_args.kwargs["temperature"] == 0.7
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="retry_async デコレータとのモックの相互作用が複雑なためスキップ")
+    @pytest.mark.skip(
+        reason="retry_async デコレータとのモックの相互作用が複雑なためスキップ"
+    )
     async def test_ai_generate_use_search(self, temp_dir, monkeypatch):
         """Web検索を有効化"""
         # 注: use_search 機能は実際のAPI呼び出しでテストされる
@@ -313,7 +315,7 @@ class TestActionAiGenerate:
 
             await action_ai_generate(
                 {"prompt": "Test", "api_key_file": "secrets/gemini_api_key.txt"},
-                {"base_dir": temp_dir}
+                {"base_dir": temp_dir},
             )
 
             mock_call.assert_called_once()
@@ -324,7 +326,4 @@ class TestActionAiGenerate:
     async def test_ai_generate_no_api_key(self, temp_dir):
         """APIキーがない場合はエラー"""
         with pytest.raises(FileNotFoundError):
-            await action_ai_generate(
-                {"prompt": "Test"},
-                {"base_dir": temp_dir}
-            )
+            await action_ai_generate({"prompt": "Test"}, {"base_dir": temp_dir})

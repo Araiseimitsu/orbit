@@ -10,7 +10,7 @@ API キー設定:
     - id: generate
       type: ai_generate
       params:
-        model: gemini-2.5-flash-lite
+        model: gemini-3.1-flash-lite-preview
         prompt: "次の要約を作成: {{ step_1.text }}"
         system: "あなたは優秀なアシスタントです"
         max_tokens: 1000
@@ -176,12 +176,14 @@ def _call_gemini(
         "text": result.text,
         "model": model,
         "provider": "gemini",
-        "finish_reason": result.candidates[0].finish_reason.name
-        if result.candidates
-        else None,
-        "prompt_tokens": result.usage_metadata.total_token_count
-        if hasattr(result, "usage_metadata")
-        else None,
+        "finish_reason": (
+            result.candidates[0].finish_reason.name if result.candidates else None
+        ),
+        "prompt_tokens": (
+            result.usage_metadata.total_token_count
+            if hasattr(result, "usage_metadata")
+            else None
+        ),
     }
 
 
@@ -189,7 +191,11 @@ def _call_gemini(
     max_attempts=3,
     delay=1.0,
     backoff=2.0,
-    exceptions=(requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ConnectionError),
+    exceptions=(
+        requests.exceptions.RequestException,
+        requests.exceptions.Timeout,
+        requests.exceptions.ConnectionError,
+    ),
 )
 async def _call_gemini_rest(
     prompt: str,
@@ -254,7 +260,9 @@ async def _call_gemini_rest(
     if not text:
         raise ValueError("Gemini の応答テキストが空です")
 
-    grounding = candidate.get("groundingMetadata") if isinstance(candidate, dict) else None
+    grounding = (
+        candidate.get("groundingMetadata") if isinstance(candidate, dict) else None
+    )
     usage = data.get("usageMetadata") if isinstance(data, dict) else None
 
     return {
@@ -262,7 +270,9 @@ async def _call_gemini_rest(
         "model": model,
         "provider": "gemini",
         "finish_reason": candidate.get("finishReason"),
-        "prompt_tokens": usage.get("totalTokenCount") if isinstance(usage, dict) else None,
+        "prompt_tokens": (
+            usage.get("totalTokenCount") if isinstance(usage, dict) else None
+        ),
         "grounding": grounding,
         "raw": data,
     }
@@ -280,62 +290,65 @@ async def _call_gemini_rest(
                 "key": "prompt",
                 "description": "生成指示",
                 "required": True,
-                "example": "次を要約: {{ step_1.text }}"
+                "example": "次を要約: {{ step_1.text }}",
             },
             {
                 "key": "system",
                 "description": "システムプロンプト",
                 "required": False,
-                "example": "あなたは優秀なアシスタントです"
+                "example": "あなたは優秀なアシスタントです",
             },
             {
                 "key": "provider",
                 "description": "プロバイダー",
                 "required": False,
                 "default": "gemini",
-                "example": "gemini"
+                "example": "gemini",
             },
             {
                 "key": "model",
                 "description": "モデル名",
                 "required": False,
-                "example": "gemini-2.5-flash-lite"
+                "example": "gemini-3.1-flash-lite-preview",
             },
             {
                 "key": "max_tokens",
                 "description": "最大出力トークン数",
                 "required": False,
-                "example": "1000"
+                "example": "1000",
             },
             {
                 "key": "temperature",
                 "description": "温度パラメータ（0.0〜1.0）",
                 "required": False,
-                "example": "0.7"
+                "example": "0.7",
             },
             {
                 "key": "use_search",
                 "description": "Web検索（Google Search）を有効化する",
                 "required": False,
-                "example": "true"
+                "example": "true",
             },
             {
                 "key": "api_key_file",
                 "description": "APIキーのファイルパス",
                 "required": False,
-                "example": "secrets/gemini_api_key.txt"
-            }
+                "example": "secrets/gemini_api_key.txt",
+            },
         ],
         "outputs": [
-            {"key": "text", "description": "生成テキスト（JSON形式で出力させた場合は {{ step_id.text | fromjson }} でパース可能）"},
+            {
+                "key": "text",
+                "description": "生成テキスト（JSON形式で出力させた場合は {{ step_id.text | fromjson }} でパース可能）",
+            },
             {"key": "raw", "description": "生のAPIレスポンス（JSON形式）"},
             {"key": "model", "description": "使用モデル"},
             {"key": "provider", "description": "プロバイダー"},
             {"key": "finish_reason", "description": "完了理由"},
             {"key": "prompt_tokens", "description": "入力トークン数"},
-            {"key": "grounding", "description": "Web検索の根拠情報（ある場合）"}
-        ]
-    }
+            {"key": "grounding", "description": "Web検索の根拠情報（ある場合）"},
+        ],
+    },
 )
 async def action_ai_generate(
     params: dict[str, Any], context: dict[str, Any]
@@ -346,7 +359,7 @@ async def action_ai_generate(
     params:
         provider: "gemini" のみ (デフォルト: gemini)
         model: モデル名
-            - Gemini: "gemini-2.5-flash-lite", "gemini-1.5-pro", etc.
+            - Gemini: "gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite-preview", etc.
         prompt: プロンプトテキスト (必須)
         system: システムプロンプト (オプション)
         max_tokens: 最大出力トークン数 (オプション)
@@ -388,7 +401,7 @@ async def action_ai_generate(
 
     # デフォルトモデル
     if not model:
-        model = "gemini-2.5-flash-lite"
+        model = "gemini-3.1-flash-lite-preview"
 
     # オプションパラメータ
     system = params.get("system")

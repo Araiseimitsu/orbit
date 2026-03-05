@@ -1,6 +1,7 @@
 """
 ORBIT - AI フロー自動構築（Gemini）
 """
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,7 @@ from .core.registry import ActionRegistry
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
 DEFAULT_MAX_TOKENS = 1400
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT = 30
@@ -213,8 +214,10 @@ def _normalize_steps(
         if isinstance(when_raw, dict):
             step_ref = str(when_raw.get("step") or "").strip()
             equals = when_raw.get("equals")
-            if step_ref and equals is not None and not (
-                isinstance(equals, str) and equals.strip() == ""
+            if (
+                step_ref
+                and equals is not None
+                and not (isinstance(equals, str) and equals.strip() == "")
             ):
                 field = str(when_raw.get("field") or "text").strip() or "text"
                 when = {"step": step_ref, "field": field, "equals": equals}
@@ -225,7 +228,12 @@ def _normalize_steps(
 
         position = _normalize_position(raw.get("position"), index)
 
-        step_data = {"id": step_id, "type": step_type, "params": params, "position": position}
+        step_data = {
+            "id": step_id,
+            "type": step_type,
+            "params": params,
+            "position": position,
+        }
         if when:
             step_data["when"] = when
 
@@ -245,7 +253,9 @@ def _normalize_trigger(raw: Any, warnings: list[str]) -> dict[str, str]:
     if trigger_type == "schedule":
         cron = (raw.get("cron") or "").strip()
         if not cron:
-            warnings.append("schedule 指定ですが cron がありません。manual に変更しました。")
+            warnings.append(
+                "schedule 指定ですが cron がありません。manual に変更しました。"
+            )
             return {"type": "manual"}
         try:
             CronTrigger.from_crontab(cron, timezone=ZoneInfo("Asia/Tokyo"))
@@ -349,13 +359,13 @@ def _build_params_system_prompt() -> str:
         "ユーザーの自然言語指示から、適切なパラメータを生成してください。\n\n"
         "## 出力形式\n"
         "必ず JSON だけを返し、説明文やコードフェンスは出力しないでください。\n"
-        '{\n'
+        "{\n"
         '  "params": {\n'
         '    "パラメータ名": "値",\n'
-        '    ...\n'
-        '  },\n'
+        "    ...\n"
+        "  },\n"
         '  "explanation": "設定内容の簡潔な説明"\n'
-        '}\n\n'
+        "}\n\n"
         "## パラメータ選択のガイドライン\n"
         "- 各アクションには複数のパラメータがあり、説明文に「※AI使用時・初心者はこちらを優先」と記載されているものがあります。\n"
         "- このマークが付いているパラメータを必ず優先的に使用してください（シンプル形式）。\n"

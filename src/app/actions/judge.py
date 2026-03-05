@@ -92,13 +92,17 @@ def _load_api_key(file_path: str, base_dir: Path, env_var_name: str) -> str:
     max_attempts=3,
     delay=1.0,
     backoff=2.0,
-    exceptions=(requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ConnectionError),
+    exceptions=(
+        requests.exceptions.RequestException,
+        requests.exceptions.Timeout,
+        requests.exceptions.ConnectionError,
+    ),
 )
 async def _call_judge_gemini(
     target: str,
     question: str,
     api_key: str,
-    model: str = "gemini-2.5-flash-lite",
+    model: str = "gemini-3.1-flash-lite-preview",
 ) -> dict[str, Any]:
     """
     Gemini API で yes/no 判定を実行
@@ -139,7 +143,7 @@ async def _call_judge_gemini(
             "generationConfig": {
                 "temperature": 0.0,
                 "maxOutputTokens": 500,
-            }
+            },
         }
 
         response = requests.post(
@@ -174,7 +178,7 @@ async def _call_judge_gemini(
     result = ""
 
     # マークダウンコードブロックを除去
-    json_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', raw, re.DOTALL)
+    json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw, re.DOTALL)
     if json_match:
         json_text = json_match.group(1).strip()
     else:
@@ -230,32 +234,32 @@ async def _call_judge_gemini(
                 "key": "target",
                 "description": "判定対象テキスト（Jinja2テンプレート可）",
                 "required": True,
-                "example": "{{ step_1.text }}"
+                "example": "{{ step_1.text }}",
             },
             {
                 "key": "question",
                 "description": "判定質問（例: エラーが含まれているか）",
                 "required": True,
-                "example": "このテキストにエラーが含まれているか"
+                "example": "このテキストにエラーが含まれているか",
             },
             {
                 "key": "model",
                 "description": "モデル名",
                 "required": False,
-                "example": "gemini-2.5-flash-lite"
+                "example": "gemini-3.1-flash-lite-preview",
             },
             {
                 "key": "api_key_file",
                 "description": "APIキーのファイルパス",
                 "required": False,
-                "example": "secrets/gemini_api_key.txt"
-            }
+                "example": "secrets/gemini_api_key.txt",
+            },
         ],
         "outputs": [
             {"key": "result", "description": "判定結果 (yes/no)"},
             {"key": "raw", "description": "生の応答テキスト"},
             {"key": "reason", "description": "判定理由"},
-            {"key": "model", "description": "使用モデル"}
+            {"key": "model", "description": "使用モデル"},
         ],
         "example": """steps:
   - id: judge_error
@@ -271,8 +275,8 @@ async def _call_judge_gemini(
     when:
       step: judge_error
       field: result
-      equals: "yes" """
-    }
+      equals: "yes" """,
+    },
 )
 async def action_judge(
     params: dict[str, Any], context: dict[str, Any]
@@ -283,7 +287,7 @@ async def action_judge(
     params:
         target: 判定対象テキスト（必須）
         question: 判定質問（必須）
-        model: モデル名（デフォルト: gemini-2.5-flash-lite）
+        model: モデル名（デフォルト: gemini-3.1-flash-lite-preview）
         api_key_file: APIキーファイルパス（オプション）
 
     returns:
@@ -295,7 +299,7 @@ async def action_judge(
     """
     target = params.get("target")
     question = params.get("question")
-    model = params.get("model", "gemini-2.5-flash-lite")
+    model = params.get("model", "gemini-3.1-flash-lite-preview")
 
     if not target:
         raise ValueError("target は必須です")
