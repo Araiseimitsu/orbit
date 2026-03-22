@@ -12,6 +12,7 @@ services:
       TZ: Asia/Tokyo
     volumes:
       - ./workflows:/app/workflows
+      - ./skills:/app/skills
       - ./runs:/app/runs
       - ./secrets:/app/secrets
       - ./backups:/app/backups

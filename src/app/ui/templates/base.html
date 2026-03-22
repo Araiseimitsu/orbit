@@ -314,6 +314,18 @@
                         </div>
                         <div>
                             <h3 class="text-white font-semibold text-base">
+                                AI スキル（ai_generate）
+                            </h3>
+                            <p class="mt-2 text-gray-300 text-sm leading-relaxed">
+                                プロジェクト直下の <code class="font-mono text-white/80">skills/&lt;名前&gt;/SKILL.md</code>
+                                に手順・トーン・出力形式などを書き、ノードのパラメータ
+                                <code class="font-mono text-white/80">skills</code> では一覧から
+                                <strong class="text-white/90 font-medium">チェックボックスで選択</strong>すると、
+                                システムプロンプトに取り込まれます（任意の YAML フロントマター＋本文）。
+                            </p>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-semibold text-base">
                                 条件分岐と参照
                             </h3>
                             <p class="mt-2 text-gray-300">
@@ -330,7 +342,7 @@
                                 主要アクションの例
                             </h3>
                             <ul class="text-sm text-gray-300 space-y-2">
-                                <li><strong>AI 生成:</strong> プロンプトを渡して要約・分類・生成（Web検索対応）</li>
+                                <li><strong>AI 生成:</strong> プロンプトを渡して要約・分類・生成（Web検索対応・スキル適用可）</li>
                                 <li><strong>AI 判定:</strong> yes/no で判定、条件分岐と組み合わせ可能</li>
                                 <li><strong>ARAICHAT 送信:</strong> room_id / text / files を指定して送信</li>
                                 <li><strong>Excel:</strong> 読み込み / 書き込み / 追記 / シート一覧</li>
@@ -370,6 +382,7 @@
                                 リリースノート（抜粋）
                             </h3>
                             <ul class="text-sm text-gray-300 space-y-2">
+                                <li>2026-03-22: AI スキル（skills/&lt;名&gt;/SKILL.md を ai_generate に統合）</li>
                                 <li>2026-01-11: /runs の All workflows フィルター修正</li>
                                 <li>2026-01-11: Notion 統合（検索/作成/更新）を追加</li>
                                 <li>2026-01-09: AI パラメータ生成機能（シンプル形式優先）</li>

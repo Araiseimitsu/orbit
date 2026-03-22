@@ -1056,6 +1056,62 @@
     min-width: 0;
 }
 
+/* スキルチェックボックスUI */
+.skills-checkbox-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    border-radius: 6px;
+    min-height: 32px;
+    flex: 1;
+}
+
+.skill-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #c4b5fd;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.skill-checkbox-label:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.skill-checkbox-label:has(input:checked) {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #a78bfa;
+}
+
+.skill-checkbox-label input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+    accent-color: #8b5cf6;
+    margin: 0;
+}
+
+.skill-checkbox-text {
+    line-height: 1;
+}
+
+.skills-empty {
+    font-size: 11px;
+    color: #6b7280;
+    padding: 2px;
+}
+
 .ai-expression-button {
     background: rgba(59, 130, 246, 0.1);
     color: #3b82f6;

@@ -18,6 +18,7 @@ src/app/core/
 ├── registry.py        # ActionRegistry: action_type -> 実行関数の辞書
 ├── scheduler.py       # WorkflowScheduler: APScheduler で cron 実行
 ├── run_logger.py      # RunLogger: 実行ログを JSONL に記録
+├── skill_loader.py    # skills/<名>/SKILL.md の読み込みとシステムプロンプト統合
 └── templating.py      # Jinja2 テンプレートレンダリング
 ```
 
@@ -39,6 +40,11 @@ src/app/core/
 4. **ログ記録**
    - 実行結果を RunLogger で JSONL に追記
    - UI から実行履歴を参照
+
+### AI スキル
+
+- `skills/<スキル名>/SKILL.md`（先頭に任意の YAML フロントマター、本文が instruction）
+- `ai_generate` のパラメータ `skills`: UI ではチェックボックスで選択。YAML ではカンマ区切り文字列または配列。内容は `system` に統合される
 
 ### アクション拡張
 
@@ -111,6 +117,7 @@ orbit/
 │   │   ├── registry.py
 │   │   ├── scheduler.py
 │   │   ├── run_logger.py
+│   │   ├── skill_loader.py
 │   │   └── templating.py
 │   ├── actions/                 # アクション実装（拡張可能）
 │   │   ├── log.py
@@ -118,6 +125,7 @@ orbit/
 │   └── ui/
 │       └── templates/           # Jinja2 テンプレート
 ├── workflows/                   # ワークフロー定義（YAML）
+├── skills/                      # AI スキル（各サブフォルダに SKILL.md）
 ├── runs/                        # 実行ログ / 出力ファイル
 │   ├── YYYYMMDD.jsonl          # 日付ごとの実行ログ
 │   └── output/                  # ワークフロー出力

@@ -26,6 +26,7 @@ import requests
 
 from ..core.registry import register_action
 from ..core.retry import retry_async
+from ..core.skill_loader import load_skills, build_system_prompt_with_skills
 
 logger = logging.getLogger(__name__)
 
@@ -324,6 +325,12 @@ async def _call_gemini_rest(
                 "example": "0.7",
             },
             {
+                "key": "skills",
+                "description": "使用するスキル（UI はチェックボックス、YAML はカンマ区切りまたは配列）。skills/<名前>/SKILL.md のフォルダ名",
+                "required": False,
+                "example": "summarizer, json_output",
+            },
+            {
                 "key": "use_search",
                 "description": "Web検索（Google Search）を有効化する",
                 "required": False,
@@ -413,6 +420,23 @@ async def action_ai_generate(
 
     # API キーの読み込み
     base_dir = context.get("base_dir", Path.cwd())
+
+    # スキルの読み込み・適用
+    skills_param = params.get("skills")
+    if skills_param:
+        if isinstance(skills_param, str):
+            skill_names = [s.strip() for s in skills_param.split(",") if s.strip()]
+        elif isinstance(skills_param, list):
+            skill_names = [str(s).strip() for s in skills_param if str(s).strip()]
+        else:
+            skill_names = []
+
+        if skill_names:
+            skills_dir = Path(base_dir) / "skills"
+            loaded_skills = load_skills(skills_dir, skill_names)
+            if loaded_skills:
+                system = build_system_prompt_with_skills(system, loaded_skills)
+                logger.info("スキル適用: %s", [s.get("title", "") for s in loaded_skills])
 
     if provider != "gemini":
         raise ValueError(f"未対応の provider です: {provider}")

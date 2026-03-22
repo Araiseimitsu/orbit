@@ -38,6 +38,7 @@ from .core.registry import get_registry
 from .core.run_logger import RunLogger
 from .core.run_manager import RunManager
 from .core.scheduler import WorkflowScheduler
+from .core.skill_loader import list_skills
 from .ai_flow import generate_ai_flow
 
 # ログ設定
@@ -124,7 +125,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ORBIT",
     description="n8nライクなワークフロー実行アプリ（MVP）",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -667,6 +668,13 @@ async def list_actions():
             metadata[action_type] = meta.dict()
 
     return {"actions": actions, "metadata": metadata}
+
+
+@app.get("/api/skills")
+async def list_skills_api():
+    """利用可能なスキル一覧（UI用）"""
+    skills_dir = BASE_DIR / "skills"
+    return {"skills": list_skills(skills_dir)}
 
 
 @app.get("/api/workflows")

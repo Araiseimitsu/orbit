@@ -19,6 +19,7 @@
     selectedId: null,
     zoomLevel: 1.0,
     workflowsCache: [],
+    skillsCache: [],
   };
 
   const DEBUG = config.debug === true;
@@ -203,6 +204,23 @@
       }
     } catch (error) {
       console.error('Failed to fetch workflows:', error);
+    }
+    return [];
+  };
+
+  const fetchSkills = async () => {
+    if (state.skillsCache && state.skillsCache.length > 0) {
+      return state.skillsCache;
+    }
+    try {
+      const response = await fetch('/api/skills');
+      if (response.ok) {
+        const data = await response.json();
+        state.skillsCache = data.skills || [];
+        return state.skillsCache;
+      }
+    } catch (error) {
+      console.error('Failed to fetch skills:', error);
     }
     return [];
   };
@@ -688,9 +706,64 @@
 
     keySelect.addEventListener("change", () => {
       setKeyMode(keySelect.value);
-      
+
+      // skillsパラメータが選択された場合、チェックボックスを表示
+      if (keySelect.value === "skills") {
+        while (valueWrap.firstChild) {
+          valueWrap.removeChild(valueWrap.firstChild);
+        }
+
+        const skillsContainer = document.createElement("div");
+        skillsContainer.className = "skills-checkbox-container";
+
+        const hiddenInput = document.createElement("input");
+        hiddenInput.type = "hidden";
+        hiddenInput.value = "";
+        hiddenInput.className = "param-value";
+
+        const updateHiddenValue = () => {
+          const checked = skillsContainer.querySelectorAll('input[type="checkbox"]:checked');
+          const names = Array.from(checked).map(cb => cb.value);
+          hiddenInput.value = names.join(", ");
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+
+        fetchSkills().then((skills) => {
+          if (skills.length === 0) {
+            const empty = document.createElement("span");
+            empty.className = "skills-empty";
+            empty.textContent = "スキルがありません";
+            skillsContainer.appendChild(empty);
+            return;
+          }
+          skills.forEach((skill) => {
+            const label = document.createElement("label");
+            label.className = "skill-checkbox-label";
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.value = skill.name;
+            cb.addEventListener("change", updateHiddenValue);
+            label.appendChild(cb);
+            const text = document.createElement("span");
+            text.className = "skill-checkbox-text";
+            text.textContent = skill.title || skill.name;
+            if (skill.description) {
+              text.title = skill.description;
+            }
+            label.appendChild(text);
+            skillsContainer.appendChild(label);
+          });
+        });
+
+        valueWrap.appendChild(hiddenInput);
+        valueWrap.appendChild(skillsContainer);
+
+        if (valueInput && valueInput.parentNode) {
+          valueInput.remove();
+        }
+        valueInput = hiddenInput;
+      } else if (keySelect.value === "workflow_name") {
       // workflow_nameパラメータが選択された場合、ドロップダウンを表示
-      if (keySelect.value === "workflow_name") {
         // valueWrapの中身をクリア
         while (valueWrap.firstChild) {
           valueWrap.removeChild(valueWrap.firstChild);
@@ -753,8 +826,8 @@
           valueInput.remove();
         }
         valueInput = dropdown;
-      } else if (valueInput && valueInput.tagName === "SELECT") {
-        // workflow_name以外が選択された場合、テキストエリアに戻す
+      } else if (valueInput && (valueInput.tagName === "SELECT" || valueInput.type === "hidden")) {
+        // 特殊UI以外が選択された場合、テキストエリアに戻す
         while (valueWrap.firstChild) {
           valueWrap.removeChild(valueWrap.firstChild);
         }
@@ -791,10 +864,63 @@
     let valueInput;
     let aiButton = null;
 
-    // workflow_nameパラメータの場合はドロップダウンを表示
-    const isWorkflowNameParam = (keyInput?.value || keySelect?.value) === "workflow_name";
+    // 特殊パラメータの判定
+    const currentKey = keyInput?.value || keySelect?.value;
+    const isWorkflowNameParam = currentKey === "workflow_name";
+    const isSkillsParam = currentKey === "skills";
 
-    if (isWorkflowNameParam) {
+    if (isSkillsParam) {
+      // スキル選択用チェックボックスUI
+      const skillsContainer = document.createElement("div");
+      skillsContainer.className = "skills-checkbox-container";
+
+      // 隠しinputで値を保持
+      valueInput = document.createElement("input");
+      valueInput.type = "hidden";
+      valueInput.value = value || "";
+      valueInput.className = "param-value";
+
+      const existingSkills = (value || "").split(",").map(s => s.trim()).filter(Boolean);
+
+      const updateHiddenValue = () => {
+        const checked = skillsContainer.querySelectorAll('input[type="checkbox"]:checked');
+        const names = Array.from(checked).map(cb => cb.value);
+        valueInput.value = names.join(", ");
+        valueInput.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+
+      // スキル一覧を非同期で取得して表示
+      fetchSkills().then((skills) => {
+        if (skills.length === 0) {
+          const empty = document.createElement("span");
+          empty.className = "skills-empty";
+          empty.textContent = "スキルがありません（skills/<名前>/SKILL.md を追加）";
+          skillsContainer.appendChild(empty);
+          return;
+        }
+        skills.forEach((skill) => {
+          const label = document.createElement("label");
+          label.className = "skill-checkbox-label";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.value = skill.name;
+          cb.checked = existingSkills.includes(skill.name);
+          cb.addEventListener("change", updateHiddenValue);
+          label.appendChild(cb);
+          const text = document.createElement("span");
+          text.className = "skill-checkbox-text";
+          text.textContent = skill.title || skill.name;
+          if (skill.description) {
+            text.title = skill.description;
+          }
+          label.appendChild(text);
+          skillsContainer.appendChild(label);
+        });
+      });
+
+      valueWrap.appendChild(valueInput);
+      valueWrap.appendChild(skillsContainer);
+    } else if (isWorkflowNameParam) {
       // ドロップダウン表示
       valueInput = document.createElement("select");
       valueInput.className = "param-value";
