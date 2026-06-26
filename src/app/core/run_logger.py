@@ -50,38 +50,38 @@ class RunLogger:
             limit: 取得件数（デフォルト: 50）
             offset: オフセット（デフォルト: 0）
         """
-        runs = []
-
-        # 全ログファイルを日付降順で読む
-        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
-
-        for log_file in log_files:
-            file_runs = self._read_log_file(log_file, workflow_name)
-            runs.extend(file_runs)
-
-        # ソートしてからオフセットと制限を適用
-        sorted_runs = sorted(runs, key=lambda x: x.started_at, reverse=True)
-        return sorted_runs[offset:offset + limit]
+        return self.get_all_runs(limit=limit, offset=offset, workflow_filter=workflow_name)
 
     def get_all_runs(self, limit: int = 50, offset: int = 0, workflow_filter: str | None = None) -> list[RunLog]:
-        """全実行履歴を取得（新しい順）
+        """実行履歴を取得（新しい順）
+
+        ログファイルは `YYYYMMDD.jsonl`（日付降順＝新しい順）で、各ファイル内も
+        追記＝時系列順。新しいファイルから順に必要件数（offset+limit）が揃うまで
+        だけ読み、それ以降の古いファイルは開かない（遅延読み込み）。
 
         Args:
             limit: 取得件数（デフォルト: 50）
             offset: オフセット（デフォルト: 0）
             workflow_filter: フィルタするワークフロー名（オプション）
         """
-        runs = []
+        needed = offset + limit
+        runs: list[RunLog] = []
 
         log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
 
         for log_file in log_files:
             file_runs = self._read_log_file(log_file, workflow_filter)
+            # ファイル内は追記＝古い→新しい順なので、新しい順に並べ替える
+            file_runs.sort(key=lambda x: x.started_at, reverse=True)
             runs.extend(file_runs)
 
-        # ソートしてからオフセットと制限を適用
-        sorted_runs = sorted(runs, key=lambda x: x.started_at, reverse=True)
-        return sorted_runs[offset:offset + limit]
+            # 必要件数が揃ったら、これより古いファイルは開かない
+            if len(runs) >= needed:
+                break
+
+        # 念のため全体を新しい順に整列（ファイル名と started_at のズレに備える）
+        runs.sort(key=lambda x: x.started_at, reverse=True)
+        return runs[offset:offset + limit]
 
     def get_latest_run(self, workflow_name: str) -> RunLog | None:
         """ワークフローの最新実行結果を取得"""
@@ -166,23 +166,35 @@ class RunLogger:
 
     def count_runs_for_workflow(self, workflow_name: str) -> int:
         """特定ワークフローの実行履歴の総件数を取得"""
-        count = 0
-        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
-
-        for log_file in log_files:
-            file_runs = self._read_log_file(log_file, workflow_name)
-            count += len(file_runs)
-
-        return count
+        return self.count_all_runs(workflow_filter=workflow_name)
 
     def count_all_runs(self, workflow_filter: str | None = None) -> int:
-        """全実行履歴の総件数を取得"""
+        """実行履歴の総件数を取得（Pydantic 検証はしない）
+
+        フィルタなしなら空行を除いた行数を数えるだけ。フィルタありの場合のみ
+        各行を JSON パースして workflow を判定するが、RunLog 検証は行わない。
+        """
         count = 0
-        log_files = sorted(self.runs_dir.glob("*.jsonl"), reverse=True)
+        log_files = self.runs_dir.glob("*.jsonl")
 
         for log_file in log_files:
-            file_runs = self._read_log_file(log_file, workflow_filter)
-            count += len(file_runs)
+            try:
+                with log_file.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
+                        if workflow_filter is None:
+                            count += 1
+                            continue
+                        try:
+                            data = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if data.get("workflow") == workflow_filter:
+                            count += 1
+            except Exception as e:
+                logger.error(f"Failed to read log file {log_file}: {e}")
+                continue
 
         return count
 

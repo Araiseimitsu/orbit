@@ -102,7 +102,7 @@ async def _call_judge_gemini(
     target: str,
     question: str,
     api_key: str,
-    model: str = "gemini-3.1-flash-lite-preview",
+    model: str = "gemini-3.5-flash",
 ) -> dict[str, Any]:
     """
     Gemini API で yes/no 判定を実行
@@ -246,7 +246,7 @@ async def _call_judge_gemini(
                 "key": "model",
                 "description": "モデル名",
                 "required": False,
-                "example": "gemini-3.1-flash-lite-preview",
+                "example": "gemini-3.5-flash",
             },
             {
                 "key": "api_key_file",
@@ -287,7 +287,7 @@ async def action_judge(
     params:
         target: 判定対象テキスト（必須）
         question: 判定質問（必須）
-        model: モデル名（デフォルト: gemini-3.1-flash-lite-preview）
+        model: モデル名（デフォルト: gemini-3.5-flash）
         api_key_file: APIキーファイルパス（オプション）
 
     returns:
@@ -299,7 +299,7 @@ async def action_judge(
     """
     target = params.get("target")
     question = params.get("question")
-    model = params.get("model", "gemini-3.1-flash-lite-preview")
+    model = params.get("model", "gemini-3.5-flash")
 
     if not target:
         raise ValueError("target は必須です")

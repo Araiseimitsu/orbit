@@ -310,9 +310,9 @@ async def dashboard(request: Request, q: str | None = None):
     ]
 
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
-            "request": request,
             "workflows": workflows,
             "workflow_groups": workflow_groups,
             "search_query": query,
@@ -345,9 +345,9 @@ async def workflow_detail(request: Request, name: str, page: int = 1):
                 break
 
     return templates.TemplateResponse(
+        request,
         "workflow_detail.html",
         {
-            "request": request,
             "name": name,
             "yaml_content": yaml_content,
             "workflow": workflow,
@@ -396,9 +396,9 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
     total_pages = (total_runs + per_page - 1) // per_page  # 切り上げ
 
     return templates.TemplateResponse(
+        request,
         "runs.html",
         {
-            "request": request,
             "runs": runs,
             "workflow_filter": workflow,
             "workflow_options": workflow_options,
@@ -419,13 +419,13 @@ async def runs_page(request: Request, workflow: str | None = None, page: int = 1
 async def workflow_new(request: Request):
     """ワークフロー新規作成（テンプレート選択）"""
     # テンプレート一覧を取得
-    templates = []
+    workflow_templates = []
     templates_dir = WORKFLOWS_DIR / "templates"
     if templates_dir.exists():
         for yaml_file in templates_dir.glob("*.yaml"):
             workflow, error = loader.load_workflow(yaml_file.stem, templates_dir=True)
             if workflow:
-                templates.append(
+                workflow_templates.append(
                     {
                         "name": yaml_file.stem,
                         "title": workflow.name,
@@ -435,8 +435,9 @@ async def workflow_new(request: Request):
                 )
 
     return templates.TemplateResponse(
+        request,
         "new_workflow.html",
-        {"request": request, "templates": templates},
+        {"templates": workflow_templates},
     )
 
 
@@ -456,9 +457,9 @@ async def workflow_new_visual(request: Request):
         ensure_ascii=False,
     )
     return templates.TemplateResponse(
+        request,
         "flow_editor.html",
         {
-            "request": request,
             "config_json": config_json,
             "error": None,
             "page_title": "ビジュアルエディタ（新規作成）",
@@ -486,9 +487,9 @@ async def workflow_edit(request: Request, name: str):
         ensure_ascii=False,
     )
     return templates.TemplateResponse(
+        request,
         "flow_editor.html",
         {
-            "request": request,
             "config_json": config_json,
             "error": error,
             "page_title": f"ビジュアルエディタ - {name}",
@@ -519,9 +520,9 @@ async def workflow_from_template(request: Request, template_name: str):
         ensure_ascii=False,
     )
     return templates.TemplateResponse(
+        request,
         "flow_editor.html",
         {
-            "request": request,
             "config_json": config_json,
             "error": None,
             "page_title": f"テンプレートから作成 - {workflow.name}",
@@ -552,8 +553,9 @@ async def run_workflow(request: Request, name: str):
             "すでに実行中です。停止ボタンで中断できます。",
         )
         return templates.TemplateResponse(
+            request,
             "partials/run_result.html",
-            {"request": request, "run": error_run, "workflow_name": safe_name},
+            {"run": error_run, "workflow_name": safe_name},
         )
 
     try:
@@ -577,8 +579,9 @@ async def run_workflow(request: Request, name: str):
                 error or "Workflow not found",
             )
             return templates.TemplateResponse(
+                request,
                 "partials/run_result.html",
-                {"request": request, "run": error_run, "workflow_name": safe_name},
+                {"run": error_run, "workflow_name": safe_name},
             )
 
         if prompt and workflow.steps:
@@ -596,8 +599,9 @@ async def run_workflow(request: Request, name: str):
                 "すでに実行中です。停止ボタンで中断できます。",
             )
             return templates.TemplateResponse(
+                request,
                 "partials/run_result.html",
-                {"request": request, "run": error_run, "workflow_name": safe_name},
+                {"run": error_run, "workflow_name": safe_name},
             )
 
         try:
@@ -612,8 +616,9 @@ async def run_workflow(request: Request, name: str):
         )
 
         return templates.TemplateResponse(
+            request,
             "partials/run_result.html",
-            {"request": request, "run": run_log, "workflow_name": safe_name},
+            {"run": run_log, "workflow_name": safe_name},
         )
 
     except Exception as e:
@@ -623,8 +628,9 @@ async def run_workflow(request: Request, name: str):
             f"{type(e).__name__}: {str(e)}",
         )
         return templates.TemplateResponse(
+            request,
             "partials/run_result.html",
-            {"request": request, "run": error_run, "workflow_name": safe_name},
+            {"run": error_run, "workflow_name": safe_name},
         )
 
 

@@ -10,7 +10,7 @@ API キー設定:
     - id: generate
       type: ai_generate
       params:
-        model: gemini-3.1-flash-lite-preview
+        model: gemini-3.5-flash
         prompt: "次の要約を作成: {{ step_1.text }}"
         system: "あなたは優秀なアシスタントです"
         max_tokens: 1000
@@ -310,7 +310,7 @@ async def _call_gemini_rest(
                 "key": "model",
                 "description": "モデル名",
                 "required": False,
-                "example": "gemini-3.1-flash-lite-preview",
+                "example": "gemini-3.5-flash",
             },
             {
                 "key": "max_tokens",
@@ -366,7 +366,7 @@ async def action_ai_generate(
     params:
         provider: "gemini" のみ (デフォルト: gemini)
         model: モデル名
-            - Gemini: "gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite-preview", etc.
+            - Gemini: "gemini-3.5-flash", "gemini-3.5-flash", etc.
         prompt: プロンプトテキスト (必須)
         system: システムプロンプト (オプション)
         max_tokens: 最大出力トークン数 (オプション)
@@ -408,7 +408,7 @@ async def action_ai_generate(
 
     # デフォルトモデル
     if not model:
-        model = "gemini-3.1-flash-lite-preview"
+        model = "gemini-3.5-flash"
 
     # オプションパラメータ
     system = params.get("system")

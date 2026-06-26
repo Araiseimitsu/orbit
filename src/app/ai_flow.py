@@ -24,7 +24,7 @@ from .core.registry import ActionRegistry
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
+DEFAULT_MODEL = "gemini-3.5-flash"
 DEFAULT_MAX_TOKENS = 1400
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_TIMEOUT = 30

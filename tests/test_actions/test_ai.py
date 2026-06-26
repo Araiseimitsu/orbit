@@ -233,7 +233,7 @@ class TestActionAiGenerate:
         with patch("src.app.actions.ai._call_gemini") as mock_call:
             mock_call.return_value = {
                 "text": "Generated text",
-                "model": "gemini-3.1-flash-lite-preview",
+                "model": "gemini-3.5-flash",
             }
 
             result = await action_ai_generate(
@@ -241,7 +241,7 @@ class TestActionAiGenerate:
             )
 
             assert result["text"] == "Generated text"
-            assert result["model"] == "gemini-3.1-flash-lite-preview"
+            assert result["model"] == "gemini-3.5-flash"
             mock_call.assert_called_once()
 
     @pytest.mark.asyncio
@@ -252,15 +252,15 @@ class TestActionAiGenerate:
         with patch("src.app.actions.ai._call_gemini") as mock_call:
             mock_call.return_value = {
                 "text": "Result",
-                "model": "gemini-3.1-flash-lite-preview",
+                "model": "gemini-3.5-flash",
             }
 
             result = await action_ai_generate(
-                {"prompt": "Test", "model": "gemini-3.1-flash-lite-preview"},
+                {"prompt": "Test", "model": "gemini-3.5-flash"},
                 {"base_dir": temp_dir},
             )
 
-            assert result["model"] == "gemini-3.1-flash-lite-preview"
+            assert result["model"] == "gemini-3.5-flash"
 
     @pytest.mark.asyncio
     async def test_ai_generate_with_max_tokens_string(self, temp_dir, monkeypatch):
