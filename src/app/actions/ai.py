@@ -10,7 +10,6 @@ API キー設定:
     - id: generate
       type: ai_generate
       params:
-        model: gemini-3.5-flash
         prompt: "次の要約を作成: {{ step_1.text }}"
         system: "あなたは優秀なアシスタントです"
         max_tokens: 1000
@@ -35,15 +34,18 @@ logger = logging.getLogger(__name__)
 DEFAULT_GEMINI_KEY_FILE = "secrets/gemini_api_key.txt"
 DEFAULT_GEMINI_KEY_ENV = "GEMINI_API_KEY"
 GEMINI_MODEL_ENV = "GEMINI_MODEL"
-DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 DEFAULT_TIMEOUT = 30
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
-def get_default_gemini_model() -> str:
-    """未指定時の Gemini モデル名。環境変数 GEMINI_MODEL を優先する。"""
+def get_gemini_model() -> str:
+    """Gemini モデル名。.env の GEMINI_MODEL のみを参照する。"""
     model = (os.getenv(GEMINI_MODEL_ENV) or "").strip()
-    return model or DEFAULT_GEMINI_MODEL
+    if not model:
+        raise ValueError(
+            "Gemini モデルが未設定です。.env の GEMINI_MODEL を設定してください。"
+        )
+    return model
 
 
 def _coerce_int(value: Any, label: str) -> int | None:
@@ -314,12 +316,6 @@ async def _call_gemini_rest(
                 "example": "gemini",
             },
             {
-                "key": "model",
-                "description": "モデル名（未指定時は環境変数 GEMINI_MODEL）",
-                "required": False,
-                "example": "gemini-3.5-flash",
-            },
-            {
                 "key": "max_tokens",
                 "description": "最大出力トークン数",
                 "required": False,
@@ -372,7 +368,6 @@ async def action_ai_generate(
 
     params:
         provider: "gemini" のみ (デフォルト: gemini)
-        model: モデル名（未指定時は環境変数 GEMINI_MODEL）
         prompt: プロンプトテキスト (必須)
         system: システムプロンプト (オプション)
         max_tokens: 最大出力トークン数 (オプション)
@@ -406,15 +401,15 @@ async def action_ai_generate(
             values: "{{ ai_1.text | fromjson }}"  # JSON文字列 → 配列に変換
     """
     provider = params.get("provider", "gemini").lower()
-    model = params.get("model")
     prompt = params.get("prompt")
 
     if not prompt:
         raise ValueError("prompt は必須です")
 
-    # デフォルトモデル（.env の GEMINI_MODEL）
-    if not model:
-        model = get_default_gemini_model()
+    if provider != "gemini":
+        raise ValueError(f"未対応の provider です: {provider}")
+
+    model = get_gemini_model()
 
     # オプションパラメータ
     system = params.get("system")
@@ -443,9 +438,6 @@ async def action_ai_generate(
             if loaded_skills:
                 system = build_system_prompt_with_skills(system, loaded_skills)
                 logger.info("スキル適用: %s", [s.get("title", "") for s in loaded_skills])
-
-    if provider != "gemini":
-        raise ValueError(f"未対応の provider です: {provider}")
 
     api_key_file = params.get("api_key_file", DEFAULT_GEMINI_KEY_FILE)
     api_key = _load_api_key(api_key_file, base_dir, DEFAULT_GEMINI_KEY_ENV)

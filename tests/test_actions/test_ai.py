@@ -226,28 +226,19 @@ class TestActionAiGenerate:
             )
 
     @pytest.mark.asyncio
-    async def test_ai_generate_default_model(self, temp_dir, monkeypatch):
-        """環境変数未設定時は組み込みの既定モデルを使う"""
+    async def test_ai_generate_requires_env_model(self, temp_dir, monkeypatch):
+        """GEMINI_MODEL 未設定時はエラー"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
         monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
-        with patch("src.app.actions.ai._call_gemini") as mock_call:
-            mock_call.return_value = {
-                "text": "Generated text",
-                "model": "gemini-3.5-flash",
-            }
-
-            result = await action_ai_generate(
+        with pytest.raises(ValueError, match="GEMINI_MODEL"):
+            await action_ai_generate(
                 {"prompt": "Test prompt"}, {"base_dir": temp_dir}
             )
 
-            assert result["text"] == "Generated text"
-            assert result["model"] == "gemini-3.5-flash"
-            assert mock_call.call_args.args[1] == "gemini-3.5-flash"
-
     @pytest.mark.asyncio
     async def test_ai_generate_model_from_env(self, temp_dir, monkeypatch):
-        """GEMINI_MODEL を既定モデルとして使う"""
+        """使うモデルは GEMINI_MODEL のみ"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
         monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-pro")
 
@@ -258,34 +249,18 @@ class TestActionAiGenerate:
             }
 
             result = await action_ai_generate(
-                {"prompt": "Test prompt"}, {"base_dir": temp_dir}
+                {"prompt": "Test prompt", "model": "other-model"},
+                {"base_dir": temp_dir},
             )
 
             assert result["model"] == "gemini-2.5-pro"
             assert mock_call.call_args.args[1] == "gemini-2.5-pro"
 
     @pytest.mark.asyncio
-    async def test_ai_generate_with_custom_model(self, temp_dir, monkeypatch):
-        """カスタムモデルを指定"""
-        monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-
-        with patch("src.app.actions.ai._call_gemini") as mock_call:
-            mock_call.return_value = {
-                "text": "Result",
-                "model": "gemini-3.5-flash",
-            }
-
-            result = await action_ai_generate(
-                {"prompt": "Test", "model": "gemini-3.5-flash"},
-                {"base_dir": temp_dir},
-            )
-
-            assert result["model"] == "gemini-3.5-flash"
-
-    @pytest.mark.asyncio
     async def test_ai_generate_with_max_tokens_string(self, temp_dir, monkeypatch):
         """max_tokensを文字列で指定"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
 
         with patch("src.app.actions.ai._call_gemini") as mock_call:
             mock_call.return_value = {"text": "Result", "model": "test"}
@@ -295,13 +270,13 @@ class TestActionAiGenerate:
             )
 
             # 文字列が整数に変換されて呼ばれる
-            call_args = mock_call.call_args
-            assert call_args.kwargs["max_tokens"] == 100
+            assert mock_call.call_args.args[4] == 100
 
     @pytest.mark.asyncio
     async def test_ai_generate_with_temperature_string(self, temp_dir, monkeypatch):
         """temperatureを文字列で指定"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
 
         with patch("src.app.actions.ai._call_gemini") as mock_call:
             mock_call.return_value = {"text": "Result", "model": "test"}
@@ -310,8 +285,7 @@ class TestActionAiGenerate:
                 {"prompt": "Test", "temperature": "0.7"}, {"base_dir": temp_dir}
             )
 
-            call_args = mock_call.call_args
-            assert call_args.kwargs["temperature"] == 0.7
+            assert mock_call.call_args.args[5] == 0.7
 
     @pytest.mark.asyncio
     @pytest.mark.skip(
@@ -324,8 +298,10 @@ class TestActionAiGenerate:
         pass
 
     @pytest.mark.asyncio
-    async def test_ai_generate_loads_api_key_from_file(self, temp_dir):
+    async def test_ai_generate_loads_api_key_from_file(self, temp_dir, monkeypatch):
         """ファイルからAPIキーを読み込む"""
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         key_file = temp_dir / "secrets" / "gemini_api_key.txt"
         key_file.parent.mkdir(parents=True, exist_ok=True)
         key_file.write_text("file-api-key", encoding="utf-8")
@@ -339,11 +315,12 @@ class TestActionAiGenerate:
             )
 
             mock_call.assert_called_once()
-            call_args = mock_call.call_args
-            assert call_args.kwargs["api_key"] == "file-api-key"
+            assert mock_call.call_args.args[2] == "file-api-key"
 
     @pytest.mark.asyncio
-    async def test_ai_generate_no_api_key(self, temp_dir):
+    async def test_ai_generate_no_api_key(self, temp_dir, monkeypatch):
         """APIキーがない場合はエラー"""
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         with pytest.raises(FileNotFoundError):
             await action_ai_generate({"prompt": "Test"}, {"base_dir": temp_dir})

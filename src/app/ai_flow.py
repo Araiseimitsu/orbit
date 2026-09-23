@@ -19,7 +19,7 @@ from .actions.ai import (
     DEFAULT_GEMINI_KEY_ENV,
     _call_gemini,
     _load_api_key,
-    get_default_gemini_model,
+    get_gemini_model,
 )
 from .core.registry import ActionRegistry
 
@@ -311,11 +311,9 @@ def generate_ai_flow(
     registry: ActionRegistry,
     base_dir: Path,
     current_workflow: dict[str, Any] | None = None,
-    model: str | None = None,
     use_search: bool = True,
 ) -> dict[str, Any]:
-    if not model:
-        model = get_default_gemini_model()
+    model = get_gemini_model()
     api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, base_dir, DEFAULT_GEMINI_KEY_ENV)
     actions_meta = registry.list_all_metadata()
 
@@ -399,7 +397,6 @@ def generate_ai_params(
     registry: ActionRegistry,
     base_dir: Path,
     previous_steps: list[dict[str, Any]] | None = None,
-    model: str | None = None,
 ) -> dict[str, Any]:
     """AIでステップのパラメータを生成
 
@@ -409,13 +406,10 @@ def generate_ai_params(
         registry: アクションレジストリ
         base_dir: ベースディレクトリ
         previous_steps: 前のステップの情報（id, type, outputsを含む）
-        model: 使用するAIモデル（未指定時は環境変数 GEMINI_MODEL）
-
     Returns:
         {"params": dict, "explanation": str}
     """
-    if not model:
-        model = get_default_gemini_model()
+    model = get_gemini_model()
     api_key = _load_api_key(DEFAULT_GEMINI_KEY_FILE, base_dir, DEFAULT_GEMINI_KEY_ENV)
 
     # アクションのメタデータを取得

@@ -33,7 +33,7 @@ import requests
 
 from ..core.registry import register_action
 from ..core.retry import retry_async
-from .ai import get_default_gemini_model
+from .ai import get_gemini_model
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ async def _call_judge_gemini(
         target: 判定対象テキスト
         question: 判定質問（例: "エラーが含まれているか"）
         api_key: Gemini API キー
-        model: モデル名（未指定時は環境変数 GEMINI_MODEL）
+        model: モデル名（.env の GEMINI_MODEL）
 
     Returns:
         {
@@ -123,7 +123,7 @@ async def _call_judge_gemini(
         }
     """
     if not model:
-        model = get_default_gemini_model()
+        model = get_gemini_model()
 
     loop = asyncio.get_event_loop()
 
@@ -247,12 +247,6 @@ async def _call_judge_gemini(
                 "example": "このテキストにエラーが含まれているか",
             },
             {
-                "key": "model",
-                "description": "モデル名（未指定時は環境変数 GEMINI_MODEL）",
-                "required": False,
-                "example": "gemini-3.5-flash",
-            },
-            {
                 "key": "api_key_file",
                 "description": "APIキーのファイルパス",
                 "required": False,
@@ -291,7 +285,6 @@ async def action_judge(
     params:
         target: 判定対象テキスト（必須）
         question: 判定質問（必須）
-        model: モデル名（未指定時は環境変数 GEMINI_MODEL）
         api_key_file: APIキーファイルパス（オプション）
 
     returns:
@@ -303,7 +296,7 @@ async def action_judge(
     """
     target = params.get("target")
     question = params.get("question")
-    model = params.get("model") or get_default_gemini_model()
+    model = get_gemini_model()
 
     if not target:
         raise ValueError("target は必須です")

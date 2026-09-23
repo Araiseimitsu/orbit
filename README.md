@@ -313,7 +313,7 @@ steps:
 | 環境変数 | 説明 | 必須 |
 |---------|------|------|
 | `GEMINI_API_KEY` | Gemini API キー | ai_generate / ai_judge 使用時 |
-| `GEMINI_MODEL` | 既定の Gemini モデル名（ステップの `model` 未指定時） | 任意（未設定時は `gemini-3.5-flash`） |
+| `GEMINI_MODEL` | Gemini モデル名（指定箇所は .env のみ） | ai_generate / ai_judge / AI生成使用時 |
 | `ARAICHAT_API_KEY` | ARAICHAT API キー | araichat_send_message 使用時 |
 | `ARAICHAT_ROOM_ID` | ARAICHAT デフォルトルームID | araichat_send_message 使用時（オプション） |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Google サービスアカウントJSONパス | sheets_* 使用時 |
