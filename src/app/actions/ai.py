@@ -18,6 +18,7 @@ API キー設定:
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -33,8 +34,16 @@ logger = logging.getLogger(__name__)
 # デフォルトの API キーファイルパス
 DEFAULT_GEMINI_KEY_FILE = "secrets/gemini_api_key.txt"
 DEFAULT_GEMINI_KEY_ENV = "GEMINI_API_KEY"
+GEMINI_MODEL_ENV = "GEMINI_MODEL"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 DEFAULT_TIMEOUT = 30
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+def get_default_gemini_model() -> str:
+    """未指定時の Gemini モデル名。環境変数 GEMINI_MODEL を優先する。"""
+    model = (os.getenv(GEMINI_MODEL_ENV) or "").strip()
+    return model or DEFAULT_GEMINI_MODEL
 
 
 def _coerce_int(value: Any, label: str) -> int | None:
@@ -113,8 +122,6 @@ def _load_api_key(file_path: str, base_dir: Path, env_var_name: str) -> str:
         FileNotFoundError: 環境変数もファイルも存在しない
         ValueError: APIキーが空
     """
-    import os
-
     # 環境変数を優先
     api_key = os.getenv(env_var_name)
     if api_key:
@@ -308,7 +315,7 @@ async def _call_gemini_rest(
             },
             {
                 "key": "model",
-                "description": "モデル名",
+                "description": "モデル名（未指定時は環境変数 GEMINI_MODEL）",
                 "required": False,
                 "example": "gemini-3.5-flash",
             },
@@ -365,8 +372,7 @@ async def action_ai_generate(
 
     params:
         provider: "gemini" のみ (デフォルト: gemini)
-        model: モデル名
-            - Gemini: "gemini-3.5-flash", "gemini-3.5-flash", etc.
+        model: モデル名（未指定時は環境変数 GEMINI_MODEL）
         prompt: プロンプトテキスト (必須)
         system: システムプロンプト (オプション)
         max_tokens: 最大出力トークン数 (オプション)
@@ -406,9 +412,9 @@ async def action_ai_generate(
     if not prompt:
         raise ValueError("prompt は必須です")
 
-    # デフォルトモデル
+    # デフォルトモデル（.env の GEMINI_MODEL）
     if not model:
-        model = "gemini-3.5-flash"
+        model = get_default_gemini_model()
 
     # オプションパラメータ
     system = params.get("system")

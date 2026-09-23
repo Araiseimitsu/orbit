@@ -949,20 +949,16 @@ async def build_expression_with_ai(request: Request):
             DEFAULT_GEMINI_KEY_FILE,
             DEFAULT_GEMINI_KEY_ENV,
             _load_api_key,
+            get_default_gemini_model,
         )
-        from .ai_flow import (
-            DEFAULT_MODEL,
-            DEFAULT_MAX_TOKENS,
-            DEFAULT_TEMPERATURE,
-            _call_gemini_rest,
-        )
+        from .ai_flow import _call_gemini_rest
 
         api_key = _load_api_key(
             DEFAULT_GEMINI_KEY_FILE, BASE_DIR, DEFAULT_GEMINI_KEY_ENV
         )
         result = _call_gemini_rest(
             prompt=user_prompt_text,
-            model=DEFAULT_MODEL,
+            model=get_default_gemini_model(),
             api_key=api_key,
             system=system_prompt,
             max_tokens=200,

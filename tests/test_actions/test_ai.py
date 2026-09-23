@@ -227,8 +227,9 @@ class TestActionAiGenerate:
 
     @pytest.mark.asyncio
     async def test_ai_generate_default_model(self, temp_dir, monkeypatch):
-        """デフォルトモデルが設定される"""
+        """環境変数未設定時は組み込みの既定モデルを使う"""
         monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+        monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
         with patch("src.app.actions.ai._call_gemini") as mock_call:
             mock_call.return_value = {
@@ -242,7 +243,26 @@ class TestActionAiGenerate:
 
             assert result["text"] == "Generated text"
             assert result["model"] == "gemini-3.5-flash"
-            mock_call.assert_called_once()
+            assert mock_call.call_args.args[1] == "gemini-3.5-flash"
+
+    @pytest.mark.asyncio
+    async def test_ai_generate_model_from_env(self, temp_dir, monkeypatch):
+        """GEMINI_MODEL を既定モデルとして使う"""
+        monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-pro")
+
+        with patch("src.app.actions.ai._call_gemini") as mock_call:
+            mock_call.return_value = {
+                "text": "Generated text",
+                "model": "gemini-2.5-pro",
+            }
+
+            result = await action_ai_generate(
+                {"prompt": "Test prompt"}, {"base_dir": temp_dir}
+            )
+
+            assert result["model"] == "gemini-2.5-pro"
+            assert mock_call.call_args.args[1] == "gemini-2.5-pro"
 
     @pytest.mark.asyncio
     async def test_ai_generate_with_custom_model(self, temp_dir, monkeypatch):
